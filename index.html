@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IT Project Gantt Chart & Real-time Tracker</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Vue 3 CDN -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <style>
+        .gantt-grid {
+            background-size: 40px 100%;
+            background-image: linear-gradient(to right, #f1f5f9 1px, transparent 1px);
+        }
+        .task-name {
+            white-space: normal;
+            overflow: visible;
+            word-break: break-word;
+            line-height: 1.4;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { height: 8px; width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen">
+
+<div id="app" class="p-4 md:p-6 max-w-[1600px] mx-auto">
+    
+    <!-- HEADER & KPI DASHBOARD -->
+    <header class="mb-6 bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+            <div>
+                <h1 class="text-2xl md:text-3xl font-bold text-slate-900">Timeline Project SIM Penugasan</h1>
+                <p class="text-slate-500 text-sm mt-1">Sistem Pelacak Jadwal Real-Time & Diagram Gantt</p>
+            </div>
+            
+            <!-- REAL-TIME DATE SIMULATOR / TRACKER -->
+            <div class="flex items-center gap-3 bg-slate-100 p-2.5 rounded-xl border border-slate-200">
+                <span class="text-xs font-semibold text-slate-600 uppercase tracking-wider pl-2">📅 Simulasi Tanggal Hari Ini:</span>
+                <input type="date" v-model="simulatedToday" class="bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+        </div>
+
+        <!-- STATS CARDS -->
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200/80">
+                <p class="text-xs text-slate-500 font-medium">Total Tugas</p>
+                <p class="text-2xl font-bold text-slate-800 mt-1">{{ tasks.length }}</p>
+            </div>
+            <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                <p class="text-xs text-blue-600 font-medium">Progres Proyek</p>
+                <p class="text-2xl font-bold text-blue-700 mt-1">{{ overallProgress }}%</p>
+            </div>
+            <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
+                <p class="text-xs text-emerald-600 font-medium">Selesai</p>
+                <p class="text-2xl font-bold text-emerald-700 mt-1">{{ stats.completed }}</p>
+            </div>
+            <div class="bg-amber-50 p-4 rounded-xl border border-amber-100">
+                <p class="text-xs text-amber-600 font-medium">Sedang Berjalan</p>
+                <p class="text-2xl font-bold text-amber-700 mt-1">{{ stats.inProgress }}</p>
+            </div>
+            <div class="bg-rose-50 p-4 rounded-xl border border-rose-100 col-span-2 md:col-span-1">
+                <p class="text-xs text-rose-600 font-medium">Terlambat (Overdue)</p>
+                <p class="text-2xl font-bold text-rose-700 mt-1">{{ stats.overdue }}</p>
+            </div>
+        </div>
+    </header>
+
+    <!-- CONTROLS & FILTER -->
+    <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 mb-6 flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0">
+            <button @click="currentTab = 'gantt'" :class="currentTab === 'gantt' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'" class="px-4 py-2 rounded-xl text-sm font-semibold transition">
+                📊 Gantt Chart
+            </button>
+            <button @click="currentTab = 'table'" :class="currentTab === 'table' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'" class="px-4 py-2 rounded-xl text-sm font-semibold transition">
+                📋 Daftar & Editor Tugas
+            </button>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3">
+            <!-- Category Filter -->
+            <select v-model="selectedCategory" class="bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="ALL">Semua Kategori</option>
+                <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+            </select>
+
+            <!-- Reset Data Button -->
+            <button @click="resetDefaultData" class="text-xs text-slate-400 hover:text-rose-600 underline px-2">
+                Reset Data Awal
+            </button>
+        </div>
+    </div>
+
+    <!-- VIEW 1: GANTT CHART -->
+    <div v-if="currentTab === 'gantt'" class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="overflow-x-auto">
+            <div class="min-w-[1200px] p-4">
+                
+                <!-- TIMELINE HEADER (DAYS) -->
+                <div class="grid grid-cols-[360px_1fr] border-b border-slate-200 pb-3 mb-3">
+                    <div class="font-bold text-slate-700 text-sm">Tugas / Modul</div>
+                    <div class="flex relative text-xs font-semibold text-slate-500">
+                        <div v-for="date in timelineDays" :key="date" 
+                             :class="{'bg-blue-100 text-blue-700 rounded-t': date === simulatedToday}"
+                             class="w-[40px] shrink-0 text-center py-1">
+                            <div>{{ formatDateDay(date) }}</div>
+                            <div class="text-[10px] text-slate-400">{{ formatDateMonth(date) }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- GANTT ROWS GROUPED BY CATEGORY -->
+                <div v-for="cat in filteredCategories" :key="cat.id" class="mb-6">
+                    <!-- Category Header -->
+                    <div class="flex items-center gap-2 py-2 px-3 bg-slate-100/80 rounded-lg mb-2 border-l-4" :style="{ borderColor: cat.color }">
+                        <span class="font-bold text-xs uppercase tracking-wider text-slate-700">{{ cat.name }}</span>
+                    </div>
+
+                    <!-- Task Rows -->
+                    <div v-for="task in getTasksByCategory(cat.id)" :key="task.id" class="grid grid-cols-[360px_1fr] items-center hover:bg-slate-50/80 py-1.5 rounded-lg transition border-b border-slate-100">
+                        <!-- Task Title & Status Badge -->
+                        <div class="pr-4 flex items-center justify-between gap-2">
+                            <span class="task-name text-xs font-medium text-slate-700" :title="task.name">{{ task.name }}</span>
+                            <span :class="getStatusBadgeClass(task)" class="text-[10px] px-2 py-0.5 rounded-full font-semibold shrink-0">
+                                {{ getTaskStatus(task) }}
+                            </span>
+                        </div>
+
+                        <!-- Gantt Bar Track -->
+                        <div class="relative flex items-center h-8 gantt-grid">
+                            <!-- Gantt Bar -->
+                            <div class="absolute h-6 rounded-md shadow-sm text-[10px] text-white flex items-center px-2 font-semibold overflow-hidden transition-all duration-300"
+                                 :style="getBarStyle(task, cat.color)"
+                                 :title="`${task.name}: ${task.startDate} s/d ${task.endDate} (${task.progress}%)`">
+                                <!-- Progress Fill Overlay -->
+                                <div class="absolute top-0 left-0 bottom-0 bg-black/20" :style="{ width: task.progress + '%' }"></div>
+                                <span class="relative z-10 truncate">{{ task.progress }}%</span>
+                            </div>
+
+                            <!-- Real-time Today Line -->
+                            <div v-if="isDateInTimeline(simulatedToday)" 
+                                 class="absolute top-0 bottom-0 w-[2px] bg-rose-500 z-20 pointer-events-none"
+                                 :style="{ left: getTodayLinePosition() + 'px' }">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- VIEW 2: TASK MANAGEMENT TABLE -->
+    <div v-if="currentTab === 'table'" class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-600">
+                <thead class="bg-slate-50 text-slate-700 font-bold uppercase border-b border-slate-200">
+                    <tr>
+                        <th class="p-3 w-8">#</th>
+                        <th class="p-3">Nama Tugas</th>
+                        <th class="p-3">Kategori</th>
+                        <th class="p-3">Mulai</th>
+                        <th class="p-3">Selesai</th>
+                        <th class="p-3 w-48">Progres (%)</th>
+                        <th class="p-3">Status Real-time</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    <tr v-for="(task, index) in filteredTasks" :key="task.id" class="hover:bg-slate-50/80">
+                        <td class="p-3 font-medium text-slate-400">{{ index + 1 }}</td>
+                        <td class="p-3">
+                            <input v-model="task.name" type="text" class="w-full bg-transparent font-medium text-slate-800 focus:bg-white focus:ring-1 focus:ring-blue-500 rounded px-1.5 py-1 outline-none">
+                        </td>
+                        <td class="p-3">
+                            <span class="px-2 py-1 rounded text-[10px] font-semibold text-white" :style="{ backgroundColor: getCategoryColor(task.categoryId) }">
+                                {{ getCategoryName(task.categoryId) }}
+                            </span>
+                        </td>
+                        <td class="p-3">
+                            <input v-model="task.startDate" type="date" class="bg-slate-100 border border-slate-200 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-blue-500">
+                        </td>
+                        <td class="p-3">
+                            <input v-model="task.endDate" type="date" class="bg-slate-100 border border-slate-200 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-blue-500">
+                        </td>
+                        <td class="p-3">
+                            <div class="flex items-center gap-3">
+                                <input v-model.number="task.progress" type="range" min="0" max="100" class="w-full accent-blue-600">
+                                <span class="w-8 font-bold text-slate-700 text-right">{{ task.progress }}%</span>
+                            </div>
+                        </td>
+                        <td class="p-3">
+                            <span :class="getStatusBadgeClass(task)" class="px-2.5 py-1 rounded-full text-[10px] font-bold">
+                                {{ getTaskStatus(task) }}
+                            </span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<script>
+const { createApp } = Vue;
+
+const DEFAULT_CATEGORIES = [
+    { id: 'CAT1', name: '1. Perencanaan & Desain', color: '#3b82f6' },
+    { id: 'CAT2', name: '2. Pengembangan & Integrasi', color: '#8b5cf6' },
+    { id: 'CAT3', name: '3. Pengujian & QA', color: '#f59e0b' },
+    { id: 'CAT4', name: '4. Deployment & Serah Terima', color: '#10b981' }
+];
+
+const DEFAULT_TASKS = [
+    // Category 1
+    { id: 1, categoryId: 'CAT1', name: 'Analisis kebutuhan sistem & kebutuhan pengguna', startDate: '2026-07-27', endDate: '2026-07-27', progress: 100 },
+    { id: 2, categoryId: 'CAT1', name: 'Pembuatan wireframe dan desain UI', startDate: '2026-07-28', endDate: '2026-07-28', progress: 100 },
+    { id: 3, categoryId: 'CAT1', name: 'Penyusunan alur sistem (flowchart, database, navigasi)', startDate: '2026-07-29', endDate: '2026-07-29', progress: 100 },
+    { id: 4, categoryId: 'CAT1', name: 'Penyempurnaan desain UI/UX', startDate: '2026-07-30', endDate: '2026-07-30', progress: 80 },
+    { id: 5, categoryId: 'CAT1', name: 'Review internal desain proyek', startDate: '2026-07-31', endDate: '2026-07-31', progress: 0 },
+    { id: 6, categoryId: 'CAT1', name: 'Revisi desain berdasarkan hasil review', startDate: '2026-08-01', endDate: '2026-08-01', progress: 0 },
+    { id: 7, categoryId: 'CAT1', name: 'Presentasi desain kepada pihak klien/instansi', startDate: '2026-08-02', endDate: '2026-08-02', progress: 0 },
+    { id: 8, categoryId: 'CAT1', name: 'Pengesahan (Approval) Desain Proyek', startDate: '2026-08-03', endDate: '2026-08-03', progress: 0 },
+
+    // Category 2
+    { id: 9, categoryId: 'CAT2', name: 'Struktur database & konfigurasi project', startDate: '2026-08-04', endDate: '2026-08-04', progress: 0 },
+    { id: 10, categoryId: 'CAT2', name: 'Pembuatan Modul Login dan Dashboard', startDate: '2026-08-05', endDate: '2026-08-05', progress: 0 },
+    { id: 11, categoryId: 'CAT2', name: 'Pengembangan Modul Master Data', startDate: '2026-08-06', endDate: '2026-08-06', progress: 0 },
+    { id: 12, categoryId: 'CAT2', name: 'Penyelesaian Modul Master Data', startDate: '2026-08-07', endDate: '2026-08-07', progress: 0 },
+    { id: 13, categoryId: 'CAT2', name: 'Pengembangan Modul Transaksi', startDate: '2026-08-08', endDate: '2026-08-08', progress: 0 },
+    { id: 14, categoryId: 'CAT2', name: 'Penyelesaian Modul Transaksi', startDate: '2026-08-09', endDate: '2026-08-09', progress: 0 },
+    { id: 15, categoryId: 'CAT2', name: 'Pengembangan Modul Laporan', startDate: '2026-08-10', endDate: '2026-08-10', progress: 0 },
+    { id: 16, categoryId: 'CAT2', name: 'Integrasi seluruh modul', startDate: '2026-08-11', endDate: '2026-08-11', progress: 0 },
+    { id: 17, categoryId: 'CAT2', name: 'Implementasi hak akses pengguna', startDate: '2026-08-12', endDate: '2026-08-12', progress: 0 },
+
+    // Category 3
+    { id: 18, categoryId: 'CAT3', name: 'Pengujian fungsional setiap modul', startDate: '2026-08-13', endDate: '2026-08-13', progress: 0 },
+    { id: 19, categoryId: 'CAT3', name: 'Perbaikan bug hasil pengujian', startDate: '2026-08-14', endDate: '2026-08-14', progress: 0 },
+    { id: 20, categoryId: 'CAT3', name: 'User Acceptance Test (UAT)', startDate: '2026-08-15', endDate: '2026-08-15', progress: 0 },
+    { id: 21, categoryId: 'CAT3', name: 'Revisi berdasarkan hasil UAT', startDate: '2026-08-16', endDate: '2026-08-16', progress: 0 },
+    { id: 22, categoryId: 'CAT3', name: 'Penyempurnaan fitur dan tampilan', startDate: '2026-08-17', endDate: '2026-08-17', progress: 0 },
+    { id: 23, categoryId: 'CAT3', name: 'Final Testing', startDate: '2026-08-18', endDate: '2026-08-18', progress: 0 },
+
+    // Category 4
+    { id: 24, categoryId: 'CAT4', name: 'Penyusunan dokumentasi & panduan pengguna', startDate: '2026-08-19', endDate: '2026-08-19', progress: 0 },
+    { id: 25, categoryId: 'CAT4', name: 'Deployment ke server', startDate: '2026-08-20', endDate: '2026-08-20', progress: 0 },
+    { id: 26, categoryId: 'CAT4', name: 'Monitoring & evaluasi pasca deployment', startDate: '2026-08-21', endDate: '2026-08-21', progress: 0 },
+    { id: 27, categoryId: 'CAT4', name: 'Perbaikan akhir jika ditemukan kendala', startDate: '2026-08-22', endDate: '2026-08-22', progress: 0 },
+    { id: 28, categoryId: 'CAT4', name: 'Persiapan serah terima program', startDate: '2026-08-23', endDate: '2026-08-23', progress: 0 },
+    { id: 29, categoryId: 'CAT4', name: 'Presentasi akhir dan pelatihan pengguna', startDate: '2026-08-24', endDate: '2026-08-24', progress: 0 },
+    { id: 30, categoryId: 'CAT4', name: 'Penandatanganan BAST & Serah Terima Program', startDate: '2026-08-25', endDate: '2026-08-25', progress: 0 }
+];
+
+createApp({
+    data() {
+        return {
+            currentTab: 'gantt',
+            selectedCategory: 'ALL',
+            simulatedToday: '2026-07-30', // Tanggal default simulasi hari ini
+            categories: DEFAULT_CATEGORIES,
+            tasks: JSON.parse(localStorage.getItem('it_project_tasks')) || DEFAULT_TASKS,
+            timelineStartDate: '2026-07-27',
+            timelineEndDate: '2026-08-26'
+        }
+    },
+    watch: {
+        tasks: {
+            handler(newVal) {
+                localStorage.setItem('it_project_tasks', JSON.stringify(newVal));
+            },
+            deep: true
+        }
+    },
+    computed: {
+        filteredCategories() {
+            if (this.selectedCategory === 'ALL') return this.categories;
+            return this.categories.filter(c => c.id === this.selectedCategory);
+        },
+        filteredTasks() {
+            if (this.selectedCategory === 'ALL') return this.tasks;
+            return this.tasks.filter(t => t.categoryId === this.selectedCategory);
+        },
+        timelineDays() {
+            const days = [];
+            let curr = new Date(this.timelineStartDate);
+            const end = new Date(this.timelineEndDate);
+            while (curr <= end) {
+                days.push(curr.toISOString().split('T')[0]);
+                curr.setDate(curr.getDate() + 1);
+            }
+            return days;
+        },
+        overallProgress() {
+            if (!this.tasks.length) return 0;
+            const total = this.tasks.reduce((acc, t) => acc + (t.progress || 0), 0);
+            return Math.round(total / this.tasks.length);
+        },
+        stats() {
+            let completed = 0;
+            let inProgress = 0;
+            let overdue = 0;
+
+            this.tasks.forEach(t => {
+                const status = this.getTaskStatus(t);
+                if (status === 'Selesai') completed++;
+                else if (status === 'Sedang Berjalan') inProgress++;
+                else if (status === 'Terlambat') overdue++;
+            });
+
+            return { completed, inProgress, overdue };
+        }
+    },
+    methods: {
+        getTasksByCategory(catId) {
+            return this.tasks.filter(t => t.categoryId === catId);
+        },
+        getCategoryName(catId) {
+            const cat = this.categories.find(c => c.id === catId);
+            return cat ? cat.name : '';
+        },
+        getCategoryColor(catId) {
+            const cat = this.categories.find(c => c.id === catId);
+            return cat ? cat.color : '#3b82f6';
+        },
+        formatDateDay(dateStr) {
+            const d = new Date(dateStr);
+            return d.getDate();
+        },
+        formatDateMonth(dateStr) {
+            const d = new Date(dateStr);
+            return d.toLocaleDateString('id-ID', { month: 'short' });
+        },
+        getDaysDiff(startStr, endStr) {
+            const d1 = new Date(startStr);
+            const d2 = new Date(endStr);
+            const diffTime = Math.abs(d2 - d1);
+            return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        },
+        getBarStyle(task, color) {
+            const dayWidth = 40; // pixel per day
+            const startOffsetDays = this.getDaysDiff(this.timelineStartDate, task.startDate);
+            const durationDays = this.getDaysDiff(task.startDate, task.endDate) + 1;
+
+            const left = startOffsetDays * dayWidth;
+            const width = Math.max(durationDays * dayWidth, 24);
+
+            return {
+                left: `${left}px`,
+                width: `${width}px`,
+                backgroundColor: color
+            };
+        },
+        getTodayLinePosition() {
+            const dayWidth = 40;
+            const offsetDays = this.getDaysDiff(this.timelineStartDate, this.simulatedToday);
+            return (offsetDays * dayWidth) + (dayWidth / 2);
+        },
+        isDateInTimeline(dateStr) {
+            return dateStr >= this.timelineStartDate && dateStr <= this.timelineEndDate;
+        },
+        getTaskStatus(task) {
+            if (task.progress === 100) return 'Selesai';
+            if (this.simulatedToday > task.endDate && task.progress < 100) return 'Terlambat';
+            if (this.simulatedToday >= task.startDate && this.simulatedToday <= task.endDate) return 'Sedang Berjalan';
+            return 'Belum Dimulai';
+        },
+        getStatusBadgeClass(task) {
+            const status = this.getTaskStatus(task);
+            switch (status) {
+                case 'Selesai': return 'bg-emerald-100 text-emerald-700';
+                case 'Sedang Berjalan': return 'bg-amber-100 text-amber-700';
+                case 'Terlambat': return 'bg-rose-100 text-rose-700';
+                default: return 'bg-slate-100 text-slate-500';
+            }
+        },
+        resetDefaultData() {
+            if (confirm('Apakah Anda yakin ingin mengembalikan data ke posisi awal?')) {
+                this.tasks = JSON.parse(JSON.stringify(DEFAULT_TASKS));
+                localStorage.removeItem('it_project_tasks');
+            }
+        }
+    }
+}).mount('#app');
+</script>
+</body>
+</html>
