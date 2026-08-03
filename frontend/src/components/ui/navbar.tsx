@@ -63,10 +63,9 @@ export const Navbar = () => {
             to="/"
             end
             className={({ isActive }) =>
-              `flex items-center gap-2 px-3.5 py-2 rounded-lg transition-all ${
-                isActive
-                  ? 'bg-blue-50 text-blue-700 font-semibold shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+              `flex items-center gap-2 px-3.5 py-2 rounded-lg transition-all ${isActive
+                ? 'bg-blue-50 text-blue-700 font-semibold shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
               }`
             }
           >
@@ -77,10 +76,9 @@ export const Navbar = () => {
           <NavLink
             to="/tugas"
             className={({ isActive }) =>
-              `flex items-center gap-2 px-3.5 py-2 rounded-lg transition-all ${
-                isActive
-                  ? 'bg-blue-50 text-blue-700 font-semibold shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+              `flex items-center gap-2 px-3.5 py-2 rounded-lg transition-all ${isActive
+                ? 'bg-blue-50 text-blue-700 font-semibold shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
               }`
             }
           >
@@ -91,10 +89,9 @@ export const Navbar = () => {
           <NavLink
             to="/absensi"
             className={({ isActive }) =>
-              `flex items-center gap-2 px-3.5 py-2 rounded-lg transition-all ${
-                isActive
-                  ? 'bg-blue-50 text-blue-700 font-semibold shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+              `flex items-center gap-2 px-3.5 py-2 rounded-lg transition-all ${isActive
+                ? 'bg-blue-50 text-blue-700 font-semibold shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
               }`
             }
           >
@@ -105,10 +102,9 @@ export const Navbar = () => {
           <NavLink
             to="/pemetaan"
             className={({ isActive }) =>
-              `flex items-center gap-2 px-3.5 py-2 rounded-lg transition-all ${
-                isActive
-                  ? 'bg-blue-50 text-blue-700 font-semibold shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+              `flex items-center gap-2 px-3.5 py-2 rounded-lg transition-all ${isActive
+                ? 'bg-blue-50 text-blue-700 font-semibold shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
               }`
             }
           >
@@ -131,11 +127,12 @@ export const Navbar = () => {
               <img
                 src={
                   user.fotoAvatar ||
-                  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150'
+                  `${import.meta.env.BASE_URL}pp-navbar-2.jpg`
                 }
                 alt={user.nama}
                 className="w-9 h-9 rounded-lg object-cover border border-blue-500/30 shadow-xs group-hover:border-blue-500"
               />
+
               <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full" />
             </div>
 
@@ -147,9 +144,8 @@ export const Navbar = () => {
             </div>
 
             <ChevronDown
-              className={`w-4 h-4 text-slate-400 group-hover:text-slate-600 transition-transform ${
-                isDropdownOpen ? 'rotate-180 text-blue-600' : ''
-              }`}
+              className={`w-4 h-4 text-slate-400 group-hover:text-slate-600 transition-transform ${isDropdownOpen ? 'rotate-180 text-blue-600' : ''
+                }`}
             />
           </button>
         ) : (

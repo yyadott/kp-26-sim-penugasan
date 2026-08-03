@@ -5,7 +5,7 @@ on:
     branches:
       - main
       - master
-      - program-sim-v1
+      - frontend-sim-penugasan
 
 permissions:
   contents: read

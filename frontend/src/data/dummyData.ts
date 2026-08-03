@@ -15,7 +15,7 @@ export const dummyPegawaiList: Pegawai[] = [
     unitKerja: 'RBI',
     jabatan: 'Analisis Sistem Informasi Utama',
     email: 'taryadi@pemda.go.id',
-    fotoAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150',
+    fotoAvatar: `${import.meta.env.BASE_URL}pp-navbar-2.jpg`,
     role: 'ADMIN',
   },
   {
