@@ -6,7 +6,7 @@ import { AppRouter } from '@/routes/appRouter';
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
+      <BrowserRouter basename={import.meta.env.BASE_URL}>
         <div className="min-h-screen bg-slate-100 flex flex-col">
           <Navbar />
           <main className="flex-1">

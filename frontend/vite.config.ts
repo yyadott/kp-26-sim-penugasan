@@ -4,8 +4,9 @@ import { defineConfig } from "vite"
 import tailwindcss from "@tailwindcss/vite"
 
 export default defineConfig({
+  base: '/kp-26-sim-penugasan/',
   plugins: [
-    react(), 
+    react(),
     tailwindcss()
   ],
   resolve: {
