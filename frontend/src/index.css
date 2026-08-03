@@ -1,0 +1,27 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "@fontsource-variable/geist";
+@import "leaflet/dist/leaflet.css";
+
+@layer base {
+  * {
+    border-color: var(--border, #e2e8f0);
+  }
+  body {
+    background-color: var(--background, #f8fafc);
+    color: var(--foreground, #0f172a);
+    font-family: 'Geist Variable', sans-serif;
+  }
+}
+
+/* Custom leaflet marker styling */
+.leaflet-popup-content-wrapper {
+  border-radius: 0.75rem !important;
+  padding: 0 !important;
+  overflow: hidden;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+}
+.leaflet-popup-content {
+  margin: 0 !important;
+  line-height: 1.5 !important;
+}
