@@ -6,26 +6,31 @@ import {
   Plus,
   CheckCircle2,
   Clock,
-  AlertCircle,
   MapPin,
   Search,
   Filter,
   Eye,
   X,
   FileCheck,
-  UserCheck,
   Send,
+  MoreHorizontal,
+  Users,
+  Hourglass,
 } from 'lucide-react';
 
 export const TugasPage = () => {
   const [ajuanList, setAjuanList] = useState<AjuanSuratTugas[]>(dummyAjuanSuratTugas);
   const [activeTab, setActiveTab] = useState<'DAFTAR' | 'WORKFLOW'>('DAFTAR');
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterUnit, setFilterUnit] = useState<string>('ALL');
+  const [selectedUnits, setSelectedUnits] = useState<UnitKerjaType[]>([]);
+  const [isUnitFilterOpen, setIsUnitFilterOpen] = useState(false);
 
   // Modal Detail Workflow / Timeline
   const [selectedAjuan, setSelectedAjuan] = useState<AjuanSuratTugas | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedPegawaiAjuan, setSelectedPegawaiAjuan] = useState<AjuanSuratTugas | null>(null);
+  const [openStatusId, setOpenStatusId] = useState<string | null>(null);
+  const [openActionId, setOpenActionId] = useState<string | null>(null);
 
   // Modal Form Ajuan Baru
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
@@ -47,9 +52,47 @@ export const TugasPage = () => {
       item.nomorSurat.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.perihal.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.lokasiPenugasan.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesUnit = filterUnit === 'ALL' || item.unitKerja === filterUnit;
+    const matchesUnit = selectedUnits.length === 0 || selectedUnits.includes(item.unitKerja);
     return matchesSearch && matchesUnit;
   });
+
+  const unitOptions: UnitKerjaType[] = ['RBI', 'Fastingkom', 'Kepeg', 'PM'];
+
+  const toggleUnitFilter = (unit: UnitKerjaType) => {
+    setSelectedUnits((currentUnits) => currentUnits.includes(unit)
+      ? currentUnits.filter((currentUnit) => currentUnit !== unit)
+      : [...currentUnits, unit]);
+  };
+
+  const formatLokasiKhusus = (lokasi: string) => {
+    const cleaned = lokasi.trim();
+    if (!cleaned) return '';
+    let result = cleaned.replace(/,?\s*jawa barat$/i, '').trim();
+    result = result.replace(/^kecamatan\s+/i, '').trim();
+    result = result.replace(/^desa\s+/i, '').trim();
+    result = result.replace(/^kelurahan\s+/i, '').trim();
+    result = result.replace(/^kota\s+/i, 'Kota ').trim();
+    result = result.replace(/^kabupaten\s+/i, 'Kabupaten ').trim();
+    return `${result}, Jawa Barat`;
+  };
+
+  const formatTanggal = (tanggal: string) => {
+    const [tahun, bulan, hari] = tanggal.split('-');
+    return `${hari}/${bulan}/${tahun}`;
+  };
+
+  const formatRentangTanggal = (tanggalMulai: string, tanggalSelesai: string) => {
+    const mulai = formatTanggal(tanggalMulai);
+    return tanggalMulai === tanggalSelesai ? mulai : `${mulai} s/d ${formatTanggal(tanggalSelesai)}`;
+  };
+
+  const updateStatusAjuan = (id: string, status: AjuanSuratTugas['status']) => {
+    setAjuanList((currentList) => currentList.map((item) => (
+      item.id === id ? { ...item, status } : item
+    )));
+    setSelectedAjuan((current) => current?.id === id ? { ...current, status } : current);
+    setOpenStatusId(null);
+  };
 
   const handleCreateDraft = (e: React.FormEvent) => {
     e.preventDefault();
@@ -107,38 +150,27 @@ export const TugasPage = () => {
   };
 
   const getStatusBadge = (status: AjuanSuratTugas['status']) => {
-    switch (status) {
-      case 'SURAT_TERBIT':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-            <CheckCircle2 className="w-3.5 h-3.5" /> Surat Tugas Terbit
-          </span>
-        );
-      case 'PERSETUJUAN_PIMPINAN':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-300">
-            <Clock className="w-3.5 h-3.5" /> Persetujuan Pimpinan
-          </span>
-        );
-      case 'VERIFIKASI_SUBBAGIAN':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300">
-            <Clock className="w-3.5 h-3.5" /> Verifikasi Subbagian
-          </span>
-        );
-      case 'DRAFT':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-300">
-            <FileText className="w-3.5 h-3.5" /> Draft Ajuan
-          </span>
-        );
-      default:
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300">
-            <AlertCircle className="w-3.5 h-3.5" /> Ditolak
-          </span>
-        );
-    }
+    const statusIsApproved = status === 'SURAT_TERBIT';
+    const statusIsRejected = status === 'DITOLAK';
+    const label = statusIsApproved ? 'Diapprove' : statusIsRejected ? 'Dibatalkan' : 'Diproses';
+    const classes = statusIsApproved
+      ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+      : statusIsRejected
+        ? 'bg-rose-100 text-rose-800 border border-rose-300'
+        : 'bg-slate-100 text-slate-700 border border-slate-300';
+
+    return (
+      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${classes}`}>
+        {statusIsApproved ? (
+          <CheckCircle2 className="w-3.5 h-3.5" />
+        ) : statusIsRejected ? (
+          <X className="w-3.5 h-3.5 text-rose-600" />
+        ) : (
+          <Hourglass className="w-3.5 h-3.5" />
+        )}
+        {label}
+      </span>
+    );
   };
 
   return (
@@ -174,15 +206,7 @@ export const TugasPage = () => {
           >
             Daftar Proses Ajuan ST ({ajuanList.length})
           </button>
-          <button
-            onClick={() => setActiveTab('WORKFLOW')}
-            className={`px-4 py-2 rounded-lg transition-all cursor-pointer ${activeTab === 'WORKFLOW' ? 'bg-white text-blue-700 font-bold shadow-xs' : 'text-slate-600 hover:text-slate-900'
-              }`}
-          >
-            Alur Draft & Approval Workflow
-          </button>
         </div>
-
         {/* Filter Controls */}
         <div className="flex items-center gap-3">
           <div className="relative">
@@ -196,21 +220,58 @@ export const TugasPage = () => {
             />
           </div>
 
-          <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs sm:text-sm shadow-xs">
-            <Filter className="w-4 h-4 text-slate-400" />
-            <select
-              value={filterUnit}
-              onChange={(e) => setFilterUnit(e.target.value)}
-              className="bg-transparent font-medium text-slate-700 focus:outline-none cursor-pointer"
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setIsUnitFilterOpen((isOpen) => !isOpen)}
+              className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 shadow-xs transition-colors hover:border-blue-300 hover:bg-blue-50 sm:text-sm"
+              aria-expanded={isUnitFilterOpen}
             >
-              <option value="ALL">Semua Unit Kerja</option>
-              <option value="RBI">RBI</option>
-              <option value="Dinas Kesehatan">Dinas Kesehatan</option>
-              <option value="Dinas Perhubungan">Dinas Perhubungan</option>
-              <option value="Satuan Polisi Pamong Praja">Satpol PP</option>
-              <option value="Dinas Pekerjaan Umum">Dinas PU</option>
-              <option value="Sekretariat Daerah">Sekretariat Daerah</option>
-            </select>
+              <Filter className="h-4 w-4 text-slate-400" />
+              <span>
+                {selectedUnits.length === 0
+                  ? 'Semua Unit Kerja'
+                  : selectedUnits.length === 1
+                    ? selectedUnits[0]
+                    : `${selectedUnits.length} unit dipilih`}
+              </span>
+            </button>
+
+            {isUnitFilterOpen && (
+              <div
+                className="absolute right-0 top-full z-30 mt-2 w-56 rounded-xl border border-slate-200 bg-white p-2 shadow-xl"
+                onMouseLeave={() => setIsUnitFilterOpen(false)}
+              >
+                <div className="flex items-center justify-between border-b border-slate-100 px-2 pb-2">
+                  <span className="text-xs font-bold text-slate-700">Filter Unit Kerja</span>
+                  {selectedUnits.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedUnits([])}
+                      className="text-[11px] font-semibold text-blue-600 hover:underline"
+                    >
+                      Reset
+                    </button>
+                  )}
+                </div>
+                <div className="space-y-1 pt-2">
+                  {unitOptions.map((unit) => (
+                    <label key={unit} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-xs text-slate-700 hover:bg-slate-50">
+                      <input
+                        type="checkbox"
+                        checked={selectedUnits.includes(unit)}
+                        onChange={() => toggleUnitFilter(unit)}
+                        className="h-4 w-4 rounded border-slate-300 text-blue-600 accent-blue-600 focus:ring-blue-500"
+                      />
+                      <span>{unit}</span>
+                    </label>
+                  ))}
+                </div>
+                <p className="border-t border-slate-100 px-2 pt-2 text-[11px] text-slate-400">
+                  Kosongkan pilihan untuk menampilkan semua unit.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -226,7 +287,7 @@ export const TugasPage = () => {
                   <th className="px-6 py-4">Unit Kerja & Pengaju</th>
                   <th className="px-6 py-4">Pegawai Ditugaskan</th>
                   <th className="px-6 py-4">Tanggal & Lokasi</th>
-                  <th className="px-6 py-4">Status Ajuan</th>
+                  <th className="px-6 py-4">Status</th>
                   <th className="px-6 py-4 text-right">Aksi</th>
                 </tr>
               </thead>
@@ -236,49 +297,101 @@ export const TugasPage = () => {
 
                   return (
                     <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="px-6 py-4 max-w-xs">
+                      <td className="px-6 py-4 min-w-[430px]">
                         <span className="font-mono text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 block w-fit mb-1">
                           {item.nomorSurat}
                         </span>
-                        <p className="font-semibold text-slate-800 line-clamp-2">{item.perihal}</p>
+                        <p className="font-semibold text-slate-800 whitespace-nowrap">{item.perihal}</p>
                       </td>
                       <td className="px-6 py-4">
                         <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold ${unitColor.bg} ${unitColor.text} mb-1`}>
                           {item.unitKerja}
                         </span>
                         <p className="text-xs font-medium text-slate-600">Oleh: {item.pengaju.nama}</p>
+                        <p className="text-[11px] text-slate-500">NIP: {item.pengaju.nip}</p>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          {item.pegawaiDitugaskan.map((p) => (
-                            <div key={p.id} className="flex items-center gap-1.5 bg-slate-100 px-2 py-1 rounded-lg">
-                              <UserCheck className="w-3.5 h-3.5 text-slate-500" />
-                              <span className="text-xs font-medium text-slate-800">{p.nama}</span>
-                            </div>
-                          ))}
-                        </div>
+                      <td className="px-6 py-4 min-w-[170px] align-top">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedPegawaiAjuan(item)}
+                          className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-xs font-bold text-blue-700 hover:bg-blue-100 transition-colors cursor-pointer"
+                          aria-label={`Lihat ${item.pegawaiDitugaskan.length} pegawai yang ditugaskan`}
+                        >
+                          <Users className="w-3.5 h-3.5" />
+                          {item.pegawaiDitugaskan.length} Pegawai
+                        </button>
                       </td>
                       <td className="px-6 py-4">
                         <p className="text-xs font-semibold text-slate-800">
-                          {item.tanggalMulai} s/d {item.tanggalSelesai}
+                          {formatRentangTanggal(item.tanggalMulai, item.tanggalSelesai)}
                         </p>
                         <div className="flex items-center gap-1 text-slate-500 text-xs mt-0.5">
                           <MapPin className="w-3.5 h-3.5 text-rose-500" />
-                          <span>{item.lokasiPenugasan}</span>
+                          <span>{formatLokasiKhusus(item.lokasiPenugasan)}</span>
                         </div>
                       </td>
-                      <td className="px-6 py-4">{getStatusBadge(item.status)}</td>
-                      <td className="px-6 py-4 text-right">
+                      <td
+                        className="relative px-6 py-4"
+                        onMouseLeave={() => setOpenStatusId((current) => current === item.id ? null : current)}
+                      >
                         <button
+                          type="button"
                           onClick={() => {
-                            setSelectedAjuan(item);
-                            setIsModalOpen(true);
+                            setOpenStatusId(openStatusId === item.id ? null : item.id);
+                            setOpenActionId(null);
                           }}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-700 text-xs font-semibold rounded-lg transition-colors cursor-pointer border border-slate-200"
+                          className="cursor-pointer rounded-full focus:outline-none focus:ring-2 focus:ring-blue-300"
+                          aria-label={`Ubah status ajuan ${item.nomorSurat}`}
+                          aria-expanded={openStatusId === item.id}
                         >
-                          <Eye className="w-3.5 h-3.5" />
-                          <span>Alur Draft</span>
+                          {getStatusBadge(item.status)}
                         </button>
+                        {openStatusId === item.id && (
+                          <div className="absolute left-6 top-14 z-20 w-40 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg">
+                            <button type="button" onClick={() => updateStatusAjuan(item.id, 'SURAT_TERBIT')} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-semibold text-emerald-700 hover:bg-emerald-50">
+                              <CheckCircle2 className="w-4 h-4" /> Diapprove
+                            </button>
+                            <button type="button" onClick={() => updateStatusAjuan(item.id, 'VERIFIKASI_SUBBAGIAN')} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-semibold text-slate-600 hover:bg-slate-100">
+                              <Hourglass className="w-4 h-4" /> Diproses
+                            </button>
+                            <button type="button" onClick={() => updateStatusAjuan(item.id, 'DITOLAK')} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-semibold text-rose-700 hover:bg-rose-50">
+                              <X className="w-4 h-4" /> Dibatalkan
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                      <td
+                        className="relative px-6 py-4 text-right"
+                        onMouseLeave={() => setOpenActionId((current) => current === item.id ? null : current)}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setOpenActionId(openActionId === item.id ? null : item.id);
+                            setOpenStatusId(null);
+                          }}
+                          className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-slate-100 p-2 text-slate-600 hover:bg-blue-50 hover:text-blue-700 transition-colors cursor-pointer"
+                          aria-label={`Aksi ajuan ${item.nomorSurat}`}
+                          aria-expanded={openActionId === item.id}
+                        >
+                          <MoreHorizontal className="w-4 h-4" />
+                        </button>
+                        {openActionId === item.id && (
+                          <div className="absolute right-6 top-14 z-20 w-36 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg text-left">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedAjuan(item);
+                                setIsModalOpen(true);
+                                setOpenActionId(null);
+                              }}
+                              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-700"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                              Lihat Alur Draft
+                            </button>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   );
@@ -305,8 +418,8 @@ export const TugasPage = () => {
                   key={item.id}
                   onClick={() => setSelectedAjuan(item)}
                   className={`p-3.5 rounded-xl border transition-all cursor-pointer ${selectedAjuan?.id === item.id
-                      ? 'border-blue-500 bg-blue-50/50 shadow-xs'
-                      : 'border-slate-200 bg-white hover:border-slate-300'
+                    ? 'border-blue-500 bg-blue-50/50 shadow-xs'
+                    : 'border-slate-200 bg-white hover:border-slate-300'
                     }`}
                 >
                   <div className="flex items-center justify-between mb-1">
@@ -350,10 +463,10 @@ export const TugasPage = () => {
                           {/* Dot Badge */}
                           <div
                             className={`absolute -left-6 top-0.5 w-5 h-5 rounded-full flex items-center justify-center border-2 bg-white text-xs ${isDone
-                                ? 'border-emerald-500 text-emerald-600'
-                                : isInProgress
-                                  ? 'border-blue-500 text-blue-600 animate-pulse'
-                                  : 'border-slate-300 text-slate-400'
+                              ? 'border-emerald-500 text-emerald-600'
+                              : isInProgress
+                                ? 'border-blue-500 text-blue-600 animate-pulse'
+                                : 'border-slate-300 text-slate-400'
                               }`}
                           >
                             {isDone ? (
@@ -392,6 +505,58 @@ export const TugasPage = () => {
                 <p className="text-sm font-medium">Pilih surat tugas di sebelah kiri untuk melihat alur persetujuan lengkap.</p>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DAFTAR PEGAWAI YANG DITUGASKAN */}
+      {selectedPegawaiAjuan && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="flex items-center gap-2 text-lg font-bold text-slate-800">
+                  <Users className="h-5 w-5 text-blue-600" />
+                  Daftar Pegawai Ditugaskan
+                </h3>
+                <p className="mt-1 text-xs text-slate-500">{selectedPegawaiAjuan.nomorSurat}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedPegawaiAjuan(null)}
+                className="rounded-lg p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                aria-label="Tutup daftar pegawai"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="max-h-[60vh] space-y-3 overflow-y-auto">
+              {selectedPegawaiAjuan.pegawaiDitugaskan.map((pegawai, index) => (
+                <div key={pegawai.id} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="flex items-start gap-3">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700">
+                      {index + 1}
+                    </span>
+                    <div className="min-w-0 space-y-1 text-sm">
+                      <p className="font-bold text-slate-800">{pegawai.nama}</p>
+                      <p className="text-xs text-slate-600">NIP: {pegawai.nip}</p>
+                      <p className="text-xs font-semibold text-blue-700">Unit Kerja: {pegawai.unitKerja}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex justify-end border-t border-slate-100 pt-3">
+              <button
+                type="button"
+                onClick={() => setSelectedPegawaiAjuan(null)}
+                className="rounded-xl bg-slate-800 px-5 py-2 text-xs font-bold text-white transition-colors hover:bg-slate-900"
+              >
+                Tutup
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -498,11 +663,9 @@ export const TugasPage = () => {
                     className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                   >
                     <option value="RBI">RBI</option>
-                    <option value="Dinas Kesehatan">Dinas Kesehatan</option>
-                    <option value="Dinas Perhubungan">Dinas Perhubungan</option>
-                    <option value="Satuan Polisi Pamong Praja">Satpol PP</option>
-                    <option value="Dinas Pekerjaan Umum">Dinas PU</option>
-                    <option value="Sekretariat Daerah">Sekretariat Daerah</option>
+                    <option value="Fastingkom">Fastingkom</option>
+                    <option value="Kepeg">Kepeg</option>
+                    <option value="PM">PM</option>
                   </select>
                 </div>
 
