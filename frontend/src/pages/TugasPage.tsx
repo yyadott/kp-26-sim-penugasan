@@ -6,7 +6,6 @@ import {
   Plus,
   CheckCircle2,
   Clock,
-  AlertCircle,
   MapPin,
   Search,
   Filter,
@@ -50,6 +49,18 @@ export const TugasPage = () => {
     const matchesUnit = filterUnit === 'ALL' || item.unitKerja === filterUnit;
     return matchesSearch && matchesUnit;
   });
+
+  const formatLokasiKhusus = (lokasi: string) => {
+    const cleaned = lokasi.trim();
+    if (!cleaned) return '';
+    let result = cleaned.replace(/,?\s*jawa barat$/i, '').trim();
+    result = result.replace(/^kecamatan\s+/i, '').trim();
+    result = result.replace(/^desa\s+/i, '').trim();
+    result = result.replace(/^kelurahan\s+/i, '').trim();
+    result = result.replace(/^kota\s+/i, 'Kota ').trim();
+    result = result.replace(/^kabupaten\s+/i, 'Kabupaten ').trim();
+    return `${result}, Jawa Barat`;
+  };
 
   const handleCreateDraft = (e: React.FormEvent) => {
     e.preventDefault();
@@ -107,38 +118,27 @@ export const TugasPage = () => {
   };
 
   const getStatusBadge = (status: AjuanSuratTugas['status']) => {
-    switch (status) {
-      case 'SURAT_TERBIT':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-            <CheckCircle2 className="w-3.5 h-3.5" /> Surat Tugas Terbit
-          </span>
-        );
-      case 'PERSETUJUAN_PIMPINAN':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-300">
-            <Clock className="w-3.5 h-3.5" /> Persetujuan Pimpinan
-          </span>
-        );
-      case 'VERIFIKASI_SUBBAGIAN':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300">
-            <Clock className="w-3.5 h-3.5" /> Verifikasi Subbagian
-          </span>
-        );
-      case 'DRAFT':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-300">
-            <FileText className="w-3.5 h-3.5" /> Draft Ajuan
-          </span>
-        );
-      default:
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300">
-            <AlertCircle className="w-3.5 h-3.5" /> Ditolak
-          </span>
-        );
-    }
+    const statusIsApproved = status === 'SURAT_TERBIT';
+    const statusIsRejected = status === 'DITOLAK';
+    const label = statusIsApproved ? 'DiApprove' : statusIsRejected ? 'Ditolak' : 'Diproses';
+    const classes = statusIsApproved
+      ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+      : statusIsRejected
+        ? 'bg-rose-100 text-rose-800 border border-rose-300'
+        : 'bg-slate-100 text-slate-700 border border-slate-300';
+
+    return (
+      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${classes}`}>
+        {statusIsApproved ? (
+          <CheckCircle2 className="w-3.5 h-3.5" />
+        ) : statusIsRejected ? (
+          <X className="w-3.5 h-3.5 text-rose-600" />
+        ) : (
+          <Clock className="w-3.5 h-3.5" />
+        )}
+        {label}
+      </span>
+    );
   };
 
   return (
@@ -205,11 +205,9 @@ export const TugasPage = () => {
             >
               <option value="ALL">Semua Unit Kerja</option>
               <option value="RBI">RBI</option>
-              <option value="Dinas Kesehatan">Dinas Kesehatan</option>
-              <option value="Dinas Perhubungan">Dinas Perhubungan</option>
-              <option value="Satuan Polisi Pamong Praja">Satpol PP</option>
-              <option value="Dinas Pekerjaan Umum">Dinas PU</option>
-              <option value="Sekretariat Daerah">Sekretariat Daerah</option>
+                <option value="Fastingkom">Fastingkom</option>
+                <option value="Kepeg">Kepeg</option>
+                <option value="PM">PM</option>
             </select>
           </div>
         </div>
@@ -226,7 +224,7 @@ export const TugasPage = () => {
                   <th className="px-6 py-4">Unit Kerja & Pengaju</th>
                   <th className="px-6 py-4">Pegawai Ditugaskan</th>
                   <th className="px-6 py-4">Tanggal & Lokasi</th>
-                  <th className="px-6 py-4">Status Ajuan</th>
+                  <th className="px-6 py-4">Status</th>
                   <th className="px-6 py-4 text-right">Aksi</th>
                 </tr>
               </thead>
@@ -264,7 +262,7 @@ export const TugasPage = () => {
                         </p>
                         <div className="flex items-center gap-1 text-slate-500 text-xs mt-0.5">
                           <MapPin className="w-3.5 h-3.5 text-rose-500" />
-                          <span>{item.lokasiPenugasan}</span>
+                          <span>{formatLokasiKhusus(item.lokasiPenugasan)}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4">{getStatusBadge(item.status)}</td>
@@ -305,8 +303,8 @@ export const TugasPage = () => {
                   key={item.id}
                   onClick={() => setSelectedAjuan(item)}
                   className={`p-3.5 rounded-xl border transition-all cursor-pointer ${selectedAjuan?.id === item.id
-                      ? 'border-blue-500 bg-blue-50/50 shadow-xs'
-                      : 'border-slate-200 bg-white hover:border-slate-300'
+                    ? 'border-blue-500 bg-blue-50/50 shadow-xs'
+                    : 'border-slate-200 bg-white hover:border-slate-300'
                     }`}
                 >
                   <div className="flex items-center justify-between mb-1">
@@ -350,10 +348,10 @@ export const TugasPage = () => {
                           {/* Dot Badge */}
                           <div
                             className={`absolute -left-6 top-0.5 w-5 h-5 rounded-full flex items-center justify-center border-2 bg-white text-xs ${isDone
-                                ? 'border-emerald-500 text-emerald-600'
-                                : isInProgress
-                                  ? 'border-blue-500 text-blue-600 animate-pulse'
-                                  : 'border-slate-300 text-slate-400'
+                              ? 'border-emerald-500 text-emerald-600'
+                              : isInProgress
+                                ? 'border-blue-500 text-blue-600 animate-pulse'
+                                : 'border-slate-300 text-slate-400'
                               }`}
                           >
                             {isDone ? (
@@ -498,11 +496,9 @@ export const TugasPage = () => {
                     className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                   >
                     <option value="RBI">RBI</option>
-                    <option value="Dinas Kesehatan">Dinas Kesehatan</option>
-                    <option value="Dinas Perhubungan">Dinas Perhubungan</option>
-                    <option value="Satuan Polisi Pamong Praja">Satpol PP</option>
-                    <option value="Dinas Pekerjaan Umum">Dinas PU</option>
-                    <option value="Sekretariat Daerah">Sekretariat Daerah</option>
+                    <option value="Fastingkom">Fastingkom</option>
+                    <option value="Kepeg">Kepeg</option>
+                    <option value="PM">PM</option>
                   </select>
                 </div>
 

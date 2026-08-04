@@ -338,11 +338,9 @@ export const AbsensiPage = () => {
                 >
                   <option value="ALL">Semua Unit Kerja</option>
                   <option value="RBI">RBI</option>
-                  <option value="Dinas Kesehatan">Dinas Kesehatan</option>
-                  <option value="Dinas Perhubungan">Dinas Perhubungan</option>
-                  <option value="Satuan Polisi Pamong Praja">Satpol PP</option>
-                  <option value="Dinas Pekerjaan Umum">Dinas PU</option>
-                  <option value="Sekretariat Daerah">Sekretariat Daerah</option>
+                  <option value="Fastingkom">Fastingkom</option>
+                  <option value="Kepeg">Kepeg</option>
+                  <option value="PM">PM</option>
                 </select>
               </div>
 
@@ -425,10 +423,9 @@ export const AbsensiPage = () => {
               <div className="space-y-3">
                 {[
                   { unit: 'RBI', pct: 98, total: 12 },
-                  { unit: 'Dinas Kesehatan', pct: 95, total: 24 },
-                  { unit: 'Dinas Perhubungan', pct: 92, total: 18 },
-                  { unit: 'Satuan Polisi Pamong Praja', pct: 89, total: 30 },
-                  { unit: 'Dinas Pekerjaan Umum', pct: 94, total: 15 },
+                  { unit: 'Fastingkom', pct: 95, total: 24 },
+                  { unit: 'Kepeg', pct: 92, total: 18 },
+                  { unit: 'PM', pct: 89, total: 30 },
                 ].map((item, idx) => (
                   <div key={idx} className="space-y-1">
                     <div className="flex justify-between text-xs font-semibold text-slate-700">

@@ -96,7 +96,7 @@ export const Navbar = () => {
             }
           >
             <CalendarCheck className="w-4 h-4" />
-            <span>Presensi & Tukin</span>
+            <span>Presensi</span>
           </NavLink>
 
           <NavLink
