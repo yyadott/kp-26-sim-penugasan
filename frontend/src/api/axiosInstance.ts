@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 export const axiosInstance = axios.create({
-  baseURL: 'http://localhost:3000/api', // Server NestJS
+  baseURL: 'http://localhost:3001/api', // Server NestJS
   headers: {
     'Content-Type': 'application/json',
   },
