@@ -7,12 +7,20 @@ interface PenugasanMapProps {
   locations: LokasiPenugasanPegawai[];
   height?: string;
   selectedUnit?: string;
+  showBoundary?: boolean;
+  defaultCenter?: [number, number];
+  defaultZoom?: number;
+  autoFitBounds?: boolean;
 }
 
 export const PenugasanMap = ({
   locations,
   height = 'h-[500px]',
   selectedUnit = 'ALL',
+  showBoundary = true,
+  defaultCenter = [-2.5, 118],
+  defaultZoom = 5,
+  autoFitBounds = true,
 }: PenugasanMapProps) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -27,10 +35,10 @@ export const PenugasanMap = ({
 
     // Initialize Map if not initialized
     if (!mapInstanceRef.current) {
-      // Default center around Bandung & surrounding areas
+      // Default center configurable (Indonesia overview or specific area)
       const map = L.map(mapContainerRef.current, {
-        center: [-6.9175, 107.6191],
-        zoom: 11,
+        center: defaultCenter,
+        zoom: defaultZoom,
         zoomControl: true,
       });
 
@@ -43,9 +51,13 @@ export const PenugasanMap = ({
 
     const map = mapInstanceRef.current;
 
-    // Clear existing markers
+    // Clear existing markers, polygons, and tooltip overlays
     map.eachLayer((layer) => {
-      if (layer instanceof L.Marker) {
+      if (
+        layer instanceof L.Marker ||
+        layer instanceof L.Polygon ||
+        layer instanceof L.Tooltip
+      ) {
         map.removeLayer(layer);
       }
     });
@@ -54,38 +66,86 @@ export const PenugasanMap = ({
 
     const bounds = L.latLngBounds([]);
 
-    // Add markers
+    // Add markers and optionally boundary polygons
     filteredLocations.forEach((loc) => {
       const colorConfig = UNIT_COLORS[loc.unitKerja] || { hex: '#3b82f6' };
+      const markerColor = '#3b82f6';
 
-      // Custom HTML Marker Icon
+      // ===== BOUNDARY POLYGON (Wikipedia-style red outline) — only if showBoundary is true =====
+      if (showBoundary && loc.batasWilayah && loc.batasWilayah.length > 0) {
+        const polygon = L.polygon(loc.batasWilayah, {
+          color: '#d63027',        // Garis merah (Wikipedia-style)
+          weight: 3,               // Ketebalan garis
+          opacity: 0.9,
+          fillColor: '#d63027',
+          fillOpacity: 0.05,       // Sangat transparan di dalam
+          dashArray: undefined,    // Garis solid
+          interactive: true,
+        }).addTo(map);
+
+        // Extend bounds to include the entire polygon
+        loc.batasWilayah.forEach((coord) => bounds.extend(coord));
+
+        // ===== LABEL TOOLTIP (Wikipedia-style) =====
+        // Label nama lokasi ditampilkan di sisi bawah polygon
+        const labelName = loc.namaLokasi || loc.lokasi;
+
+        // Hitung posisi label — di bagian bawah-tengah polygon
+        const polygonBounds = polygon.getBounds();
+        const labelLat = polygonBounds.getSouth() + (polygonBounds.getNorth() - polygonBounds.getSouth()) * 0.15;
+        const labelLng = polygonBounds.getCenter().lng;
+
+        // Buat tooltip permanen layaknya Wikipedia
+        const tooltipLabel = L.tooltip({
+          permanent: true,
+          direction: 'center',
+          className: 'boundary-label-tooltip',
+          offset: [0, 0],
+          interactive: false,
+        })
+          .setLatLng([labelLat, labelLng])
+          .setContent(`<span class="boundary-label-text">${labelName}</span>`)
+          .addTo(map);
+
+        // Bind popup ke polygon juga
+        polygon.bindPopup(`
+          <div style="font-family: sans-serif; padding: 8px;">
+            <h4 style="font-weight: bold; font-size: 14px; margin: 0 0 4px 0;">${labelName}</h4>
+            <p style="font-size: 12px; color: #666; margin: 0;">${loc.alamatLengkap}</p>
+          </div>
+        `);
+
+        // Keep reference for cleanup
+        (polygon as any)._linkedTooltip = tooltipLabel;
+      }
+
+      // ===== MARKER ICON =====
       const customIcon = L.divIcon({
         className: 'custom-map-marker',
         html: `
           <div style="
-            background-color: ${colorConfig.hex};
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
+            background-color: ${markerColor};
+            width: 30px;
+            height: 40px;
+            border-radius: 15px 15px 18px 18px;
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.25);
             border: 2px solid white;
             font-weight: bold;
-            font-size: 14px;
             transition: transform 0.2s ease-in-out;
           ">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
-              <circle cx="12" cy="10" r="3"/>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="22" viewBox="0 0 24 24" fill="white" stroke="none">
+              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+              <circle cx="12" cy="9" r="3" fill="white" opacity="0.9" />
             </svg>
           </div>
         `,
-        iconSize: [36, 36],
-        iconAnchor: [18, 36],
-        popupAnchor: [0, -36],
+        iconSize: [30, 40],
+        iconAnchor: [15, 40],
+        popupAnchor: [0, -40],
       });
 
       const marker = L.marker(loc.koordinat, { icon: customIcon }).addTo(map);
@@ -127,9 +187,8 @@ export const PenugasanMap = ({
             
             <div class="flex items-center justify-between pt-2 border-t border-slate-100">
               <span class="text-[10px] text-slate-400">Tgl: ${loc.tanggalMulai} s/d ${loc.tanggalSelesai}</span>
-              <span class="px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                loc.status === 'AKTIF' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
-              }">${loc.status}</span>
+              <span class="px-1.5 py-0.5 rounded text-[10px] font-bold ${loc.status === 'AKTIF' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+        }">${loc.status}</span>
             </div>
           </div>
         </div>
@@ -138,15 +197,17 @@ export const PenugasanMap = ({
       marker.bindPopup(popupHTML);
     });
 
-    if (filteredLocations.length > 0) {
-      map.fitBounds(bounds, { padding: [40, 40], maxZoom: 13 });
+    if (filteredLocations.length > 0 && autoFitBounds) {
+      map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
+    } else if (defaultCenter) {
+      map.setView(defaultCenter, defaultZoom);
     }
 
     // Cleanup on unmount
     return () => {
       // Keep map instance alive for re-renders or clean properly if needed
     };
-  }, [locations, selectedUnit]);
+  }, [locations, selectedUnit, showBoundary, defaultCenter, defaultZoom, autoFitBounds]);
 
   return (
     <div className="relative w-full rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-slate-100">

@@ -1,10 +1,8 @@
 export type UnitKerjaType =
-  | 'Dinas Kesehatan'
-  | 'Dinas Perhubungan'
-  | 'Satuan Polisi Pamong Praja'
   | 'RBI'
-  | 'Dinas Pekerjaan Umum'
-  | 'Sekretariat Daerah';
+  | 'Fastingkom'
+  | 'Kepeg'
+  | 'PM';
 
 // Types untuk Pegawai
 export interface Pegawai {
@@ -103,9 +101,12 @@ export interface LokasiPenugasanPegawai {
   pegawai: Pegawai;
   unitKerja: UnitKerjaType;
   lokasi: string;
+  namaLokasi?: string; // Nama lengkap lokasi untuk label boundary (e.g. "Universitas Jenderal Achmad Yani")
   alamatLengkap: string;
   koordinat: [number, number];
+  batasWilayah?: [number, number][]; // Polygon boundary coordinates [[lat, lng], ...] — garis merah ala Wikipedia
   tanggalMulai: string;
   tanggalSelesai: string;
   status: 'AKTIF' | 'MENDATANG' | 'SELESAI';
+  markerType?: 'approvedAjuan';
 }

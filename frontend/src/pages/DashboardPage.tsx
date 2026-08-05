@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { formatDate } from '@/utils/formatter';
 import { useAuth } from '@/hooks/useAuth';
 import { PenugasanMap } from '@/components/map/PenugasanMap';
@@ -8,25 +9,63 @@ import {
   dummyPresensiPribadi,
   UNIT_COLORS,
 } from '@/data/dummyData';
+import type { AjuanSuratTugas, LokasiPenugasanPegawai } from '@/types';
 import { Link } from 'react-router-dom';
 import {
   FileText,
   CalendarCheck,
   MapPin,
   Clock,
-  DollarSign,
   ChevronRight,
   UserCheck,
   Building,
+  X,
+  FileCheck,
+  CheckCircle2,
 } from 'lucide-react';
 
 export const DashboardPage = () => {
   const { user } = useAuth();
   const todayFormatted = formatDate(new Date().toISOString());
 
+  const [selectedAjuan, setSelectedAjuan] = useState<AjuanSuratTugas | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const activeLocations = dummyLokasiPenugasan.filter((l) => l.status === 'AKTIF');
-  const recentAjuan = dummyAjuanSuratTugas.slice(0, 4);
-  const recentPresensi = dummyPresensiPegawaiLain.slice(0, 5);
+  const recentAjuan = dummyAjuanSuratTugas.slice(0, 8);
+  const recentPresensi = dummyPresensiPegawaiLain.slice(0, 8);
+
+  const approvedAjuanMapLocations: LokasiPenugasanPegawai[] = dummyAjuanSuratTugas
+    .filter((item) => item.status === 'SURAT_TERBIT')
+    .map((item) => ({
+      id: `approved-${item.id}`,
+      suratTugasId: item.id,
+      nomorSurat: item.nomorSurat,
+      perihal: item.perihal,
+      pegawai: item.pengaju,
+      unitKerja: item.unitKerja,
+      lokasi: item.lokasiPenugasan,
+      namaLokasi: item.lokasiPenugasan,
+      alamatLengkap: item.lokasiPenugasan,
+      koordinat: item.koordinat,
+      tanggalMulai: item.tanggalMulai,
+      tanggalSelesai: item.tanggalSelesai,
+      status: 'AKTIF',
+      markerType: 'approvedAjuan',
+    }));
+
+  const formatLokasiDisplay = (lokasi: string) => {
+    const cleaned = lokasi.trim();
+    if (!cleaned) return '';
+    if (cleaned.toLowerCase().includes('jawa barat')) return cleaned;
+    if (
+      cleaned.toLowerCase().includes('kota ') ||
+      cleaned.toLowerCase().includes('kabupaten ') ||
+      cleaned.toLowerCase().includes('kecamatan ')
+    ) {
+      return `${cleaned}, Jawa Barat`;
+    }
+    return cleaned;
+  };
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
@@ -38,7 +77,7 @@ export const DashboardPage = () => {
             <span>{user?.unitKerja} • {user?.role}</span>
           </div>
           <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-            Selamat Datang, <span className="text-blue-400">{user?.nama}</span> 👋
+            Selamat Datang, <span className="text-blue-400">{user?.nama}</span>
           </h2>
           <p className="text-slate-300 text-sm max-w-xl">
             Sistem Informasi Manajemen Penugasan, Presensi Pegawai, & Visualisasi Pemetaan Lokasi Terpadu.
@@ -55,8 +94,8 @@ export const DashboardPage = () => {
         <div className="absolute right-40 top-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-xl" />
       </div>
 
-      {/* 4 Key Executive Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      {/* Executive Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:border-blue-300 transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Penugasan Aktif</span>
@@ -95,21 +134,6 @@ export const DashboardPage = () => {
             <span className="text-xs text-slate-500 block mt-0.5">Ajuan Tahap Verifikasi</span>
           </div>
         </div>
-
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:border-indigo-300 transition-all flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Estimasi Tukin</span>
-            <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
-              <DollarSign className="w-5 h-5" />
-            </div>
-          </div>
-          <div className="mt-4">
-            <span className="text-2xl font-black text-indigo-700">
-              Rp {(dummyPresensiPribadi.tukin.tunjanganDiterima / 1000000).toFixed(2)} Jt
-            </span>
-            <span className="text-xs text-slate-500 block mt-0.5">Bulan Juli 2026</span>
-          </div>
-        </div>
       </div>
 
       {/* Map Widget Section */}
@@ -131,88 +155,217 @@ export const DashboardPage = () => {
           </Link>
         </div>
 
-        <PenugasanMap locations={dummyLokasiPenugasan} height="h-[380px]" />
+        <PenugasanMap
+          locations={[...dummyLokasiPenugasan, ...approvedAjuanMapLocations]}
+          height="h-[380px]"
+          showBoundary={false}
+          defaultCenter={[-2.5, 118]}
+          defaultZoom={5}
+          autoFitBounds={false}
+        />
       </div>
 
-      {/* Two Column Layout: Recent Assignments & Attendance Log */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Stacked Tables Layout: Recent Assignments & Attendance Log */}
+      <div className="space-y-6">
         {/* Ajuan Surat Tugas Terbaru */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-            <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
+        <div className="w-full bg-white rounded-2xl border-2 border-slate-300 p-6 shadow-sm space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+            <h3 className="font-bold text-slate-800 text-base flex items-center gap-2">
               <FileText className="w-4 h-4 text-blue-600" />
               Proses Ajuan Surat Tugas Terbaru
             </h3>
-            <Link to="/tugas" className="text-xs font-semibold text-blue-600 hover:underline">
+            <Link to="/tugas" className="text-sm font-semibold text-blue-600 hover:underline">
               Lihat Semua
             </Link>
           </div>
 
-          <div className="space-y-3">
-            {recentAjuan.map((item) => (
-              <div key={item.id} className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/50 space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="font-mono text-[11px] font-bold text-blue-700">{item.nomorSurat}</span>
-                  <span
-                    className={`px-2 py-0.5 rounded text-[10px] font-bold ${item.status === 'SURAT_TERBIT'
-                        ? 'bg-emerald-100 text-emerald-800'
-                        : 'bg-amber-100 text-amber-800'
-                      }`}
+          <div className="overflow-x-auto pb-2">
+            <div className="flex gap-4 min-w-max">
+              {recentAjuan.map((item) => {
+                const unitColor = UNIT_COLORS[item.unitKerja] || { bg: 'bg-slate-100', text: 'text-slate-800' };
+                const statusIsApproved = item.status === 'SURAT_TERBIT';
+                const statusIsRejected = item.status === 'DITOLAK';
+                const statusLabel = statusIsApproved ? 'DiApprove' : statusIsRejected ? 'Ditolak' : 'Diproses';
+                const statusBadgeClass = statusIsApproved
+                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                  : statusIsRejected
+                    ? 'bg-rose-100 text-rose-800 border border-rose-300'
+                    : 'bg-slate-100 text-slate-700 border border-slate-300';
+
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedAjuan(item);
+                      setIsModalOpen(true);
+                    }}
+                    className="min-w-[760px] shrink-0 rounded-3xl border border-slate-200 bg-slate-50 p-6 shadow-sm text-left transition hover:border-blue-300 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-300"
                   >
-                    {item.status.replace('_', ' ')}
-                  </span>
-                </div>
-                <h4 className="font-bold text-slate-800 text-xs line-clamp-1">{item.perihal}</h4>
-                <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1">
-                  <span>Unit: {item.unitKerja}</span>
-                  <span className="flex items-center gap-1">
-                    <MapPin className="w-3 h-3 text-rose-500" />
-                    {item.lokasiPenugasan}
-                  </span>
-                </div>
-              </div>
-            ))}
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="font-mono text-xs font-bold text-blue-700 whitespace-nowrap">{item.nomorSurat}</span>
+                      <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold ${statusBadgeClass}`}>
+                        {statusIsApproved ? (
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        ) : statusIsRejected ? (
+                          <X className="w-3.5 h-3.5 text-rose-600" />
+                        ) : (
+                          <Clock className="w-3.5 h-3.5 text-slate-500" />
+                        )}
+                        {statusLabel}
+                      </span>
+                    </div>
+
+                    <div className="mt-4">
+                      <h4 className="text-base font-semibold text-slate-900 whitespace-nowrap overflow-x-auto">{item.perihal}</h4>
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap gap-3 items-center">
+                      <span className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-bold ${unitColor.bg} ${unitColor.text}`}>
+                        {item.unitKerja}
+                      </span>
+                      <span className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 whitespace-nowrap">
+                        <MapPin className="w-4 h-4 text-rose-500 shrink-0" />
+                        {formatLokasiDisplay(item.lokasiPenugasan)}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 
         {/* Ringkasan Presensi Pegawai Hari Ini */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-            <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
+        <div className="w-full bg-white rounded-2xl border-2 border-slate-300 p-6 shadow-sm space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+            <h3 className="font-bold text-slate-800 text-base flex items-center gap-2">
               <UserCheck className="w-4 h-4 text-emerald-600" />
               Ringkasan Presensi Pegawai Hari Ini
             </h3>
-            <Link to="/absensi" className="text-xs font-semibold text-blue-600 hover:underline">
+            <Link to="/absensi" className="text-sm font-semibold text-blue-600 hover:underline">
               Lihat Detail
             </Link>
           </div>
 
-          <div className="space-y-3">
-            {recentPresensi.map((p) => {
-              const unitColor = UNIT_COLORS[p.unitKerja] || { bg: 'bg-slate-100', text: 'text-slate-800' };
+          <div className="overflow-x-auto pb-2">
+            <div className="flex gap-4 min-w-max">
+              {recentPresensi.map((p) => {
+                const unitColor = UNIT_COLORS[p.unitKerja] || { bg: 'bg-slate-100', text: 'text-slate-800' };
 
-              return (
-                <div key={p.id} className="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-slate-50/50">
-                  <div className="space-y-0.5">
-                    <h4 className="font-bold text-slate-900 text-xs">{p.nama}</h4>
-                    <div className="flex items-center gap-2">
-                      <span className={`px-2 py-0.2 rounded text-[10px] font-semibold ${unitColor.bg} ${unitColor.text}`}>
-                        {p.unitKerja}
-                      </span>
-                      <span className="text-[10px] text-slate-400 font-mono">NIP: {p.nip}</span>
+                return (
+                  <div key={p.id} className="w-[260px] shrink-0 rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3 shadow-sm">
+                    <div className="space-y-1">
+                      <h4 className="font-bold text-slate-900 text-sm">{p.nama}</h4>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${unitColor.bg} ${unitColor.text}`}>
+                          {p.unitKerja}
+                        </span>
+                        <span className="text-xs text-slate-400 font-mono">NIP: {p.nip}</span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 text-sm">
+                      <div className="rounded-lg bg-white border border-slate-200 p-2">
+                        <div className="text-[11px] font-semibold uppercase text-slate-500">Masuk</div>
+                        <div className="font-mono font-bold text-emerald-700">{p.jamMasuk}</div>
+                      </div>
+                      <div className="rounded-lg bg-white border border-slate-200 p-2">
+                        <div className="text-[11px] font-semibold uppercase text-slate-500">Keluar</div>
+                        <div className="font-mono text-slate-700">{p.jamKeluar || '-'}</div>
+                      </div>
                     </div>
                   </div>
-
-                  <div className="text-right font-mono">
-                    <span className="text-xs font-bold text-emerald-700 block">Masuk: {p.jamMasuk}</span>
-                    <span className="text-[10px] text-slate-500">{p.lokasiPresensiMasuk}</span>
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
+
+      {isModalOpen && selectedAjuan && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 space-y-5 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2">
+                <FileCheck className="w-5 h-5 text-blue-600" />
+                Detail Ajuan Surat Tugas
+              </h3>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="bg-blue-50/70 p-4 rounded-xl border border-blue-200 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-xs font-bold text-blue-700">{selectedAjuan.nomorSurat}</span>
+                <span className="text-xs text-slate-500">{selectedAjuan.unitKerja}</span>
+              </div>
+              <h4 className="font-bold text-slate-900 text-sm">{selectedAjuan.perihal}</h4>
+              <p className="text-xs text-slate-600">{selectedAjuan.deskripsi}</p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="rounded-2xl border border-slate-200 p-4 bg-slate-50">
+                <div className="text-[11px] font-semibold uppercase text-slate-500 mb-2">Tanggal Penugasan</div>
+                <div className="text-sm font-semibold text-slate-800">{selectedAjuan.tanggalMulai} s/d {selectedAjuan.tanggalSelesai}</div>
+              </div>
+              <div className="rounded-2xl border border-slate-200 p-4 bg-slate-50">
+                <div className="text-[11px] font-semibold uppercase text-slate-500 mb-2">Lokasi</div>
+                <div className="text-sm font-semibold text-slate-800">{formatLokasiDisplay(selectedAjuan.lokasiPenugasan)}</div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="rounded-2xl border border-slate-200 p-4 bg-slate-50">
+                <div className="text-[11px] font-semibold uppercase text-slate-500 mb-3">Pegawai Ditugaskan</div>
+                <div className="space-y-2">
+                  {selectedAjuan.pegawaiDitugaskan.map((p) => (
+                    <div key={p.id} className="rounded-xl bg-white border border-slate-200 p-3 text-sm font-medium text-slate-800">
+                      {p.nama} • {p.jabatan}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 p-4 bg-slate-50">
+                <div className="text-[11px] font-semibold uppercase text-slate-500 mb-3">Riwayat Workflow</div>
+                <div className="space-y-3">
+                  {selectedAjuan.workflow.map((w, idx) => (
+                    <div key={idx} className="flex items-start gap-3 p-3 rounded-xl border border-slate-200 bg-white">
+                      {w.status === 'COMPLETED' ? (
+                        <CheckCircle2 className="w-5 h-5 text-emerald-600 mt-0.5 shrink-0" />
+                      ) : (
+                        <div className="w-5 h-5 rounded-full border-2 border-slate-300 mt-0.5 shrink-0" />
+                      )}
+                      <div className="w-full space-y-1">
+                        <div className="flex items-center justify-between text-xs font-bold text-slate-800">
+                          <span>{w.label}</span>
+                          <span className="text-slate-400 font-normal">{w.tanggal || 'Menunggu'}</span>
+                        </div>
+                        <p className="text-xs text-slate-600">Aktor: {w.actor}</p>
+                        {w.catatan && <p className="text-xs text-slate-500 bg-slate-50 p-2 rounded border border-slate-200">{w.catatan}</p>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
