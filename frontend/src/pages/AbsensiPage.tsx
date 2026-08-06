@@ -10,7 +10,6 @@ import {
   User,
   Users,
   Clock,
-  DollarSign,
   CheckCircle2,
   Search,
   Filter,
@@ -20,6 +19,16 @@ import {
   ChevronRight,
   ArrowUpRight,
 } from 'lucide-react';
+
+type AttendanceStatus = 'HADIR' | 'TERLAMBAT' | 'IZIN' | 'SAKIT' | 'ALFA';
+
+type EmployeeAttendanceRecap = {
+  nama: string;
+  nip: string;
+  unitKerja: string;
+  total: number;
+  counts: Record<AttendanceStatus, number>;
+};
 
 export const AbsensiPage = () => {
   const [activeTab, setActiveTab] = useState<'PRIBADI' | 'PEGAWAI_LAIN'>('PRIBADI');
@@ -59,6 +68,48 @@ export const AbsensiPage = () => {
     return matchesSearch && matchesUnit && matchesStatus;
   });
 
+  const employeeAttendanceRecaps = Object.values(
+    dummyPresensiPegawaiLain.reduce<Record<string, EmployeeAttendanceRecap>>((recaps, item) => {
+      const current = recaps[item.pegawaiId] || {
+        nama: item.nama,
+        nip: item.nip,
+        unitKerja: item.unitKerja,
+        total: 0,
+        counts: { HADIR: 0, TERLAMBAT: 0, IZIN: 0, SAKIT: 0, ALFA: 0 },
+      };
+      const status = item.status as AttendanceStatus;
+      current.total += 1;
+      current.counts[status] += 1;
+      recaps[item.pegawaiId] = current;
+      return recaps;
+    }, {}),
+  );
+
+  const unitAttendanceRecaps = Object.values(
+    dummyPresensiPegawaiLain.reduce<Record<string, EmployeeAttendanceRecap>>((recaps, item) => {
+      const current = recaps[item.unitKerja] || {
+        nama: item.unitKerja,
+        nip: '',
+        unitKerja: item.unitKerja,
+        total: 0,
+        counts: { HADIR: 0, TERLAMBAT: 0, IZIN: 0, SAKIT: 0, ALFA: 0 },
+      };
+      const status = item.status as AttendanceStatus;
+      current.total += 1;
+      current.counts[status] += 1;
+      recaps[item.unitKerja] = current;
+      return recaps;
+    }, {}),
+  );
+
+  const chartColors: Record<AttendanceStatus, string> = {
+    HADIR: '#10b981',
+    TERLAMBAT: '#f59e0b',
+    IZIN: '#3b82f6',
+    SAKIT: '#8b5cf6',
+    ALFA: '#ef4444',
+  };
+
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
       {/* Header Banner */}
@@ -66,10 +117,10 @@ export const AbsensiPage = () => {
         <div>
           <div className="flex items-center gap-2">
             <CalendarCheck className="w-7 h-7 text-blue-600" />
-            <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Manajemen Presensi & Tunjangan Kinerja</h2>
+            <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Manajemen Presensi Pegawai</h2>
           </div>
           <p className="text-slate-500 text-sm mt-1">
-            Pantau rekap presensi pribadi, kalkulasi potongan Tukin, serta monitoring kalender dan log presensi pegawai instansi.
+            Pantau rekap presensi pribadi serta monitoring kalender dan log presensi pegawai instansi.
           </p>
         </div>
 
@@ -192,77 +243,6 @@ export const AbsensiPage = () => {
             </div>
           </div>
 
-          {/* HITUNGAN TUNJANGAN KINERJA (TUKIN) CARD */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
-              <div>
-                <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2">
-                  <DollarSign className="w-5 h-5 text-emerald-600" />
-                  Kalkulasi Hitungan Tunjangan Kinerja (Tukin)
-                </h3>
-                <p className="text-xs text-slate-500">
-                  Rincian tunjangan dasar, pemotongan kedisiplinan presensi, dan estimasi Tukin diterima bulan ini.
-                </p>
-              </div>
-              <span className="px-3 py-1 bg-emerald-50 text-emerald-800 text-xs font-bold rounded-lg border border-emerald-200 w-fit">
-                Periode: {dummyPresensiPribadi.tukin.periodeBulan}
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Formula & Summary */}
-              <div className="bg-slate-50 p-5 rounded-xl border border-slate-200 space-y-3">
-                <div className="flex justify-between items-center text-xs">
-                  <span className="text-slate-600 font-medium">Tunjangan Dasar (100%):</span>
-                  <span className="font-mono font-bold text-slate-800">
-                    Rp {dummyPresensiPribadi.tukin.tunjanganDasar.toLocaleString('id-ID')}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center text-xs text-rose-600 font-medium">
-                  <span>Total Potongan ({dummyPresensiPribadi.tukin.totalPotonganPersen}%):</span>
-                  <span className="font-mono font-bold">
-                    - Rp {dummyPresensiPribadi.tukin.totalPotonganNominal.toLocaleString('id-ID')}
-                  </span>
-                </div>
-                <div className="pt-3 border-t border-slate-200 flex justify-between items-center">
-                  <span className="font-bold text-sm text-slate-800">Estimasi Tukin Diterima:</span>
-                  <span className="font-mono font-extrabold text-base text-emerald-600">
-                    Rp {dummyPresensiPribadi.tukin.tunjanganDiterima.toLocaleString('id-ID')}
-                  </span>
-                </div>
-              </div>
-
-              {/* Tabel Rincian Potongan */}
-              <div className="md:col-span-2 border border-slate-200 rounded-xl overflow-hidden">
-                <div className="bg-slate-100 px-4 py-2.5 text-xs font-bold text-slate-700">
-                  Rincian Catatan Pemotongan Tukin Bulan Ini:
-                </div>
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 text-slate-500 font-medium border-b border-slate-200">
-                    <tr>
-                      <th className="px-4 py-2">Tanggal</th>
-                      <th className="px-4 py-2">Keterangan / Alasan Indisipliner</th>
-                      <th className="px-4 py-2 text-right">Potongan (%)</th>
-                      <th className="px-4 py-2 text-right">Nominal Potongan</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {dummyPresensiPribadi.tukin.rincianPotongan.map((r, idx) => (
-                      <tr key={idx} className="hover:bg-slate-50">
-                        <td className="px-4 py-2.5 font-mono text-slate-700">{r.tanggal}</td>
-                        <td className="px-4 py-2.5 text-slate-800 font-medium">{r.alasan}</td>
-                        <td className="px-4 py-2.5 text-right text-rose-600 font-bold">{r.persenPotongan}%</td>
-                        <td className="px-4 py-2.5 text-right font-mono text-slate-700">
-                          - Rp {r.nominalPotongan.toLocaleString('id-ID')}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-
           {/* DETAIL RIWAYAT PRESENSI PRIBADI */}
           <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
             <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2">
@@ -338,11 +318,9 @@ export const AbsensiPage = () => {
                 >
                   <option value="ALL">Semua Unit Kerja</option>
                   <option value="RBI">RBI</option>
-                  <option value="Dinas Kesehatan">Dinas Kesehatan</option>
-                  <option value="Dinas Perhubungan">Dinas Perhubungan</option>
-                  <option value="Satuan Polisi Pamong Praja">Satpol PP</option>
-                  <option value="Dinas Pekerjaan Umum">Dinas PU</option>
-                  <option value="Sekretariat Daerah">Sekretariat Daerah</option>
+                  <option value="Fastingkom">Fastingkom</option>
+                  <option value="Kepeg">Kepeg</option>
+                  <option value="PM">PM</option>
                 </select>
               </div>
 
@@ -389,7 +367,7 @@ export const AbsensiPage = () => {
               <div className="grid grid-cols-7 gap-1.5 text-xs font-mono">
                 {Array.from({ length: 31 }).map((_, i) => {
                   const dayNum = i + 1;
-                  const isWeekend = (dayNum % 7 === 5 || dayNum % 7 === 6);
+                  const isWeekend = [0, 6].includes(new Date(2026, 6, dayNum).getDay());
                   const isToday = dayNum === 28;
                   const isLateDay = dayNum === 15;
 
@@ -400,8 +378,8 @@ export const AbsensiPage = () => {
                         ? 'bg-blue-600 text-white font-extrabold shadow-sm'
                         : isLateDay
                           ? 'bg-amber-100 text-amber-900 border border-amber-300 font-bold'
-                          : isWeekend
-                            ? 'bg-slate-50 text-slate-300'
+                            : isWeekend
+                              ? 'bg-slate-100 text-slate-300 opacity-60 cursor-not-allowed'
                             : 'bg-emerald-50 text-emerald-800 border border-emerald-100 font-medium'
                         }`}
                     >
@@ -413,38 +391,193 @@ export const AbsensiPage = () => {
 
               {/* Legend Badges */}
               <div className="flex items-center justify-around text-[10px] text-slate-500 pt-2 border-t border-slate-100">
-                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500" /> Hadir 100%</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500" /> Hadir</span>
                 <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500" /> Terlambat</span>
                 <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500" /> Hari Ini</span>
               </div>
             </div>
 
-            {/* Rekap Absen per Unit Kerja */}
-            <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-4">
-              <h4 className="font-bold text-slate-800 text-sm">Rekap Tingkat Kehadiran Presensi per Unit Kerja</h4>
-              <div className="space-y-3">
-                {[
-                  { unit: 'RBI', pct: 98, total: 12 },
-                  { unit: 'Dinas Kesehatan', pct: 95, total: 24 },
-                  { unit: 'Dinas Perhubungan', pct: 92, total: 18 },
-                  { unit: 'Satuan Polisi Pamong Praja', pct: 89, total: 30 },
-                  { unit: 'Dinas Pekerjaan Umum', pct: 94, total: 15 },
-                ].map((item, idx) => (
-                  <div key={idx} className="space-y-1">
-                    <div className="flex justify-between text-xs font-semibold text-slate-700">
-                      <span>{item.unit} ({item.total} Personel)</span>
-                      <span className="text-blue-700 font-bold">{item.pct}% Hadir</span>
-                    </div>
-                    <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-blue-500 to-emerald-500 rounded-full"
-                        style={{ width: `${item.pct}%` }}
-                      />
+              <div className="hidden">
+              {/* Rekap Absen per Pegawai dalam bentuk pie chart */}
+              <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-4">
+                <div>
+                  <h4 className="font-bold text-slate-800 text-sm">Rekap Presensi Tiap Pegawai</h4>
+                  <p className="mt-1 text-xs text-slate-500">Distribusi status presensi berdasarkan unit kerja dan pegawai.</p>
+                </div>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  {employeeAttendanceRecaps.map((employee) => {
+                    let offset = 0;
+                    const statuses = (Object.keys(chartColors) as AttendanceStatus[]).filter(
+                      (status) => employee.counts[status] > 0,
+                    );
+                    const hadirPercent = Math.round((employee.counts.HADIR / employee.total) * 100);
+
+                    return (
+                      <div key={employee.nip} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                        <div className="mb-3">
+                          <p className="text-sm font-bold text-slate-800">{employee.nama}</p>
+                          <p className="text-[11px] text-slate-500">NIP: {employee.nip} · Unit: {employee.unitKerja}</p>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <div className="relative h-28 w-28 shrink-0">
+                            <svg viewBox="0 0 42 42" className="h-full w-full -rotate-90" role="img" aria-label={`Pie chart presensi ${employee.nama}`}>
+                              <circle cx="21" cy="21" r="15.9155" fill="transparent" stroke="#e2e8f0" strokeWidth="7" />
+                              {statuses.map((status) => {
+                                const percent = (employee.counts[status] / employee.total) * 100;
+                                const segment = (
+                                  <circle
+                                    key={status}
+                                    cx="21"
+                                    cy="21"
+                                    r="15.9155"
+                                    fill="transparent"
+                                    stroke={chartColors[status]}
+                                    strokeWidth="7"
+                                    strokeDasharray={`${percent} ${100 - percent}`}
+                                    strokeDashoffset={-offset}
+                                  />
+                                );
+                                offset += percent;
+                                return segment;
+                              })}
+                            </svg>
+                            <div className="absolute inset-0 flex flex-col items-center justify-center">
+                              <span className="text-lg font-extrabold text-slate-800">{hadirPercent}%</span>
+                              <span className="text-[10px] text-slate-500">Hadir</span>
+                            </div>
+                          </div>
+                          <div className="space-y-1.5 text-[11px]">
+                            {statuses.map((status) => (
+                              <div key={status} className="flex items-center justify-between gap-3 text-slate-600">
+                                <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full" style={{ backgroundColor: chartColors[status] }} />{status}</span>
+                                <span className="font-bold text-slate-800">{employee.counts[status]}</span>
+                              </div>
+                            ))}
+                            <div className="border-t border-slate-200 pt-1 font-semibold text-slate-500">Total: {employee.total} hari</div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              </div>
+
+              {/* Rekap keseluruhan seluruh unit kerja dalam satu pie chart */}
+              <div className="lg:col-span-2 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs space-y-4">
+                <div>
+                  <h4 className="font-bold text-slate-800 text-sm">Rekap Presensi Seluruh Unit Kerja</h4>
+                  <p className="mt-1 text-xs text-slate-500">Perbandingan jumlah data presensi antar-unit kerja dalam satu diagram.</p>
+                </div>
+                <div className="flex flex-col items-center gap-5 sm:flex-row sm:justify-center">
+                  <div className="relative h-44 w-44 shrink-0">
+                    <svg viewBox="0 0 42 42" className="h-full w-full -rotate-90" role="img" aria-label="Pie chart rekap presensi seluruh unit kerja">
+                      <circle cx="21" cy="21" r="15.9155" fill="transparent" stroke="#e2e8f0" strokeWidth="7" />
+                      {(() => {
+                        let offset = 0;
+                        const totalPresensi = unitAttendanceRecaps.reduce((total, unit) => total + unit.total, 0);
+                        return unitAttendanceRecaps.map((unit) => {
+                          const percent = (unit.total / totalPresensi) * 100;
+                          const color = UNIT_COLORS[unit.unitKerja]?.hex || '#64748b';
+                          const segment = (
+                            <circle
+                              key={unit.unitKerja}
+                              cx="21"
+                              cy="21"
+                              r="15.9155"
+                              fill="transparent"
+                              stroke={color}
+                              strokeWidth="7"
+                              strokeDasharray={`${percent} ${100 - percent}`}
+                              strokeDashoffset={-offset}
+                            />
+                          );
+                          offset += percent;
+                          return segment;
+                        });
+                      })()}
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <span className="text-xl font-extrabold text-slate-800">{unitAttendanceRecaps.reduce((total, unit) => total + unit.total, 0)}</span>
+                      <span className="text-[10px] text-slate-500">Total Presensi</span>
                     </div>
                   </div>
-                ))}
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs">
+                    {unitAttendanceRecaps.map((unit) => {
+                      const totalPresensi = unitAttendanceRecaps.reduce((total, recap) => total + recap.total, 0);
+                      const percent = Math.round((unit.total / totalPresensi) * 100);
+                      return (
+                        <div key={unit.unitKerja} className="flex items-center gap-2 text-slate-600">
+                          <span className="h-3 w-3 rounded-full" style={{ backgroundColor: UNIT_COLORS[unit.unitKerja]?.hex || '#64748b' }} />
+                          <span>{unit.unitKerja}: <strong className="text-slate-800">{percent}%</strong></span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
-            </div>
+
+              {/* Rekap Absen per Unit Kerja dalam bentuk pie chart */}
+              <div className="lg:col-span-2 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs space-y-4">
+                <div>
+                  <h4 className="font-bold text-slate-800 text-sm">Rekap Presensi Keseluruhan per Unit Kerja</h4>
+                  <p className="mt-1 text-xs text-slate-500">Distribusi status presensi seluruh pegawai pada masing-masing unit.</p>
+                </div>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                  {unitAttendanceRecaps.map((unit) => {
+                    let offset = 0;
+                    const statuses = (Object.keys(chartColors) as AttendanceStatus[]).filter(
+                      (status) => unit.counts[status] > 0,
+                    );
+                    const hadirPercent = Math.round((unit.counts.HADIR / unit.total) * 100);
+
+                    return (
+                      <div key={unit.unitKerja} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                        <p className="mb-3 text-sm font-bold text-slate-800">Unit {unit.unitKerja}</p>
+                        <div className="flex items-center gap-3">
+                          <div className="relative h-24 w-24 shrink-0">
+                            <svg viewBox="0 0 42 42" className="h-full w-full -rotate-90" role="img" aria-label={`Pie chart presensi unit ${unit.unitKerja}`}>
+                              <circle cx="21" cy="21" r="15.9155" fill="transparent" stroke="#e2e8f0" strokeWidth="7" />
+                              {statuses.map((status) => {
+                                const percent = (unit.counts[status] / unit.total) * 100;
+                                const segment = (
+                                  <circle
+                                    key={status}
+                                    cx="21"
+                                    cy="21"
+                                    r="15.9155"
+                                    fill="transparent"
+                                    stroke={chartColors[status]}
+                                    strokeWidth="7"
+                                    strokeDasharray={`${percent} ${100 - percent}`}
+                                    strokeDashoffset={-offset}
+                                  />
+                                );
+                                offset += percent;
+                                return segment;
+                              })}
+                            </svg>
+                            <div className="absolute inset-0 flex flex-col items-center justify-center">
+                              <span className="text-base font-extrabold text-slate-800">{hadirPercent}%</span>
+                              <span className="text-[10px] text-slate-500">Hadir</span>
+                            </div>
+                          </div>
+                          <div className="min-w-0 flex-1 space-y-1 text-[11px]">
+                            {statuses.map((status) => (
+                              <div key={status} className="flex items-center justify-between gap-2 text-slate-600">
+                                <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full" style={{ backgroundColor: chartColors[status] }} />{status}</span>
+                                <span className="font-bold text-slate-800">{unit.counts[status]}</span>
+                              </div>
+                            ))}
+                            <div className="border-t border-slate-200 pt-1 font-semibold text-slate-500">Total: {unit.total}</div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
           </div>
 
           {/* TABEL PRESEBSI PEGAWAI LAIN (PERSIS RUJUKAN USER) */}

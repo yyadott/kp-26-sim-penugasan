@@ -18,7 +18,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const stored = localStorage.getItem(AUTH_STORAGE_KEY);
       if (stored) {
-        return JSON.parse(stored);
+        const parsed = JSON.parse(stored);
+        if (!parsed.fotoAvatar || parsed.fotoAvatar.includes('unsplash') || parsed.id === 'peg-01') {
+          parsed.fotoAvatar = `${import.meta.env.BASE_URL}pp-navbar-2.jpg`;
+        }
+        return parsed;
       }
     } catch {
       // fallback
@@ -31,7 +35,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = (usernameOrNip: string, _password: string) => {
     const cleanInput = usernameOrNip.trim().toLowerCase();
-    
+
     // Find matching user by NIP, email prefix, or name
     const foundUser = dummyPegawaiList.find((p) => {
       const nipMatch = p.nip.toLowerCase() === cleanInput;
