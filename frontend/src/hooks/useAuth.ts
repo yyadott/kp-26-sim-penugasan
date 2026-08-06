@@ -1,7 +1,6 @@
 import { useContext } from 'react';
 import { AuthContext } from '@/context/AuthContext';
 import type { AuthContextType } from '@/context/AuthContext';
-import { dummyPegawaiList } from '@/data/dummyData';
 
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
@@ -9,9 +8,9 @@ export const useAuth = (): AuthContextType => {
   if (!context) {
     // Fallback if rendered outside AuthProvider
     return {
-      user: dummyPegawaiList[0],
-      isAuthenticated: true,
-      login: () => ({ success: true }),
+      user: null,
+      isAuthenticated: false,
+      login: async () => ({ success: false }),
       logout: () => {},
     };
   }

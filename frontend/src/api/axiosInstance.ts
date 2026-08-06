@@ -1,7 +1,9 @@
 import axios from 'axios';
 
 export const axiosInstance = axios.create({
-  baseURL: 'http://localhost:3001/api', // Server NestJS
+  // NestJS uses port 3000 by default (see backend/src/main.ts).
+  // VITE_API_URL can be set for staging/production deployments.
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000/api',
   headers: {
     'Content-Type': 'application/json',
   },

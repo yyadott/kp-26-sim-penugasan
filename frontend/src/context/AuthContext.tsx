@@ -1,11 +1,11 @@
 import React, { createContext, useState, useEffect } from 'react';
 import type { Pegawai } from '@/types';
-import { dummyPegawaiList } from '@/data/dummyData';
+import { simPenugasanApi } from '@/api/simPenugasanApi';
 
 export interface AuthContextType {
   user: Pegawai | null;
   isAuthenticated: boolean;
-  login: (usernameOrNip: string, password: string) => { success: boolean; message?: string };
+  login: (usernameOrNip: string, password: string) => Promise<{ success: boolean; message?: string }>;
   logout: () => void;
 }
 
@@ -27,41 +27,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch {
       // fallback
     }
-    // Default logged in as Taryadi for initial view
-    return dummyPegawaiList[0];
+    return null;
   });
 
   const isAuthenticated = !!user;
 
-  const login = (usernameOrNip: string, _password: string) => {
-    const cleanInput = usernameOrNip.trim().toLowerCase();
-
-    // Find matching user by NIP, email prefix, or name
-    const foundUser = dummyPegawaiList.find((p) => {
-      const nipMatch = p.nip.toLowerCase() === cleanInput;
-      const emailPrefixMatch = p.email?.toLowerCase().split('@')[0] === cleanInput;
-      const nameMatch = p.nama.toLowerCase().includes(cleanInput);
-      return nipMatch || emailPrefixMatch || nameMatch;
-    });
-
-    if (foundUser) {
-      setUser(foundUser);
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(foundUser));
+  const login = async (usernameOrNip: string, password: string) => {
+    try {
+      const { token, user } = await simPenugasanApi.login(usernameOrNip, password);
+      setUser(user);
+      localStorage.setItem('token', token);
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
       return { success: true };
-    } else {
-      // Fallback: if username is 'admin' or 'taryadi' or any input, log in first user
-      if (cleanInput === 'admin' || cleanInput === 'taryadi' || cleanInput === 'user' || cleanInput === '') {
-        const defaultUser = dummyPegawaiList[0];
-        setUser(defaultUser);
-        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(defaultUser));
-        return { success: true };
-      }
-      return { success: false, message: 'Username / NIP tidak ditemukan dalam database.' };
+    } catch (error: any) {
+      return { success: false, message: error.response?.data?.message || 'Tidak dapat terhubung ke server.' };
     }
   };
 
   const logout = () => {
     setUser(null);
+    localStorage.removeItem('token');
     localStorage.removeItem(AUTH_STORAGE_KEY);
   };
 

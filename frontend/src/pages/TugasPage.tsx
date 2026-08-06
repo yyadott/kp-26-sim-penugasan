@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { dummyAjuanSuratTugas, dummyPegawaiList, UNIT_COLORS } from '@/data/dummyData';
+import { simPenugasanApi } from '@/api/simPenugasanApi';
 import type { AjuanSuratTugas, UnitKerjaType } from '@/types';
 import {
   FileText,
@@ -40,6 +41,12 @@ export const TugasPage = () => {
     deskripsi: '',
   });
 
+  useEffect(() => {
+    simPenugasanApi.getTugas().then(setAjuanList).catch(() => {
+      // Data contoh tetap ditampilkan bila backend belum dijalankan.
+    });
+  }, []);
+
   // Filter list
   const filteredAjuan = ajuanList.filter((item) => {
     const matchesSearch =
@@ -62,7 +69,7 @@ export const TugasPage = () => {
     return `${result}, Jawa Barat`;
   };
 
-  const handleCreateDraft = (e: React.FormEvent) => {
+  const handleCreateDraft = async (e: React.FormEvent) => {
     e.preventDefault();
     const assignedPegawai = dummyPegawaiList.find((p) => p.id === formData.pegawaiId) || dummyPegawaiList[0];
     const newId = `st-00${ajuanList.length + 1}`;
@@ -102,7 +109,12 @@ export const TugasPage = () => {
       ],
     };
 
-    setAjuanList([newAjuan, ...ajuanList]);
+    try {
+      const savedAjuan = await simPenugasanApi.createTugas(newAjuan);
+      setAjuanList((current) => [savedAjuan, ...current]);
+    } catch {
+      setAjuanList((current) => [newAjuan, ...current]);
+    }
     setIsFormModalOpen(false);
     setFormData({
       perihal: '',

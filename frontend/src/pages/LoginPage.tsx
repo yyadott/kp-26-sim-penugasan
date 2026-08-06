@@ -35,7 +35,7 @@ export const LoginPage: React.FC = () => {
     }
   }, [isAuthenticated, successMsg]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
     setSuccessMsg(null);
@@ -62,19 +62,15 @@ export const LoginPage: React.FC = () => {
 
     // 3. Proses Login
     setIsLoading(true);
-    setTimeout(() => {
-      const res = login(username, password);
-      setIsLoading(false);
+    const res = await login(username, password);
+    setIsLoading(false);
 
-      if (res.success) {
-        setSuccessMsg('Otentikasi Berhasil! Mengalihkan ke Dashboard...');
-        setTimeout(() => {
-          navigate('/');
-        }, 1000);
-      } else {
-        setErrorMsg(res.message || 'Gagal login. Periksa kembali kredensial Anda.');
-      }
-    }, 600);
+    if (res.success) {
+      setSuccessMsg('Otentikasi Berhasil! Mengalihkan ke Dashboard...');
+      setTimeout(() => navigate('/'), 700);
+    } else {
+      setErrorMsg(res.message || 'Gagal login. Periksa kembali kredensial Anda.');
+    }
   };
 
   const fillDemoAccount = () => {
