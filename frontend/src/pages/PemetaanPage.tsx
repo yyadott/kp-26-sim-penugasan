@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { PenugasanMap } from '@/components/map/PenugasanMap';
-import { dummyAjuanSuratTugas, dummyLokasiPenugasan, UNIT_COLORS } from '@/data/dummyData';
+import { dummyAjuanSuratTugas, UNIT_COLORS } from '@/data/dummyData';
 import type { LokasiPenugasanPegawai } from '@/types';
 import { MapPin, Search, Layers, Navigation, Filter } from 'lucide-react';
 
@@ -9,28 +9,23 @@ export const PemetaanPage = () => {
   const [isUnitFilterOpen, setIsUnitFilterOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Samakan sumber marker dengan Dashboard: lokasi pemetaan + ajuan yang sudah terbit.
-  const mapLocations: LokasiPenugasanPegawai[] = [
-    ...dummyLokasiPenugasan,
-    ...dummyAjuanSuratTugas
-      .filter((item) => item.status === 'SURAT_TERBIT')
-      .map((item) => ({
+  // Satu sumber data dengan tabel Penugasan dan Dashboard.
+  const mapLocations: LokasiPenugasanPegawai[] = dummyAjuanSuratTugas.map((item) => ({
         id: `approved-${item.id}`,
         suratTugasId: item.id,
         nomorSurat: item.nomorSurat,
         perihal: item.perihal,
-        pegawai: item.pengaju,
+        pegawai: item.pegawaiDitugaskan[0] || item.pengaju,
         unitKerja: item.unitKerja,
         lokasi: item.lokasiPenugasan,
-        namaLokasi: item.lokasiPenugasan,
-        alamatLengkap: item.lokasiPenugasan,
+        namaLokasi: item.lokasiSpesifik || item.lokasiPenugasan,
+        alamatLengkap: [item.lokasiSpesifik, item.lokasiPenugasan].filter(Boolean).join(', '),
         koordinat: item.koordinat,
         tanggalMulai: item.tanggalMulai,
         tanggalSelesai: item.tanggalSelesai,
-        status: 'AKTIF' as const,
+        status: item.status === 'SURAT_TERBIT' ? 'AKTIF' : item.status === 'DITOLAK' ? 'SELESAI' : 'MENDATANG',
         markerType: 'approvedAjuan' as const,
-      })),
-  ];
+      }));
 
   const filteredLocations = mapLocations.filter((loc) => {
     const matchesUnit = selectedUnits.length === 0 || selectedUnits.includes(loc.unitKerja);
@@ -42,8 +37,14 @@ export const PemetaanPage = () => {
     return matchesUnit && matchesSearch;
   });
 
-  const totalAktif = mapLocations.filter((l) => l.status === 'AKTIF').length;
-  const totalMendatang = mapLocations.filter((l) => l.status === 'MENDATANG').length;
+  const totalOrangAktif = dummyAjuanSuratTugas
+    .filter((item) => item.status === 'SURAT_TERBIT')
+    .reduce((total, item) => total + item.pegawaiDitugaskan.length, 0);
+  const totalOrangMendatang = dummyAjuanSuratTugas
+    .filter((item) => item.status !== 'SURAT_TERBIT' && item.status !== 'DITOLAK')
+    .reduce((total, item) => total + item.pegawaiDitugaskan.length, 0);
+  const totalOrangDitugaskan = dummyAjuanSuratTugas
+    .reduce((total, item) => total + item.pegawaiDitugaskan.length, 0);
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
@@ -63,18 +64,22 @@ export const PemetaanPage = () => {
         <div className="flex items-center gap-3">
           <div className="bg-emerald-50 border border-emerald-200 px-4 py-2 rounded-xl text-center">
             <span className="text-xs text-emerald-700 font-medium block">Penugasan Aktif</span>
-            <span className="text-lg font-extrabold text-emerald-800">{totalAktif} Titik</span>
+            <span className="text-lg font-extrabold text-emerald-800">{totalOrangAktif} Orang</span>
           </div>
           <div className="bg-amber-50 border border-amber-200 px-4 py-2 rounded-xl text-center">
             <span className="text-xs text-amber-700 font-medium block">Jadwal Mendatang</span>
-            <span className="text-lg font-extrabold text-amber-800">{totalMendatang} Titik</span>
+            <span className="text-lg font-extrabold text-amber-800">{totalOrangMendatang} Orang</span>
+          </div>
+          <div className="bg-blue-50 border border-blue-200 px-4 py-2 rounded-xl text-center">
+            <span className="text-xs text-blue-700 font-medium block">Total Ditugaskan</span>
+            <span className="text-lg font-extrabold text-blue-800">{totalOrangDitugaskan} Orang</span>
           </div>
         </div>
       </div>
 
       {/* Control Bar: Search & Filter Pills per Unit Kerja */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-3">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-wrap items-center justify-end gap-3">
+        <div className="contents">
           {/* Search Box */}
           <div className="relative w-full sm:w-80">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -87,18 +92,18 @@ export const PemetaanPage = () => {
             />
           </div>
 
-          <div className="text-xs font-semibold text-slate-500 flex items-center gap-1.5">
+          <div className="hidden text-xs font-semibold text-slate-500 items-center gap-1.5">
             <Layers className="w-4 h-4 text-blue-600" />
             <span>Pilih Unit Kerja untuk Filter Marker Map:</span>
           </div>
         </div>
 
         {/* Filter Unit Kerja Multi-Select */}
-        <div className="relative border-t border-slate-100 pt-3">
+        <div className="relative border-0 pt-0">
           <button
             type="button"
             onClick={() => setIsUnitFilterOpen((isOpen) => !isOpen)}
-            className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-bold text-slate-700 transition-colors hover:border-blue-300 hover:bg-blue-50 sm:text-sm"
+              className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-bold text-slate-700 transition-colors hover:border-blue-300 hover:bg-blue-50 sm:text-sm"
             aria-expanded={isUnitFilterOpen}
           >
             <Filter className="h-4 w-4 text-slate-400" />
@@ -107,7 +112,7 @@ export const PemetaanPage = () => {
 
           {isUnitFilterOpen && (
             <div
-              className="absolute left-0 top-full z-30 mt-2 w-60 rounded-xl border border-slate-200 bg-white p-2 shadow-xl"
+              className="absolute right-0 top-full z-30 mt-2 w-60 rounded-xl border border-slate-200 bg-white p-2 shadow-xl"
               onMouseLeave={() => setIsUnitFilterOpen(false)}
             >
               <div className="flex items-center justify-between border-b border-slate-100 px-2 pb-2">
