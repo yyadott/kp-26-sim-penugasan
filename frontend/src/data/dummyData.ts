@@ -28,6 +28,8 @@ export const dummyPegawaiList: Pegawai[] = [
     fotoAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=150',
     role: 'PEGAWAI',
   },
+];
+/*
   {
     id: 'peg-03',
     nama: 'Budi Santoso, S.T., M.Si.',
