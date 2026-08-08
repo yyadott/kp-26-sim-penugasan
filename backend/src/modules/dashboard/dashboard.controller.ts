@@ -20,7 +20,8 @@ export class DashboardController {
         {
           id: 'st-001',
           nomorSurat: 'ST/084/RBI/VII/2026',
-          perihal: 'Pendampingan Integrasi Infrastruktur Network & IoT Monitoring Wilayah Utara',
+          perihal:
+            'Pendampingan Integrasi Infrastruktur Network & IoT Monitoring Wilayah Utara',
           unitKerja: 'RBI',
           lokasiPenugasan: 'Kecamatan Lembang, Bandung Barat',
           status: 'SURAT_TERBIT',
