@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { dummyAjuanSuratTugas, dummyPegawaiList, UNIT_COLORS } from '@/data/dummyData';
 import type { AjuanSuratTugas, UnitKerjaType } from '@/types';
 import {
@@ -7,7 +7,6 @@ import {
   CheckCircle2,
   Clock,
   MapPin,
-  Search,
   Filter,
   Eye,
   X,
@@ -16,14 +15,57 @@ import {
   MoreHorizontal,
   Users,
   Hourglass,
+  ChevronDown,
 } from 'lucide-react';
 
+type CheckboxDropdownProps = {
+  label: string;
+  options: { value: string; label: string }[];
+  selected: string[];
+  isOpen: boolean;
+  onToggle: () => void;
+  onChange: (value: string) => void;
+  onReset: () => void;
+};
+
+const CheckboxDropdown = ({ label, options, selected, isOpen, onToggle, onChange, onReset }: CheckboxDropdownProps) => (
+  <div className="relative">
+    <p className="mb-2 text-sm font-medium text-slate-800">{label}</p>
+    <button type="button" onClick={onToggle} className="flex w-full items-center justify-between gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-600 transition-colors hover:border-blue-400 hover:bg-blue-50" aria-expanded={isOpen}>
+      <span className="max-w-[190px] truncate">{selected.length === 0 ? `Pilih ${label}` : `${selected.length} dipilih`}</span>
+      <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+    </button>
+    {isOpen && (
+      <div className={`absolute right-0 z-40 max-h-72 w-60 overflow-y-auto rounded-xl border border-slate-200 bg-white p-2 shadow-xl ${label === 'Status' ? 'bottom-full mb-2' : 'top-full mt-2'}`} onMouseLeave={onToggle}>
+        <div className="flex items-center justify-between border-b border-slate-100 px-2 pb-2">
+          <span className="text-xs font-bold text-slate-700">{label}</span>
+          {selected.length > 0 && <button type="button" onClick={onReset} className="text-[11px] font-semibold text-blue-600 hover:underline">Reset</button>}
+        </div>
+        <div className="space-y-1 pt-2">
+          {options.map((option) => (
+            <label key={option.value} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-xs text-slate-700 hover:bg-slate-50">
+              <input type="checkbox" checked={selected.includes(option.value)} onChange={() => onChange(option.value)} className="h-4 w-4 rounded border-slate-300 accent-blue-600 focus:ring-blue-500" />
+              <span className="truncate">{option.label}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+    )}
+  </div>
+);
+
 export const TugasPage = () => {
+  type Wilayah = { id: string; name: string };
   const [ajuanList, setAjuanList] = useState<AjuanSuratTugas[]>(dummyAjuanSuratTugas);
   const [activeTab, setActiveTab] = useState<'DAFTAR' | 'WORKFLOW'>('DAFTAR');
-  const [searchQuery, setSearchQuery] = useState('');
   const [selectedUnits, setSelectedUnits] = useState<UnitKerjaType[]>([]);
   const [isUnitFilterOpen, setIsUnitFilterOpen] = useState(false);
+  const [openFilter, setOpenFilter] = useState<string | null>(null);
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
+  const [selectedApplicants, setSelectedApplicants] = useState<string[]>([]);
+  const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
+  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
+  const [selectedSpecificLocations, setSelectedSpecificLocations] = useState<string[]>([]);
 
   // Modal Detail Workflow / Timeline
   const [selectedAjuan, setSelectedAjuan] = useState<AjuanSuratTugas | null>(null);
@@ -31,6 +73,9 @@ export const TugasPage = () => {
   const [selectedPegawaiAjuan, setSelectedPegawaiAjuan] = useState<AjuanSuratTugas | null>(null);
   const [openStatusId, setOpenStatusId] = useState<string | null>(null);
   const [openActionId, setOpenActionId] = useState<string | null>(null);
+  const [provinces, setProvinces] = useState<Wilayah[]>([]);
+  const [cities, setCities] = useState<Wilayah[]>([]);
+  const [isWilayahLoading, setIsWilayahLoading] = useState(false);
 
   // Modal Form Ajuan Baru
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
@@ -41,27 +86,74 @@ export const TugasPage = () => {
     tanggalMulai: '2026-08-01',
     tanggalSelesai: '2026-08-03',
     lokasiPenugasan: 'Kecamatan Bandung Tengah',
+    lokasiSpesifik: '',
+    provinsiId: '',
+    kotaId: '',
     koordinatLat: -6.9147,
     koordinatLng: 107.6098,
     deskripsi: '',
   });
 
+  useEffect(() => {
+    fetch('https://www.emsifa.com/api-wilayah-indonesia/api/provinces.json')
+      .then((response) => response.ok ? response.json() : Promise.reject())
+      .then((data: Wilayah[]) => setProvinces(data))
+      .catch(() => setProvinces([]));
+  }, []);
+
+  useEffect(() => {
+    if (!formData.provinsiId) { setCities([]); return; }
+    setIsWilayahLoading(true);
+    fetch(`https://www.emsifa.com/api-wilayah-indonesia/api/regencies/${formData.provinsiId}.json`)
+      .then((response) => response.ok ? response.json() : Promise.reject())
+      .then((data: Wilayah[]) => setCities(data))
+      .catch(() => setCities([]))
+      .finally(() => setIsWilayahLoading(false));
+  }, [formData.provinsiId]);
+
   // Filter list
   const filteredAjuan = ajuanList.filter((item) => {
-    const matchesSearch =
-      item.nomorSurat.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.perihal.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.lokasiPenugasan.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesUnit = selectedUnits.length === 0 || selectedUnits.includes(item.unitKerja);
-    return matchesSearch && matchesUnit;
+    const matchesStatus = selectedStatuses.length === 0 || selectedStatuses.includes(item.status);
+    const matchesApplicant = selectedApplicants.length === 0 || selectedApplicants.includes(item.pengaju.nama);
+    const matchesAssignee = selectedAssignees.length === 0 || item.pegawaiDitugaskan.some((pegawai) => selectedAssignees.includes(pegawai.nama));
+    const matchesLocation = selectedLocations.length === 0 || selectedLocations.includes(item.lokasiPenugasan);
+    const matchesSpecificLocation = selectedSpecificLocations.length === 0 || selectedSpecificLocations.includes(item.lokasiSpesifik || '');
+    return matchesUnit && matchesStatus && matchesApplicant && matchesAssignee && matchesLocation && matchesSpecificLocation;
   });
 
   const unitOptions: UnitKerjaType[] = ['RBI', 'Fastingkom', 'Kepeg', 'PM'];
+  const statusOptions = [
+    { value: 'SURAT_TERBIT', label: 'Diapprove' },
+    { value: 'VERIFIKASI_SUBBAGIAN', label: 'Diproses' },
+    { value: 'PERSETUJUAN_PIMPINAN', label: 'Diproses (Pimpinan)' },
+    { value: 'DRAFT', label: 'Draft' },
+    { value: 'DITOLAK', label: 'Dibatalkan' },
+  ];
+  const applicantOptions = Array.from(new Map(ajuanList.map((item) => [item.pengaju.nama, item.pengaju.nama]))).map(([value, label]) => ({ value, label }));
+  const assigneeOptions = Array.from(new Map(ajuanList.flatMap((item) => item.pegawaiDitugaskan).map((pegawai) => [pegawai.nama, pegawai.nama]))).map(([value, label]) => ({ value, label }));
+  const locationOptions = Array.from(new Set(ajuanList.map((item) => item.lokasiPenugasan))).map((value) => ({ value, label: value }));
+  const specificLocationOptions = Array.from(new Set(ajuanList.map((item) => item.lokasiSpesifik).filter(Boolean) as string[])).map((value) => ({ value, label: value }));
 
   const toggleUnitFilter = (unit: UnitKerjaType) => {
     setSelectedUnits((currentUnits) => currentUnits.includes(unit)
       ? currentUnits.filter((currentUnit) => currentUnit !== unit)
       : [...currentUnits, unit]);
+  };
+
+  const toggleFilterValue = (setter: React.Dispatch<React.SetStateAction<string[]>>, value: string) => {
+    setter((current) => current.includes(value) ? current.filter((item) => item !== value) : [...current, value]);
+  };
+
+  const resetFilters = () => {
+    setSelectedUnits([]);
+    setSelectedStatuses([]);
+    setSelectedApplicants([]);
+    setSelectedAssignees([]);
+    setSelectedLocations([]);
+    setSelectedSpecificLocations([]);
+    setIsUnitFilterOpen(false);
+    setOpenFilter(null);
   };
 
   const formatLokasiKhusus = (lokasi: string) => {
@@ -97,6 +189,8 @@ export const TugasPage = () => {
   const handleCreateDraft = (e: React.FormEvent) => {
     e.preventDefault();
     const assignedPegawai = dummyPegawaiList.find((p) => p.id === formData.pegawaiId) || dummyPegawaiList[0];
+    const provinsi = provinces.find((item) => item.id === formData.provinsiId)?.name;
+    const kota = cities.find((item) => item.id === formData.kotaId)?.name;
     const newId = `st-00${ajuanList.length + 1}`;
     const newNomor = `DRAFT-ST/${formData.unitKerja.toUpperCase().replace(/\s+/g, '')}/2026/00${ajuanList.length + 1}`;
 
@@ -109,7 +203,8 @@ export const TugasPage = () => {
       unitKerja: formData.unitKerja,
       tanggalMulai: formData.tanggalMulai,
       tanggalSelesai: formData.tanggalSelesai,
-      lokasiPenugasan: formData.lokasiPenugasan,
+      lokasiPenugasan: [kota, provinsi].filter(Boolean).join(', ') || formData.lokasiPenugasan,
+      lokasiSpesifik: formData.lokasiSpesifik,
       koordinat: [formData.koordinatLat, formData.koordinatLng],
       deskripsi: formData.deskripsi,
       status: 'DRAFT',
@@ -143,6 +238,9 @@ export const TugasPage = () => {
       tanggalMulai: '2026-08-01',
       tanggalSelesai: '2026-08-03',
       lokasiPenugasan: 'Kecamatan Bandung Tengah',
+      lokasiSpesifik: '',
+      provinsiId: '',
+      kotaId: '',
       koordinatLat: -6.9147,
       koordinatLng: 107.6098,
       deskripsi: '',
@@ -195,8 +293,11 @@ export const TugasPage = () => {
         </button>
       </div>
 
-      {/* Navigation Tabs & Filter */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      {/* Navigation, Filter Sidebar, and Table */}
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[300px_minmax(0,1fr)]">
+      <aside className="w-full rounded-2xl border border-slate-200 bg-white p-5 shadow-xs lg:sticky lg:top-6">
+        <h3 className="mb-5 text-3xl font-normal tracking-tight text-slate-800">Pencarian</h3>
+        <div className="flex flex-col items-start gap-4">
         {/* Sub-menu Tabs */}
         <div className="flex items-center bg-slate-200/70 p-1.5 rounded-xl text-sm font-medium w-fit">
           <button
@@ -208,23 +309,13 @@ export const TugasPage = () => {
           </button>
         </div>
         {/* Filter Controls */}
-        <div className="flex items-center gap-3">
+        <div className="flex w-full flex-col items-stretch justify-start gap-4">
           <div className="relative">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder="Cari perihal, nomor surat, lokasi..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-64 shadow-xs"
-            />
-            </div>
-
-          <div className="relative">
+            <p className="mb-2 text-sm font-medium text-slate-800">Unit Kerja</p>
             <button
               type="button"
               onClick={() => setIsUnitFilterOpen((isOpen) => !isOpen)}
-              className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 shadow-xs transition-colors hover:border-blue-300 hover:bg-blue-50 sm:text-sm"
+              className="flex w-full items-center justify-start gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-600 transition-colors hover:border-blue-400 hover:bg-blue-50"
               aria-expanded={isUnitFilterOpen}
             >
               <Filter className="h-4 w-4 text-slate-400" />
@@ -274,8 +365,65 @@ export const TugasPage = () => {
             )}
           </div>
 
+          <CheckboxDropdown
+            label="Pengaju"
+            options={applicantOptions}
+            selected={selectedApplicants}
+            isOpen={openFilter === 'applicant'}
+            onToggle={() => setOpenFilter(openFilter === 'applicant' ? null : 'applicant')}
+            onChange={(value) => toggleFilterValue(setSelectedApplicants, value)}
+            onReset={() => setSelectedApplicants([])}
+          />
+          <CheckboxDropdown
+            label="Pegawai Ditugaskan"
+            options={assigneeOptions}
+            selected={selectedAssignees}
+            isOpen={openFilter === 'assignee'}
+            onToggle={() => setOpenFilter(openFilter === 'assignee' ? null : 'assignee')}
+            onChange={(value) => toggleFilterValue(setSelectedAssignees, value)}
+            onReset={() => setSelectedAssignees([])}
+          />
+          <CheckboxDropdown
+            label="Domisili"
+            options={locationOptions}
+            selected={selectedLocations}
+            isOpen={openFilter === 'location'}
+            onToggle={() => setOpenFilter(openFilter === 'location' ? null : 'location')}
+            onChange={(value) => toggleFilterValue(setSelectedLocations, value)}
+            onReset={() => setSelectedLocations([])}
+          />
+          <CheckboxDropdown
+            label="Lokasi"
+            options={specificLocationOptions}
+            selected={selectedSpecificLocations}
+            isOpen={openFilter === 'specific'}
+            onToggle={() => setOpenFilter(openFilter === 'specific' ? null : 'specific')}
+            onChange={(value) => toggleFilterValue(setSelectedSpecificLocations, value)}
+            onReset={() => setSelectedSpecificLocations([])}
+          />
+          <CheckboxDropdown
+            label="Status"
+            options={statusOptions}
+            selected={selectedStatuses}
+            isOpen={openFilter === 'status'}
+            onToggle={() => setOpenFilter(openFilter === 'status' ? null : 'status')}
+            onChange={(value) => toggleFilterValue(setSelectedStatuses, value)}
+            onReset={() => setSelectedStatuses([])}
+          />
+
+          <button
+            type="button"
+            onClick={resetFilters}
+            className="mt-2 w-full rounded-lg bg-rose-500 px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-rose-600"
+          >
+            Reset Filter
+          </button>
+
         </div>
-      </div>
+        </div>
+      </aside>
+
+      <main className="min-w-0">
 
       {/* TAB 1: DAFTAR PROSES AJUAN SURAT TUGAS */}
       {activeTab === 'DAFTAR' && (
@@ -288,6 +436,7 @@ export const TugasPage = () => {
                   <th className="px-6 py-4">Unit Kerja & Pengaju</th>
                   <th className="px-6 py-4">Pegawai Ditugaskan</th>
                   <th className="px-6 py-4">Tanggal & Lokasi</th>
+                  <th className="px-6 py-4">Lokasi</th>
                   <th className="px-6 py-4">Status</th>
                   <th className="px-6 py-4 text-right">Aksi</th>
                 </tr>
@@ -336,6 +485,9 @@ export const TugasPage = () => {
                           <MapPin className="w-3.5 h-3.5 text-rose-500" />
                           <span>{formatLokasiKhusus(item.lokasiPenugasan)}</span>
                         </div>
+                      </td>
+                      <td className="px-6 py-4 min-w-[190px] align-top">
+                        <p className="text-xs font-semibold text-slate-800 whitespace-nowrap">{item.lokasiSpesifik || '-'}</p>
                       </td>
                       <td
                         className="relative px-6 py-4"
@@ -630,6 +782,9 @@ export const TugasPage = () => {
         </div>
       )}
 
+      </main>
+      </div>
+
       {/* MODAL FORM BUAT DRAFT AJUAN BARU */}
       {isFormModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
@@ -715,15 +870,22 @@ export const TugasPage = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Lokasi Penugasan</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Contoh: Gedung Balai Kota Bandung"
-                  value={formData.lokasiPenugasan}
-                  onChange={(e) => setFormData({ ...formData, lokasiPenugasan: e.target.value })}
-                  className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                />
+                <label className="block text-xs font-bold text-slate-700 mb-1">Domisili Lokasi Penugasan</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <select required value={formData.provinsiId} onChange={(e) => setFormData({ ...formData, provinsiId: e.target.value, kotaId: '' })} className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    <option value="">Pilih Provinsi</option>
+                    {provinces.map((wilayah) => <option key={wilayah.id} value={wilayah.id}>{wilayah.name}</option>)}
+                  </select>
+                  <select required value={formData.kotaId} disabled={!formData.provinsiId || isWilayahLoading} onChange={(e) => setFormData({ ...formData, kotaId: e.target.value })} className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:bg-slate-50">
+                    <option value="">Pilih Kota/Kabupaten</option>
+                    {cities.map((wilayah) => <option key={wilayah.id} value={wilayah.id}>{wilayah.name}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Lokasi Penugasan Spesifik</label>
+                <input type="text" required placeholder="Contoh: Kantor, lembaga, atau sekolah tujuan" value={formData.lokasiSpesifik} onChange={(e) => setFormData({ ...formData, lokasiSpesifik: e.target.value })} className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
               </div>
 
               <div>

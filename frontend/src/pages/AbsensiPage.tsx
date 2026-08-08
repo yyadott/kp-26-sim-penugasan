@@ -41,8 +41,8 @@ export const AbsensiPage = () => {
   }, []);
 
   // State Simulasi Absen Hari Ini
-  const [sudahAbsenMasuk, setSudahAbsenMasuk] = useState(true);
-  const [jamMasukSimulasi, setJamMasukSimulasi] = useState('07:28');
+  const [sudahAbsenMasuk, setSudahAbsenMasuk] = useState(false);
+  const [jamMasukSimulasi, setJamMasukSimulasi] = useState<string | null>(null);
   const [sudahAbsenPulang, setSudahAbsenPulang] = useState(false);
   const [jamPulangSimulasi, setJamPulangSimulasi] = useState<string | null>(null);
 
@@ -54,12 +54,14 @@ export const AbsensiPage = () => {
 
   // Handle Absen Click
   const handleAbsenMasuk = () => {
+    if (sudahAbsenMasuk) return;
     const timeNow = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
     setSudahAbsenMasuk(true);
     setJamMasukSimulasi(timeNow);
   };
 
   const handleAbsenPulang = () => {
+    if (!sudahAbsenMasuk || sudahAbsenPulang) return;
     const timeNow = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
     setSudahAbsenPulang(true);
     setJamPulangSimulasi(timeNow);
@@ -187,7 +189,7 @@ export const AbsensiPage = () => {
               <div className="bg-white/10 backdrop-blur-md p-4 rounded-xl space-y-2 border border-white/20">
                 <div className="flex justify-between items-center text-xs">
                   <span className="text-blue-100">Jam Masuk:</span>
-                  <span className="font-mono font-bold text-sm">{sudahAbsenMasuk ? jamMasukSimulasi : '-'}</span>
+                  <span className="font-mono font-bold text-sm">{jamMasukSimulasi || '-'}</span>
                 </div>
                 <div className="flex justify-between items-center text-xs">
                   <span className="text-blue-100">Jam Pulang:</span>

@@ -38,6 +38,7 @@ export interface AjuanSuratTugas {
   tanggalSelesai: string;
   lokasiPenugasan: string;
   koordinat: [number, number]; // [latitude, longitude]
+  lokasiSpesifik?: string;
   deskripsi: string;
   status: 'DRAFT' | 'VERIFIKASI_SUBBAGIAN' | 'PERSETUJUAN_PIMPINAN' | 'SURAT_TERBIT' | 'DITOLAK';
   fileDraftUrl?: string;
