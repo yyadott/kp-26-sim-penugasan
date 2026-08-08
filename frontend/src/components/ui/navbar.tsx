@@ -201,6 +201,15 @@ export const Navbar = () => {
             {/* Tombol Aksi */}
             <div className="p-1.5 space-y-1">
               <Link
+                to="/profil"
+                onClick={() => setIsDropdownOpen(false)}
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-slate-700 hover:text-blue-700 hover:bg-blue-50 rounded-xl transition-colors font-medium"
+              >
+                <UserIcon className="w-4 h-4 text-slate-400" />
+                <span>Profil Saya</span>
+              </Link>
+
+              <Link
                 to="/login"
                 onClick={() => setIsDropdownOpen(false)}
                 className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-slate-700 hover:text-blue-700 hover:bg-blue-50 rounded-xl transition-colors font-medium"
@@ -221,6 +230,20 @@ export const Navbar = () => {
           </div>
         )}
       </div>
+      {isAuthenticated && (
+        <nav className="md:hidden fixed bottom-0 inset-x-0 h-16 bg-white/95 backdrop-blur border-t border-slate-200 z-50 flex items-center justify-around px-2 pb-[env(safe-area-inset-bottom)]">
+          {[
+            { to: '/', label: 'Beranda', icon: LayoutDashboard, end: true },
+            { to: '/tugas', label: 'Tugas', icon: FileText },
+            { to: '/absensi', label: 'Presensi', icon: CalendarCheck },
+            { to: '/profil', label: 'Profil', icon: UserIcon },
+          ].map(({ to, label, icon: Icon, end }) => (
+            <NavLink key={to} to={to} end={end} className={({ isActive }) => `flex flex-col items-center justify-center gap-0.5 min-w-14 py-1 text-[10px] font-semibold ${isActive ? 'text-blue-700' : 'text-slate-500'}`}>
+              <Icon className="w-5 h-5" />{label}
+            </NavLink>
+          ))}
+        </nav>
+      )}
     </header>
   );
 };

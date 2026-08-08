@@ -8,7 +8,8 @@ export class TugasController {
       {
         id: 'st-001',
         nomorSurat: 'ST/084/RBI/VII/2026',
-        perihal: 'Pendampingan Integrasi Infrastruktur Network & IoT Monitoring Wilayah Utara',
+        perihal:
+          'Pendampingan Integrasi Infrastruktur Network & IoT Monitoring Wilayah Utara',
         unitKerja: 'RBI',
         status: 'SURAT_TERBIT',
         lokasiPenugasan: 'Kecamatan Lembang, Bandung Barat',
@@ -29,7 +30,7 @@ export class TugasController {
   }
 
   @Post()
-  createTugas(@Body() body: any) {
+  createTugas(@Body() body: Record<string, unknown>) {
     return {
       message: 'Draft tugas berhasil dibuat',
       data: body,

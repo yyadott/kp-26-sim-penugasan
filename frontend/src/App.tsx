@@ -9,7 +9,7 @@ function App() {
       <BrowserRouter basename={import.meta.env.BASE_URL}>
         <div className="min-h-screen bg-slate-100 flex flex-col">
           <Navbar />
-          <main className="flex-1">
+          <main className="flex-1 pb-16 md:pb-0">
             <AppRouter />
           </main>
         </div>

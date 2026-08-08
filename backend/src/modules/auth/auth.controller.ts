@@ -1,19 +1,22 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import { Body, Controller, Get, Post } from '@nestjs/common';
+import { AuthService } from './auth.service';
 
 @Controller('auth')
 export class AuthController {
+  constructor(private readonly authService: AuthService) {}
+
+  @Get('captcha')
+  captcha() {
+    return this.authService.createCaptcha();
+  }
+
   @Post('login')
-  login(@Body() body: { email: string; password: string }) {
-    return {
-      message: 'Login berhasil',
-      token: 'dummy-jwt-token',
-      user: {
-        id: 'peg-01',
-        nama: 'Taryadi, S.Kom.',
-        email: body.email,
-        role: 'ADMIN',
-        unitKerja: 'RBI',
-      },
-    };
+  login(@Body() body: { username?: string; password?: string; captchaId?: string; captchaAnswer?: string }) {
+    return this.authService.login(
+      body.username || '',
+      body.password || '',
+      body.captchaId || '',
+      body.captchaAnswer || '',
+    );
   }
 }

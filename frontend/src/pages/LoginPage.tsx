@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Captcha } from '@/components/ui/captcha';
@@ -21,12 +21,13 @@ export const LoginPage: React.FC = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [userCaptcha, setUserCaptcha] = useState('');
-  const [generatedCaptcha, setGeneratedCaptcha] = useState('');
+  const [captchaId, setCaptchaId] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const handleCaptchaRefresh = useCallback(() => setUserCaptcha(''), []);
 
   // If already authenticated, allow instant navigation
   React.useEffect(() => {
@@ -35,7 +36,7 @@ export const LoginPage: React.FC = () => {
     }
   }, [isAuthenticated, successMsg]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
     setSuccessMsg(null);
@@ -54,27 +55,22 @@ export const LoginPage: React.FC = () => {
       return;
     }
 
-    // 2. Validasi CAPTCHA (case insensitive)
-    if (userCaptcha.trim().toLowerCase() !== generatedCaptcha.toLowerCase()) {
-      setErrorMsg('Kode CAPTCHA tidak cocok! Silakan coba lagi.');
+    if (!captchaId) {
+      setErrorMsg('CAPTCHA belum siap. Silakan muat ulang kode keamanan.');
       return;
     }
 
-    // 3. Proses Login
+    // CAPTCHA dan kredensial divalidasi oleh backend dalam satu permintaan.
     setIsLoading(true);
-    setTimeout(() => {
-      const res = login(username, password);
-      setIsLoading(false);
-
-      if (res.success) {
-        setSuccessMsg('Otentikasi Berhasil! Mengalihkan ke Dashboard...');
-        setTimeout(() => {
-          navigate('/');
-        }, 1000);
-      } else {
-        setErrorMsg(res.message || 'Gagal login. Periksa kembali kredensial Anda.');
-      }
-    }, 600);
+    const res = await login(username, password, captchaId, userCaptcha);
+    setIsLoading(false);
+    if (res.success) {
+      setSuccessMsg('Otentikasi berhasil. Mengalihkan ke Dashboard...');
+      window.setTimeout(() => navigate('/'), 700);
+    } else {
+      setErrorMsg(res.message || 'Gagal login. Periksa kembali kredensial Anda.');
+      setCaptchaId('');
+    }
   };
 
   const fillDemoAccount = () => {
@@ -178,7 +174,7 @@ export const LoginPage: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
-                <Captcha onCaptchaChange={setGeneratedCaptcha} />
+                <Captcha onCaptchaChange={setCaptchaId} onRefresh={handleCaptchaRefresh} />
 
                 <div>
                   <input

@@ -4,6 +4,7 @@ import { AbsensiPage } from '@/pages/AbsensiPage';
 import { TugasPage } from '@/pages/TugasPage';
 import { PemetaanPage } from '@/pages/PemetaanPage';
 import { LoginPage } from '@/pages/LoginPage';
+import { ProfilPage } from '@/pages/ProfilPage';
 
 export const AppRouter = () => {
   return (
@@ -14,6 +15,7 @@ export const AppRouter = () => {
       <Route path="/absensi" element={<AbsensiPage />} />
       <Route path="/pemetaan" element={<PemetaanPage />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/profil" element={<ProfilPage />} />
 
       {/* Fallback Route */}
       <Route path="*" element={<Navigate to="/" replace />} />
