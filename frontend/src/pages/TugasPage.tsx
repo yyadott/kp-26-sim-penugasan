@@ -218,7 +218,7 @@ export const TugasPage = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-64 shadow-xs"
             />
-          </div>
+            </div>
 
           <div className="relative">
             <button
@@ -273,6 +273,7 @@ export const TugasPage = () => {
               </div>
             )}
           </div>
+
         </div>
       </div>
 
@@ -311,15 +312,21 @@ export const TugasPage = () => {
                         <p className="text-[11px] text-slate-500">NIP: {item.pengaju.nip}</p>
                       </td>
                       <td className="px-6 py-4 min-w-[170px] align-top">
-                        <button
-                          type="button"
-                          onClick={() => setSelectedPegawaiAjuan(item)}
-                          className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-xs font-bold text-blue-700 hover:bg-blue-100 transition-colors cursor-pointer"
-                          aria-label={`Lihat ${item.pegawaiDitugaskan.length} pegawai yang ditugaskan`}
-                        >
-                          <Users className="w-3.5 h-3.5" />
-                          {item.pegawaiDitugaskan.length} Pegawai
-                        </button>
+                        {item.pegawaiDitugaskan.length === 1 ? (
+                          <p className="text-xs font-semibold text-slate-800 whitespace-nowrap">
+                            {item.pegawaiDitugaskan[0].nama}
+                          </p>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setSelectedPegawaiAjuan(item)}
+                            className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-xs font-bold text-blue-700 transition-colors hover:bg-blue-100"
+                            aria-label={`Lihat ${item.pegawaiDitugaskan.length} pegawai yang ditugaskan`}
+                          >
+                            <Users className="h-3.5 w-3.5" />
+                            {item.pegawaiDitugaskan.length} Pegawai
+                          </button>
+                        )}
                       </td>
                       <td className="px-6 py-4">
                         <p className="text-xs font-semibold text-slate-800">
@@ -496,9 +503,9 @@ export const TugasPage = () => {
                         </div>
                       );
                     })}
-                  </div>
-                </div>
               </div>
+            </div>
+            </div>
             ) : (
               <div className="text-center py-16 text-slate-400 space-y-2">
                 <FileText className="w-12 h-12 mx-auto stroke-1 text-slate-300" />
@@ -508,7 +515,6 @@ export const TugasPage = () => {
           </div>
         </div>
       )}
-
       {/* MODAL DAFTAR PEGAWAI YANG DITUGASKAN */}
       {selectedPegawaiAjuan && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm">
