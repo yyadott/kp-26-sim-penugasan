@@ -147,7 +147,7 @@ export const DashboardPage = () => {
             to="/pemetaan"
             className="flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200 transition-colors"
           >
-            <span>Buka Peta Penuh</span>
+            <span>Lihat Detail</span>
             <ChevronRight className="w-3.5 h-3.5" />
           </Link>
         </div>

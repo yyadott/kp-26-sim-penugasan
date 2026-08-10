@@ -16,7 +16,7 @@ export const dummyPegawaiList: Pegawai[] = [
     jabatan: 'Analisis Sistem Informasi Utama',
     email: 'taryadi@pemda.go.id',
     fotoAvatar: `${import.meta.env.BASE_URL}pp-navbar-2.jpg`,
-    role: 'ADMIN',
+    role: 'SUPER_ADMIN',
   },
   {
     id: 'peg-02',

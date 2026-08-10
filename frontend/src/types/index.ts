@@ -13,7 +13,7 @@ export interface Pegawai {
   jabatan: string;
   fotoAvatar?: string;
   email?: string;
-  role?: 'ADMIN' | 'PEGAWAI';
+  role?: 'SUPER_ADMIN' | 'ADMIN' | 'PEGAWAI';
 }
 
 // History / Workflow Timeline item untuk Surat Tugas
