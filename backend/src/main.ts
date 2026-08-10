@@ -24,11 +24,15 @@ async function findAvailablePort(startPort: number): Promise<number> {
       return port;
     }
   }
-  throw new Error(`No available port found from ${startPort} to ${startPort + 19}`);
+  throw new Error(
+    `No available port found from ${startPort} to ${startPort + 19}`,
+  );
 }
 
 async function bootstrap() {
-  const requestedPort = Number(process.env.PORT || process.env.npm_config_port || 3000);
+  const requestedPort = Number(
+    process.env.PORT || process.env.npm_config_port || 3000,
+  );
   const port = (await isPortFree(requestedPort))
     ? requestedPort
     : await findAvailablePort(requestedPort + 1);

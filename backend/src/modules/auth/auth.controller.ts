@@ -11,7 +11,15 @@ export class AuthController {
   }
 
   @Post('login')
-  login(@Body() body: { username?: string; password?: string; captchaId?: string; captchaAnswer?: string }) {
+  login(
+    @Body()
+    body: {
+      username?: string;
+      password?: string;
+      captchaId?: string;
+      captchaAnswer?: string;
+    },
+  ) {
     return this.authService.login(
       body.username || '',
       body.password || '',
