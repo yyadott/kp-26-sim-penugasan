@@ -152,10 +152,16 @@ export const PenugasanMap = ({
       bounds.extend(loc.koordinat);
 
       // HTML Popup Content
+      // Defensive check untuk pegawai yang mungkin undefined
+      if (!loc.pegawai) {
+        console.warn(`Warning: Pegawai data not found for location ${loc.lokasi}`);
+        return; // Skip marker jika pegawai tidak valid
+      }
+
       const popupHTML = `
         <div style="width: 280px; font-family: sans-serif; padding: 12px;" class="text-slate-800">
           <div class="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100">
-            <img src="${loc.pegawai.fotoAvatar}" alt="${loc.pegawai.nama}" class="w-10 h-10 rounded-full object-cover border border-slate-200" />
+            <img src="${loc.pegawai.fotoAvatar || 'https://via.placeholder.com/40'}" alt="${loc.pegawai.nama}" class="w-10 h-10 rounded-full object-cover border border-slate-200" />
             <div>
               <h4 class="font-bold text-sm text-slate-900 leading-tight">${loc.pegawai.nama}</h4>
               <p class="text-xs text-slate-500">NIP: ${loc.pegawai.nip}</p>

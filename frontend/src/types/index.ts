@@ -13,6 +13,7 @@ export interface Pegawai {
   jabatan: string;
   fotoAvatar?: string;
   email?: string;
+  username?: string;
   role?: 'SUPER_ADMIN' | 'ADMIN' | 'PEGAWAI';
 }
 

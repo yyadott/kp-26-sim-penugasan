@@ -12,7 +12,6 @@ import {
   LogIn,
   User as UserIcon,
   BadgeCheck,
-  Building2,
 } from 'lucide-react';
 
 export const Navbar = () => {
@@ -120,7 +119,7 @@ export const Navbar = () => {
           <button
             type="button"
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-            className="flex items-center gap-3 p-1.5 pr-2.5 rounded-xl border border-slate-200/80 hover:bg-slate-50 transition-all cursor-pointer group"
+            className="flex h-14 items-center gap-2.5 rounded-2xl border border-slate-200 bg-white p-1.5 pr-3 transition-all hover:bg-slate-50 cursor-pointer group"
           >
             <div className="relative">
               <img
@@ -129,21 +128,21 @@ export const Navbar = () => {
                   `${import.meta.env.BASE_URL}pp-navbar-2.jpg`
                 }
                 alt={user.nama}
-                className="w-9 h-9 rounded-lg object-cover border border-blue-500/30 shadow-xs group-hover:border-blue-500"
+                className="h-10 w-10 rounded-xl object-cover border-2 border-blue-600 shadow-sm group-hover:border-blue-700"
               />
 
-              <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full" />
+              <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white bg-emerald-500" />
             </div>
 
             <div className="hidden sm:block text-left">
-              <p className="text-xs font-bold text-slate-800 leading-tight group-hover:text-blue-600 transition-colors">
+              <p className="text-[13px] font-extrabold text-slate-800 leading-tight group-hover:text-blue-600 transition-colors">
                 {user.nama}
               </p>
-              <p className="text-[11px] font-medium text-slate-500">{user.unitKerja}</p>
+              <p className="mt-0.5 text-xs font-medium text-slate-500">{user.unitKerja}</p>
             </div>
 
             <ChevronDown
-              className={`w-4 h-4 text-slate-400 group-hover:text-slate-600 transition-transform ${isDropdownOpen ? 'rotate-180 text-blue-600' : ''
+              className={`ml-2 h-4 w-4 text-[#8ca0bd] group-hover:text-slate-600 transition-transform ${isDropdownOpen ? 'rotate-180 text-blue-600' : ''
                 }`}
             />
           </button>
@@ -160,24 +159,24 @@ export const Navbar = () => {
 
         {/* Dropdown Menu Modal */}
         {isAuthenticated && user && isDropdownOpen && (
-          <div className="absolute right-0 mt-2 w-72 bg-white rounded-2xl shadow-xl border border-slate-200/90 py-2 z-50 animate-in fade-in slide-in-from-top-2">
+          <div className="absolute right-0 mt-2 w-[300px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl z-50 animate-in fade-in slide-in-from-top-2">
             {/* User Info Header */}
-            <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/50 rounded-t-2xl">
-              <div className="flex items-center gap-3">
+            <div className="border-b border-slate-100 bg-slate-50/60 px-5 py-5">
+              <div className="flex items-start gap-3">
                 <img
                   src={
                     user.fotoAvatar ||
                     'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150'
                   }
                   alt={user.nama}
-                  className="w-11 h-11 rounded-xl object-cover border-2 border-blue-500/20 shadow-xs"
+                  className="h-12 w-12 rounded-xl object-cover border-2 border-blue-600 shadow-sm"
                 />
                 <div className="overflow-hidden">
-                  <h4 className="text-xs font-bold text-slate-900 truncate">{user.nama}</h4>
-                  <p className="text-[11px] text-slate-500 font-mono">NIP. {user.nip}</p>
-                  <div className="mt-1 flex items-center gap-1.5">
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-100 text-blue-700">
-                      <BadgeCheck className="w-3 h-3 text-blue-600" />
+                  <h4 className="truncate text-sm font-extrabold text-slate-900">{user.nama}</h4>
+                  <p className="mt-0.5 font-mono text-xs text-[#617798]">NIP. {user.nip}</p>
+                  <div className="mt-2 flex items-center gap-1.5">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-[#dbeafe] px-2.5 py-0.5 text-[11px] font-extrabold text-[#1d5eff]">
+                      <BadgeCheck className="h-3.5 w-3.5" />
                       {user.role === 'SUPER_ADMIN' ? 'SUPER ADMIN' : user.role || 'PEGAWAI'}
                     </span>
                   </div>
@@ -185,26 +184,22 @@ export const Navbar = () => {
               </div>
             </div>
 
-            {/* Rincian Tambahan Profil */}
-            <div className="px-4 py-2.5 text-xs text-slate-600 space-y-1.5 border-b border-slate-100">
-              <div className="flex items-center gap-2 text-slate-600">
-                <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                <span className="truncate">{user.unitKerja}</span>
-              </div>
-              <div className="flex items-center gap-2 text-slate-600">
-                <UserIcon className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                <span className="truncate">{user.jabatan}</span>
-              </div>
-            </div>
-
             {/* Tombol Aksi */}
-            <div className="p-1.5 space-y-1">
+            <div className="px-4 py-2.5 space-y-1">
+              <Link
+                to="/profile"
+                onClick={() => setIsDropdownOpen(false)}
+                className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-blue-50 hover:text-blue-700"
+              >
+                <UserIcon className="h-4 w-4 text-[#8094b4]" />
+                <span>Profil Saya</span>
+              </Link>
               <button
                 type="button"
                 onClick={handleLogout}
-                className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-red-600 hover:bg-red-50 rounded-xl transition-colors font-bold cursor-pointer"
+                className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold text-red-600 transition-colors hover:bg-red-50 cursor-pointer"
               >
-                <LogOut className="w-4 h-4 text-red-500" />
+                <LogOut className="h-4 w-4 text-red-500" />
                 <span>Keluar (Logout)</span>
               </button>
             </div>

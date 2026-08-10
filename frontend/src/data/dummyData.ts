@@ -13,7 +13,7 @@ export const dummyPegawaiList: Pegawai[] = [
     nama: 'Taryadi, S.Kom.',
     nip: '2350081041',
     unitKerja: 'RBI',
-    jabatan: 'Analisis Sistem Informasi Utama',
+    jabatan: 'Super Admin',
     email: 'taryadi@pemda.go.id',
     fotoAvatar: `${import.meta.env.BASE_URL}pp-navbar-2.jpg`,
     role: 'SUPER_ADMIN',
@@ -28,30 +28,6 @@ export const dummyPegawaiList: Pegawai[] = [
     fotoAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=150',
     role: 'PEGAWAI',
   },
-];
-/*
-  {
-    id: 'peg-03',
-    nama: 'Budi Santoso, S.T., M.Si.',
-    nip: '198711042012021005',
-    unitKerja: 'Kepeg',
-    jabatan: 'Koordinator Pengawasan Lalu Lintas',
-    email: 'budi.santoso@dishub.go.id',
-    fotoAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=150',
-    role: 'PEGAWAI',
-  },
-  {
-    id: 'peg-04',
-    nama: 'Siti Rahmawati, S.H.',
-    nip: '199204152015032001',
-    unitKerja: 'PM',
-    jabatan: 'Kasi Penertiban & Operasional',
-    email: 'siti.rahmawati@satpolpp.go.id',
-    fotoAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=150',
-    role: 'PEGAWAI',
-  },
-];
-/*
   {
     id: 'peg-03',
     nama: 'Budi Santoso, S.T., M.Si.',
@@ -93,7 +69,6 @@ export const dummyPegawaiList: Pegawai[] = [
     role: 'PEGAWAI',
   },
 ];
-*/
 
 // Data Ajuan Surat Tugas & Workflow Stage
 export const dummyAjuanSuratTugas: AjuanSuratTugas[] = [

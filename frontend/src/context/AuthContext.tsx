@@ -6,12 +6,25 @@ export interface AuthContextType {
   user: Pegawai | null;
   isAuthenticated: boolean;
   login: (usernameOrNip: string, password: string) => { success: boolean; message?: string };
+  updateCredentials: (data: { username: string; currentPassword: string; newPassword: string }) => { success: boolean; message?: string };
+  getDemoCredentials: () => { username: string; password: string };
   logout: () => void;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const AUTH_STORAGE_KEY = 'sim_penugasan_user';
+const CREDENTIALS_STORAGE_KEY = 'sim_penugasan_credentials';
+const DEFAULT_CREDENTIALS = { username: 'yadiyudi', password: 'password123' };
+
+const getCredentials = () => {
+  try {
+    const saved = localStorage.getItem(CREDENTIALS_STORAGE_KEY);
+    return saved ? { ...DEFAULT_CREDENTIALS, ...JSON.parse(saved) } : DEFAULT_CREDENTIALS;
+  } catch {
+    return DEFAULT_CREDENTIALS;
+  }
+};
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<Pegawai | null>(() => {
@@ -34,8 +47,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const isAuthenticated = !!user;
 
-  const login = (usernameOrNip: string, _password: string) => {
+  const login = (usernameOrNip: string, password: string) => {
     const cleanInput = usernameOrNip.trim().toLowerCase();
+    const credentials = getCredentials();
+    const isCustomUsername = cleanInput === credentials.username.toLowerCase();
+
+    if (isCustomUsername && password !== credentials.password) {
+      return { success: false, message: 'Password tidak sesuai.' };
+    }
 
     // Find matching user by NIP, email prefix, or name
     const foundUser = dummyPegawaiList.find((p) => {
@@ -46,13 +65,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     if (foundUser) {
-      setUser(foundUser);
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(foundUser));
+      const authenticatedUser = { ...foundUser, username: credentials.username };
+      setUser(authenticatedUser);
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authenticatedUser));
       return { success: true };
     } else {
       // Fallback: if username is 'admin' or 'taryadi' or any input, log in first user
-      if (cleanInput === 'admin' || cleanInput === 'taryadi' || cleanInput === 'user' || cleanInput === '') {
-        const defaultUser = dummyPegawaiList[0];
+      if (isCustomUsername || cleanInput === 'admin' || cleanInput === 'taryadi' || cleanInput === 'user' || cleanInput === '') {
+        const defaultUser = { ...dummyPegawaiList[0], username: credentials.username };
         setUser(defaultUser);
         localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(defaultUser));
         return { success: true };
@@ -60,6 +80,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { success: false, message: 'Username / NIP tidak ditemukan dalam database.' };
     }
   };
+
+  const updateCredentials: AuthContextType['updateCredentials'] = ({ username, currentPassword, newPassword }) => {
+    const trimmedUsername = username.trim();
+    const credentials = getCredentials();
+
+    if (!trimmedUsername) return { success: false, message: 'Username wajib diisi.' };
+    if (currentPassword !== credentials.password) return { success: false, message: 'Password lama tidak sesuai.' };
+    if (!newPassword || newPassword.length < 6) return { success: false, message: 'Password baru minimal 6 karakter.' };
+
+    const nextCredentials = { username: trimmedUsername, password: newPassword };
+    localStorage.setItem(CREDENTIALS_STORAGE_KEY, JSON.stringify(nextCredentials));
+    setUser((currentUser) => currentUser ? { ...currentUser, username: trimmedUsername } : currentUser);
+    return { success: true, message: 'Username dan password berhasil diperbarui.' };
+  };
+
+  const getDemoCredentials = () => getCredentials();
 
   const logout = () => {
     setUser(null);
@@ -75,7 +111,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [user]);
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, login, logout }}>
+    <AuthContext.Provider value={{ user, isAuthenticated, login, updateCredentials, getDemoCredentials, logout }}>
       {children}
     </AuthContext.Provider>
   );
