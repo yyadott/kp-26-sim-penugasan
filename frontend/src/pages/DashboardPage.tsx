@@ -3,7 +3,6 @@ import { formatDate } from '@/utils/formatter';
 import { useAuth } from '@/hooks/useAuth';
 import { PenugasanMap } from '@/components/map/PenugasanMap';
 import {
-  dummyLokasiPenugasan,
   dummyAjuanSuratTugas,
   dummyPresensiPegawaiLain,
   dummyPresensiPribadi,
@@ -30,28 +29,26 @@ export const DashboardPage = () => {
 
   const [selectedAjuan, setSelectedAjuan] = useState<AjuanSuratTugas | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const activeLocations = dummyLokasiPenugasan.filter((l) => l.status === 'AKTIF');
+  const ajuanMapLocations: LokasiPenugasanPegawai[] = dummyAjuanSuratTugas.map((item) => ({
+    id: `ajuan-${item.id}`,
+    suratTugasId: item.id,
+    nomorSurat: item.nomorSurat,
+    perihal: item.perihal,
+    pegawai: item.pegawaiDitugaskan[0] || item.pengaju,
+    unitKerja: item.unitKerja,
+    lokasi: item.lokasiPenugasan,
+    namaLokasi: item.lokasiSpesifik || item.lokasiPenugasan,
+    alamatLengkap: [item.lokasiSpesifik, item.lokasiPenugasan].filter(Boolean).join(', '),
+    koordinat: item.koordinat,
+    tanggalMulai: item.tanggalMulai,
+    tanggalSelesai: item.tanggalSelesai,
+    status: item.status === 'SURAT_TERBIT' ? 'AKTIF' : item.status === 'DITOLAK' ? 'SELESAI' : 'MENDATANG',
+    markerType: 'approvedAjuan',
+  }));
+  const activeLocations = ajuanMapLocations.filter((l) => l.status === 'AKTIF');
   const recentAjuan = dummyAjuanSuratTugas.slice(0, 8);
   const recentPresensi = dummyPresensiPegawaiLain.slice(0, 8);
 
-  const approvedAjuanMapLocations: LokasiPenugasanPegawai[] = dummyAjuanSuratTugas
-    .filter((item) => item.status === 'SURAT_TERBIT')
-    .map((item) => ({
-      id: `approved-${item.id}`,
-      suratTugasId: item.id,
-      nomorSurat: item.nomorSurat,
-      perihal: item.perihal,
-      pegawai: item.pengaju,
-      unitKerja: item.unitKerja,
-      lokasi: item.lokasiPenugasan,
-      namaLokasi: item.lokasiPenugasan,
-      alamatLengkap: item.lokasiPenugasan,
-      koordinat: item.koordinat,
-      tanggalMulai: item.tanggalMulai,
-      tanggalSelesai: item.tanggalSelesai,
-      status: 'AKTIF',
-      markerType: 'approvedAjuan',
-    }));
 
   const formatLokasiDisplay = (lokasi: string) => {
     const cleaned = lokasi.trim();
@@ -156,7 +153,7 @@ export const DashboardPage = () => {
         </div>
 
         <PenugasanMap
-          locations={[...dummyLokasiPenugasan, ...approvedAjuanMapLocations]}
+          locations={ajuanMapLocations}
           height="h-[380px]"
           showBoundary={false}
           defaultCenter={[-2.5, 118]}
