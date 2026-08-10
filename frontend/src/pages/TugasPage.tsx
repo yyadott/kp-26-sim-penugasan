@@ -77,14 +77,18 @@ export const TugasPage = () => {
   const [cities, setCities] = useState<Wilayah[]>([]);
   const [isWilayahLoading, setIsWilayahLoading] = useState(false);
 
+  const today = new Date();
+  const todayIso = today.toISOString().slice(0, 10);
+  const currentMonthStart = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-01`;
+
   // Modal Form Ajuan Baru
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     perihal: '',
     unitKerja: 'RBI' as UnitKerjaType,
     pegawaiId: dummyPegawaiList[0].id,
-    tanggalMulai: '2026-08-01',
-    tanggalSelesai: '2026-08-03',
+    tanggalMulai: todayIso,
+    tanggalSelesai: todayIso,
     lokasiPenugasan: 'Kecamatan Bandung Tengah',
     lokasiSpesifik: '',
     provinsiId: '',
@@ -862,6 +866,7 @@ export const TugasPage = () => {
                   <input
                     type="date"
                     required
+                    min={currentMonthStart}
                     value={formData.tanggalSelesai}
                     onChange={(e) => setFormData({ ...formData, tanggalSelesai: e.target.value })}
                     className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"

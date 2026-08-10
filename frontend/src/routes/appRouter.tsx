@@ -4,6 +4,7 @@ import { AbsensiPage } from '@/pages/AbsensiPage';
 import { TugasPage } from '@/pages/TugasPage';
 import { PemetaanPage } from '@/pages/PemetaanPage';
 import { LoginPage } from '@/pages/LoginPage';
+import { ProfilePage } from '@/pages/ProfilePage';
 import { useAuth } from '@/hooks/useAuth';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -19,6 +20,7 @@ export const AppRouter = () => {
       <Route path="/tugas" element={<ProtectedRoute><TugasPage /></ProtectedRoute>} />
       <Route path="/absensi" element={<ProtectedRoute><AbsensiPage /></ProtectedRoute>} />
       <Route path="/pemetaan" element={<ProtectedRoute><PemetaanPage /></ProtectedRoute>} />
+      <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
       <Route path="/login" element={<LoginPage />} />
 
       {/* Fallback Route */}

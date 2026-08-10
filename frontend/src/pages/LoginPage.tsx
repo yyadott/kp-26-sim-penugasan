@@ -16,7 +16,7 @@ import {
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const { login, isAuthenticated } = useAuth();
+  const { login, isAuthenticated, username: demoUsername, currentPassword } = useAuth();
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -78,8 +78,8 @@ export const LoginPage: React.FC = () => {
   };
 
   const fillDemoAccount = () => {
-    setUsername('taryadi');
-    setPassword('password123');
+    setUsername(demoUsername);
+    setPassword(currentPassword);
     setErrorMsg(null);
   };
 
@@ -221,7 +221,7 @@ export const LoginPage: React.FC = () => {
               onClick={fillDemoAccount}
               className="text-xs text-blue-600 hover:text-blue-800 font-semibold underline underline-offset-2 cursor-pointer"
             >
-              Isi Otomatis Kredensial Demo (Taryadi)
+              Isi Otomatis Kredensial Demo ({demoUsername})
             </button>
           </div>
         </div>

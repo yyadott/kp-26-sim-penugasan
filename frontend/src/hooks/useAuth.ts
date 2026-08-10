@@ -11,6 +11,9 @@ export const useAuth = (): AuthContextType => {
     return {
       user: dummyPegawaiList[0],
       isAuthenticated: true,
+      username: 'taryadi',
+      currentPassword: 'password123',
+      updateProfile: () => {},
       login: () => ({ success: true }),
       logout: () => {},
     };

@@ -5,6 +5,9 @@ import { dummyPegawaiList } from '@/data/dummyData';
 export interface AuthContextType {
   user: Pegawai | null;
   isAuthenticated: boolean;
+  username: string;
+  currentPassword: string;
+  updateProfile: (username: string, password: string) => void;
   login: (usernameOrNip: string, password: string) => { success: boolean; message?: string };
   logout: () => void;
 }
@@ -12,8 +15,16 @@ export interface AuthContextType {
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const AUTH_STORAGE_KEY = 'sim_penugasan_user';
+const PROFILE_STORAGE_KEY = 'sim_penugasan_profile_credentials';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [credentials, setCredentials] = useState(() => {
+    try {
+      const stored = localStorage.getItem(PROFILE_STORAGE_KEY);
+      if (stored) return JSON.parse(stored) as { username: string; password: string };
+    } catch { /* gunakan kredensial demo */ }
+    return { username: 'taryadi', password: 'password123' };
+  });
   const [user, setUser] = useState<Pegawai | null>(() => {
     try {
       const stored = localStorage.getItem(AUTH_STORAGE_KEY);
@@ -38,7 +49,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const cleanInput = usernameOrNip.trim().toLowerCase();
 
     // Find matching user by NIP, email prefix, or name
-    const foundUser = dummyPegawaiList.find((p) => {
+    const foundUser = (cleanInput === credentials.username.toLowerCase() ? dummyPegawaiList[0] : undefined) || dummyPegawaiList.find((p) => {
       const nipMatch = p.nip.toLowerCase() === cleanInput;
       const emailPrefixMatch = p.email?.toLowerCase().split('@')[0] === cleanInput;
       const nameMatch = p.nama.toLowerCase().includes(cleanInput);
@@ -61,6 +72,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const updateProfile = (username: string, password: string) => {
+    const nextCredentials = { username: username.trim(), password };
+    setCredentials(nextCredentials);
+    localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(nextCredentials));
+  };
+
   const logout = () => {
     setUser(null);
     localStorage.removeItem(AUTH_STORAGE_KEY);
@@ -75,7 +92,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [user]);
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, login, logout }}>
+    <AuthContext.Provider value={{ user, isAuthenticated, username: credentials.username, currentPassword: credentials.password, updateProfile, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

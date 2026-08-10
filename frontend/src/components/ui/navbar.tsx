@@ -129,8 +129,7 @@ export const Navbar = () => {
                   `${import.meta.env.BASE_URL}pp-navbar-2.jpg`
                 }
                 alt={user.nama}
-                className="w-9 h-9 rounded-lg object-cover border border-blue-500/30 shadow-xs group-hover:border-blue-500"
-              />
+                className="w-9 h-9 rounded-lg object-cover border border-blue-500/30 shadow-xs group-hover:border-blue-500"/>
 
               <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full" />
             </div>
@@ -139,7 +138,6 @@ export const Navbar = () => {
               <p className="text-xs font-bold text-slate-800 leading-tight group-hover:text-blue-600 transition-colors">
                 {user.nama}
               </p>
-              <p className="text-[11px] font-medium text-slate-500">{user.unitKerja}</p>
             </div>
 
             <ChevronDown
@@ -185,20 +183,31 @@ export const Navbar = () => {
               </div>
             </div>
 
-            {/* Rincian Tambahan Profil */}
-            <div className="px-4 py-2.5 text-xs text-slate-600 space-y-1.5 border-b border-slate-100">
-              <div className="flex items-center gap-2 text-slate-600">
-                <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                <span className="truncate">{user.unitKerja}</span>
+            {/* Rincian tambahan tidak ditampilkan untuk akun Super Admin */}
+            {user.role !== 'SUPER_ADMIN' && (
+              <div className="px-4 py-2.5 text-xs text-slate-600 space-y-1.5 border-b border-slate-100">
+                <div className="flex items-center gap-2 text-slate-600">
+                  <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  <span className="truncate">{user.unitKerja}</span>
+                </div>
+                <div className="flex items-center gap-2 text-slate-600">
+                  <UserIcon className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  <span className="truncate">{user.jabatan}</span>
+                </div>
               </div>
-              <div className="flex items-center gap-2 text-slate-600">
-                <UserIcon className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                <span className="truncate">{user.jabatan}</span>
-              </div>
-            </div>
+            )}
 
             {/* Tombol Aksi */}
             <div className="p-1.5 space-y-1">
+              <Link
+                to="/profile"
+                onClick={() => setIsDropdownOpen(false)}
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-slate-700 hover:text-blue-700 hover:bg-blue-50 rounded-xl transition-colors font-medium"
+              >
+                <UserIcon className="w-4 h-4 text-slate-400" />
+                <span>Profil Saya</span>
+              </Link>
+
               <button
                 type="button"
                 onClick={handleLogout}
