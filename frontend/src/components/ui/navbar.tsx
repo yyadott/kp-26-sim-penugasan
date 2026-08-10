@@ -13,7 +13,6 @@ import {
   User as UserIcon,
   BadgeCheck,
   Building2,
-  Lock,
 } from 'lucide-react';
 
 export const Navbar = () => {
@@ -53,7 +52,7 @@ export const Navbar = () => {
             <h1 className="font-extrabold text-base text-slate-800 tracking-tight leading-none group-hover:text-blue-600 transition-colors">
               SIM-PENUGASAN
             </h1>
-            <p className="text-[11px] font-medium text-slate-500">Pemerintah Daerah & Presensi</p>
+            <p className="text-[11px] font-medium text-slate-500"></p>
           </div>
         </Link>
 
@@ -179,7 +178,7 @@ export const Navbar = () => {
                   <div className="mt-1 flex items-center gap-1.5">
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-100 text-blue-700">
                       <BadgeCheck className="w-3 h-3 text-blue-600" />
-                      {user.role || 'PEGAWAI'}
+                      {user.role === 'SUPER_ADMIN' ? 'SUPER ADMIN' : user.role || 'PEGAWAI'}
                     </span>
                   </div>
                 </div>
@@ -200,15 +199,6 @@ export const Navbar = () => {
 
             {/* Tombol Aksi */}
             <div className="p-1.5 space-y-1">
-              <Link
-                to="/login"
-                onClick={() => setIsDropdownOpen(false)}
-                className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-slate-700 hover:text-blue-700 hover:bg-blue-50 rounded-xl transition-colors font-medium"
-              >
-                <Lock className="w-4 h-4 text-slate-400" />
-                <span>Ganti Akun / Halaman Login</span>
-              </Link>
-
               <button
                 type="button"
                 onClick={handleLogout}

@@ -435,7 +435,7 @@ export const TugasPage = () => {
                   <th className="px-6 py-4">Nomor & Perihal Surat</th>
                   <th className="px-6 py-4">Unit Kerja & Pengaju</th>
                   <th className="px-6 py-4">Pegawai Ditugaskan</th>
-                  <th className="px-6 py-4">Tanggal & Lokasi</th>
+                  <th className="px-6 py-4">Tanggal & Domisili</th>
                   <th className="px-6 py-4">Lokasi</th>
                   <th className="px-6 py-4">Status</th>
                   <th className="px-6 py-4 text-right">Aksi</th>
