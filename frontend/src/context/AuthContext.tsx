@@ -49,12 +49,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const cleanInput = usernameOrNip.trim().toLowerCase();
 
     // Find matching user by NIP, email prefix, or name
-    const foundUser = (cleanInput === credentials.username.toLowerCase() ? dummyPegawaiList[0] : undefined) || dummyPegawaiList.find((p) => {
+    let foundUser = (cleanInput === credentials.username.toLowerCase() ? dummyPegawaiList[0] : undefined) || dummyPegawaiList.find((p) => {
       const nipMatch = p.nip.toLowerCase() === cleanInput;
       const emailPrefixMatch = p.email?.toLowerCase().split('@')[0] === cleanInput;
       const nameMatch = p.nama.toLowerCase().includes(cleanInput);
       return nipMatch || emailPrefixMatch || nameMatch;
     });
+
+    if (!foundUser) {
+      // Check in localStorage sim_penugasan_akuns for dynamically created accounts
+      try {
+        const savedAkunsStr = localStorage.getItem('sim_penugasan_akuns');
+        if (savedAkunsStr) {
+          const savedAkuns = JSON.parse(savedAkunsStr);
+          const matchingAkun = savedAkuns.find((a: any) =>
+            a.username.toLowerCase() === cleanInput ||
+            (a.nip && a.nip.toLowerCase() === cleanInput)
+          );
+          if (matchingAkun) {
+            foundUser = {
+              ...dummyPegawaiList[0],
+              id: `peg-new-${matchingAkun.id}`,
+              nama: matchingAkun.nama,
+              nip: matchingAkun.nip || '0000000000',
+              role: matchingAkun.level === 'Admin' ? 'ADMIN' : 'PEGAWAI',
+              unitKerja: 'RBI', // Must be one of UnitKerjaType ('RBI' | 'Fastingkom' | 'Kepeg' | 'PM')
+              jabatan: matchingAkun.level === 'Admin' ? 'Administrator Unit' : 'Pegawai',
+            };
+          }
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
 
     if (foundUser) {
       setUser(foundUser);
@@ -62,8 +89,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { success: true };
     } else {
       // Fallback: if username is 'admin' or 'taryadi' or any input, log in first user
-      if (cleanInput === 'admin' || cleanInput === 'taryadi' || cleanInput === 'user' || cleanInput === '') {
-        const defaultUser = dummyPegawaiList[0];
+      if (cleanInput === 'admin' || cleanInput === 'taryadi' || cleanInput === 'user' || cleanInput === 'superadmin' || cleanInput === '') {
+        const defaultUser = { ...dummyPegawaiList[0] };
+
+        if (cleanInput === 'superadmin') {
+          defaultUser.role = 'SUPER_ADMIN';
+          defaultUser.nama = 'Super Administrator';
+        } else if (cleanInput === 'admin') {
+          defaultUser.role = 'ADMIN';
+          defaultUser.nama = 'Admin Unit Kerja';
+        } else if (cleanInput === 'user') {
+          defaultUser.role = 'PEGAWAI';
+          defaultUser.nama = 'User Pegawai';
+        }
+
         setUser(defaultUser);
         localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(defaultUser));
         return { success: true };

@@ -13,13 +13,21 @@ import {
   User as UserIcon,
   BadgeCheck,
   Building2,
+  Settings,
+  Users,
+  FolderKanban,
+  ClipboardList,
 } from 'lucide-react';
 
 export const Navbar = () => {
   const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isSuperadminMenuOpen, setIsSuperadminMenuOpen] = useState(false);
+  const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const superadminDropdownRef = useRef<HTMLDivElement>(null);
+  const adminDropdownRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -27,6 +35,13 @@ export const Navbar = () => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsDropdownOpen(false);
       }
+      if (superadminDropdownRef.current && !superadminDropdownRef.current.contains(event.target as Node)) {
+        setIsSuperadminMenuOpen(false);
+      }
+      if (adminDropdownRef.current && !adminDropdownRef.current.contains(event.target as Node)) {
+        setIsAdminMenuOpen(false);
+      }
+      
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
@@ -110,6 +125,86 @@ export const Navbar = () => {
             <MapPin className="w-4 h-4" />
             <span>Pemetaan Penugasan</span>
           </NavLink>
+
+          {isAuthenticated && user?.role === 'SUPER_ADMIN' && (
+            <div className="relative" ref={superadminDropdownRef}>
+              <button
+                type="button"
+                onClick={() => setIsSuperadminMenuOpen(!isSuperadminMenuOpen)}
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-lg transition-all ${
+                  isSuperadminMenuOpen
+                    ? 'bg-blue-50 text-blue-700 font-semibold shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                }`}
+              >
+                <Settings className="w-4 h-4" />
+                <span>Superadmin</span>
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isSuperadminMenuOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {isSuperadminMenuOpen && (
+                <div className="absolute left-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-slate-200/80 py-1.5 z-50 animate-in fade-in slide-in-from-top-2">
+                  <Link
+                    to="/akun"
+                    onClick={() => setIsSuperadminMenuOpen(false)}
+                    className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 hover:text-blue-700 hover:bg-blue-50 transition-colors font-medium"
+                  >
+                    <Users className="w-4 h-4 text-slate-400" />
+                    Menu Akun
+                  </Link>
+                  <Link
+                    to="/pokja"
+                    onClick={() => setIsSuperadminMenuOpen(false)}
+                    className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 hover:text-blue-700 hover:bg-blue-50 transition-colors font-medium"
+                  >
+                    <FolderKanban className="w-4 h-4 text-slate-400" />
+                    Menu POKJA
+                  </Link>
+                </div>
+              )}
+            </div>
+          )}
+
+          {isAuthenticated && (user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && (
+            <div className="relative" ref={adminDropdownRef}>
+              <button
+                type="button"
+                onClick={() => setIsAdminMenuOpen(!isAdminMenuOpen)}
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-lg transition-all ${
+                  isAdminMenuOpen
+                    ? 'bg-blue-50 text-blue-700 font-semibold shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                }`}
+              >
+                <ClipboardList className="w-4 h-4" />
+                <span>Administrator</span>
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isAdminMenuOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {isAdminMenuOpen && (
+                <div className="absolute left-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-slate-200/80 py-1.5 z-50 animate-in fade-in slide-in-from-top-2">
+                  <Link
+                    to="/admin/ajuan"
+                    onClick={() => setIsAdminMenuOpen(false)}
+                    className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 hover:text-blue-700 hover:bg-blue-50 transition-colors font-medium"
+                  >
+                    <FileText className="w-4 h-4 text-slate-400" />
+                    Ajuan Pegawai
+                  </Link>
+                  <Link
+                    to="/admin/penugasan"
+                    onClick={() => setIsAdminMenuOpen(false)}
+                    className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 hover:text-blue-700 hover:bg-blue-50 transition-colors font-medium"
+                  >
+                    <FolderKanban className="w-4 h-4 text-slate-400" />
+                    Rekap Penugasan
+                  </Link>
+                </div>
+              )}
+            </div>
+          )}
+
+          
         </nav>
       </div>
 

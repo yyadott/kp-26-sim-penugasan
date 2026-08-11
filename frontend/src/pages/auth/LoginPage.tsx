@@ -69,7 +69,14 @@ export const LoginPage: React.FC = () => {
       if (res.success) {
         setSuccessMsg('Otentikasi Berhasil! Mengalihkan ke Dashboard...');
         setTimeout(() => {
-          navigate('/');
+          const userObj = JSON.parse(localStorage.getItem('sim_penugasan_user') || '{}');
+          if (userObj.role === 'SUPER_ADMIN') {
+            navigate('/');
+          } else if (userObj.role === 'ADMIN') {
+            navigate('/admin');
+          } else {
+            navigate('/user');
+          }
         }, 1000);
       } else {
         setErrorMsg(res.message || 'Gagal login. Periksa kembali kredensial Anda.');
