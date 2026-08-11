@@ -33,6 +33,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (stored) {
         const parsed = JSON.parse(stored);
         if (parsed.id === 'peg-01') parsed.role = 'SUPER_ADMIN';
+        if (parsed.id === 'peg-07') parsed.nama = 'Arnest, S.Kom.';
         if (!parsed.fotoAvatar || parsed.fotoAvatar.includes('unsplash') || parsed.id === 'peg-01') {
           parsed.fotoAvatar = `${import.meta.env.BASE_URL}pp-navbar-2.jpg`;
         }
@@ -61,11 +62,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const nipMatch = p.nip.toLowerCase() === cleanInput;
       const emailPrefixMatch = p.email?.toLowerCase().split('@')[0] === cleanInput;
       const nameMatch = p.nama.toLowerCase().includes(cleanInput);
-      return nipMatch || emailPrefixMatch || nameMatch;
+      const usernameMatch = p.username?.toLowerCase() === cleanInput;
+      return nipMatch || emailPrefixMatch || nameMatch || usernameMatch;
     });
 
     if (foundUser) {
-      const authenticatedUser = { ...foundUser, username: credentials.username };
+      const authenticatedUser = { ...foundUser, username: foundUser.username || credentials.username };
       setUser(authenticatedUser);
       localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authenticatedUser));
       return { success: true };

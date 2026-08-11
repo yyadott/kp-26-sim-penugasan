@@ -68,6 +68,17 @@ export const dummyPegawaiList: Pegawai[] = [
     fotoAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=150',
     role: 'PEGAWAI',
   },
+  {
+    id: 'peg-07',
+    nama: 'Arnest, S.Kom.',
+    nip: '200101010001',
+    unitKerja: 'Fastingkom',
+    jabatan: 'Anggota',
+    email: 'anggota.demo@pemda.go.id',
+    username: 'anggota',
+    fotoAvatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=150',
+    role: 'PEGAWAI',
+  },
 ];
 
 // Data Ajuan Surat Tugas & Workflow Stage
