@@ -8,7 +8,6 @@ import {
   Clock,
   MapPin,
   Filter,
-  Plus,
   Eye,
   X,
   FileCheck,
@@ -193,10 +192,6 @@ export const TugasPage = () => {
             Kelola proses ajuan surat tugas dan pelacakan status penugasan instansi.
           </p>
         </div>
-                <button type="button" onClick={() => setIsDraftModalOpen(true)} className="flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-md shadow-blue-500/20 transition-all cursor-pointer">
-                  <Plus className="w-4 h-4" />
-                  <span>Buat Draft Ajuan ST</span>
-                </button>
       </div>
 
       {/* Navigation, Filter Sidebar, and Table */}

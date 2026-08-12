@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, type ReactNode } from 'react';
-import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { LayoutDashboard, Users, CalendarCheck, FileText, MapPin, PiggyBank, Bell, BarChart3, UserCircle2, LogOut, ShieldCheck, ChevronDown, CheckCircle2, UserRound, Menu } from 'lucide-react';
+import { LayoutDashboard, CalendarCheck, FileText, MapPin, LogOut, ShieldCheck, ChevronDown, CheckCircle2, UserRound, Menu, ClipboardList, ChartNoAxesCombined, KeyRound, Network } from 'lucide-react';
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -10,13 +10,21 @@ interface AdminLayoutProps {
 export const AdminLayout = ({ children }: AdminLayoutProps) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isAdministratorMenuOpen, setIsAdministratorMenuOpen] = useState(
+    () => location.pathname.includes('/ajuan-pegawai') || location.pathname.includes('/rekap-penugasan'),
+  );
+  const [isSuperAdminMenuOpen, setIsSuperAdminMenuOpen] = useState(
+    () => location.pathname.includes('/akun') || location.pathname.includes('/pokja'),
+  );
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (dropdownRef.current && !dropdownRef.current.contains(target)) {
         setIsDropdownOpen(false);
       }
     };
@@ -34,14 +42,9 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
 
   const links = [
     { to: `${prefix}/dashboard`, label: 'Dashboard', icon: LayoutDashboard },
-    { to: `${prefix}/anggota`, label: 'Data Anggota', icon: Users, role: ['SUPER_ADMIN'] },
     { to: `${prefix}/absensi`, label: 'Absensi', icon: CalendarCheck, role: ['SUPER_ADMIN'] },
-    { to: `${prefix}/tugas`, label: 'Tugas', icon: FileText },
+    { to: `${prefix}/tugas`, label: 'Penugasan', icon: FileText },
     { to: `${prefix}/pemetaan`, label: 'Pemetaan', icon: MapPin },
-    { to: `${prefix}/simpanan`, label: 'Simpanan', icon: PiggyBank, role: ['SUPER_ADMIN'] },
-    { to: `${prefix}/notifikasi`, label: 'Notifikasi', icon: Bell },
-    { to: `${prefix}/laporan`, label: 'Laporan', icon: BarChart3, role: ['SUPER_ADMIN'] },
-    { to: `${prefix}/profile`, label: 'Profil', icon: UserCircle2 },
   ];
 
   const filteredLinks = links.filter((link) => {
@@ -54,9 +57,12 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
       <div className="flex min-h-screen">
         <aside className={`hidden flex-col border-r border-slate-200 bg-slate-950 py-6 text-slate-100 lg:flex transition-all duration-300 ${isSidebarCollapsed ? 'w-20 px-2' : 'w-72 px-5'}`}>
           <Link to={`${prefix}/dashboard`} className={`flex items-center gap-3 py-2 ${isSidebarCollapsed ? 'justify-center' : 'px-2'}`}>
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600">
-              <ShieldCheck className="h-5 w-5" />
-            </div>
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white-600">
+            <img 
+              src={`${import.meta.env.BASE_URL}logo-kemendikdasmen.ico`} 
+              alt="Logo" 
+              className="h-9 w-9"/>
+          </div>
             {!isSidebarCollapsed && (
               <div className="overflow-hidden whitespace-nowrap">
                 <p className="text-sm font-semibold">SIM Penugasan</p>
@@ -83,6 +89,105 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
                 {!isSidebarCollapsed && <span className="overflow-hidden whitespace-nowrap text-sm">{label}</span>}
               </NavLink>
             ))}
+
+            {normalizedRole === 'SUPER_ADMIN' && (
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsSuperAdminMenuOpen((isOpen) => !isOpen)}
+                  title={isSidebarCollapsed ? 'Superadmin' : undefined}
+                  aria-expanded={isSuperAdminMenuOpen}
+                  className={`flex w-full items-center gap-3 rounded-xl py-2.5 transition ${
+                    isSidebarCollapsed ? 'justify-center px-0' : 'px-3'
+                  } ${
+                    isSuperAdminMenuOpen || location.pathname.includes('/akun') || location.pathname.includes('/pokja')
+                      ? 'bg-slate-800 text-white'
+                      : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                  }`}
+                >
+                  <ShieldCheck className="h-5 w-5 shrink-0" />
+                  {!isSidebarCollapsed && (
+                    <>
+                      <span className="flex-1 text-left text-sm">Superadmin</span>
+                      <ChevronDown className={`h-4 w-4 transition-transform ${isSuperAdminMenuOpen ? 'rotate-180' : ''}`} />
+                    </>
+                  )}
+                </button>
+
+                {!isSidebarCollapsed && isSuperAdminMenuOpen && (
+                  <div className="mt-1 space-y-1 border-l border-slate-700 pl-4">
+                    <NavLink
+                      to={`${prefix}/akun`}
+                      className={({ isActive }) => `flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition ${
+                        isActive ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                      }`}
+                    >
+                      <KeyRound className="h-4 w-4 shrink-0" />
+                      Akun
+                    </NavLink>
+                    <NavLink
+                      to={`${prefix}/pokja`}
+                      className={({ isActive }) => `flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition ${
+                        isActive ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                      }`}
+                    >
+                      <Network className="h-4 w-4 shrink-0" />
+                      POKJA
+                    </NavLink>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {normalizedRole === 'SUPER_ADMIN' && (
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAdministratorMenuOpen((isOpen) => !isOpen)}
+                  title={isSidebarCollapsed ? 'Administrator' : undefined}
+                  aria-expanded={isAdministratorMenuOpen}
+                  className={`flex w-full items-center gap-3 rounded-xl py-2.5 transition ${
+                    isSidebarCollapsed ? 'justify-center px-0' : 'px-3'
+                  } ${
+                    isAdministratorMenuOpen || location.pathname.includes('/ajuan-pegawai') || location.pathname.includes('/rekap-penugasan')
+                      ? 'bg-slate-800 text-white'
+                      : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                  }`}
+                >
+                  <ShieldCheck className="h-5 w-5 shrink-0" />
+                  {!isSidebarCollapsed && (
+                    <>
+                      <span className="flex-1 text-left text-sm">Administrator</span>
+                      <ChevronDown className={`h-4 w-4 transition-transform ${isAdministratorMenuOpen ? 'rotate-180' : ''}`} />
+                    </>
+                  )}
+                </button>
+
+                {!isSidebarCollapsed && isAdministratorMenuOpen && (
+                  <div className="mt-1 space-y-1 border-l border-slate-700 pl-4">
+                    <NavLink
+                      to={`${prefix}/ajuan-pegawai`}
+                      className={({ isActive }) => `flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition ${
+                        isActive ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                      }`}
+                    >
+                      <ClipboardList className="h-4 w-4 shrink-0" />
+                      Ajuan Pegawai
+                    </NavLink>
+                    <NavLink
+                      to={`${prefix}/rekap-penugasan`}
+                      className={({ isActive }) => `flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition ${
+                        isActive ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                      }`}
+                    >
+                      <ChartNoAxesCombined className="h-4 w-4 shrink-0" />
+                      Rekap Penugasan
+                    </NavLink>
+                  </div>
+                )}
+              </div>
+            )}
+
           </nav>
 
           {/* Profile block removed from here */}
@@ -98,8 +203,9 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
                 <Menu className="h-6 w-6" />
               </button>
 
-              {/* Profile Dropdown */}
-              <div className="relative" ref={dropdownRef}>
+              <div className="flex items-center gap-3">
+                {/* Profile Dropdown */}
+                <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                   className="flex items-center gap-3 rounded-full border border-slate-200 bg-white p-1 pr-3 hover:bg-slate-50 transition"
@@ -154,6 +260,7 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
                     </button>
                   </div>
                 )}
+                </div>
               </div>
             </div>
           </header>

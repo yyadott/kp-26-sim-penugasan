@@ -12,8 +12,8 @@ export class TugasController {
         unitKerja: 'RBI',
         status: 'SURAT_TERBIT',
         lokasiPenugasan: 'Kecamatan Lembang, Bandung Barat',
-        pengaju: { nama: 'Taryadi, S.Kom.' },
-        pegawaiDitugaskan: [{ nama: 'Taryadi, S.Kom.' }],
+        pengaju: { nama: 'Taryadi' },
+        pegawaiDitugaskan: [{ nama: 'Taryadi' }],
       },
       {
         id: 'st-002',
