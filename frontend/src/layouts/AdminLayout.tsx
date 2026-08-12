@@ -7,18 +7,6 @@ interface AdminLayoutProps {
   children: ReactNode;
 }
 
-const links = [
-  { to: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/admin/anggota', label: 'Data Anggota', icon: Users },
-  { to: '/admin/absensi', label: 'Absensi', icon: CalendarCheck },
-  { to: '/admin/tugas', label: 'Tugas', icon: FileText },
-  { to: '/admin/pemetaan', label: 'Pemetaan', icon: MapPin },
-  { to: '/admin/simpanan', label: 'Simpanan', icon: PiggyBank },
-  { to: '/admin/notifikasi', label: 'Notifikasi', icon: Bell },
-  { to: '/admin/laporan', label: 'Laporan', icon: BarChart3 },
-  { to: '/admin/profile', label: 'Profil', icon: UserCircle2 },
-];
-
 export const AdminLayout = ({ children }: AdminLayoutProps) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -28,11 +16,31 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
     navigate('/auth/login');
   };
 
+  const normalizedRole = user?.role?.toUpperCase() || 'PEGAWAI';
+  const prefix = normalizedRole === 'SUPER_ADMIN' ? '/super-admin' : '/admin';
+
+  const links = [
+    { to: `${prefix}/dashboard`, label: 'Dashboard', icon: LayoutDashboard },
+    { to: `${prefix}/anggota`, label: 'Data Anggota', icon: Users, role: ['SUPER_ADMIN'] },
+    { to: `${prefix}/absensi`, label: 'Absensi', icon: CalendarCheck, role: ['SUPER_ADMIN'] },
+    { to: `${prefix}/tugas`, label: 'Tugas', icon: FileText },
+    { to: `${prefix}/pemetaan`, label: 'Pemetaan', icon: MapPin },
+    { to: `${prefix}/simpanan`, label: 'Simpanan', icon: PiggyBank, role: ['SUPER_ADMIN'] },
+    { to: `${prefix}/notifikasi`, label: 'Notifikasi', icon: Bell },
+    { to: `${prefix}/laporan`, label: 'Laporan', icon: BarChart3, role: ['SUPER_ADMIN'] },
+    { to: `${prefix}/profile`, label: 'Profil', icon: UserCircle2 },
+  ];
+
+  const filteredLinks = links.filter((link) => {
+    if (link.role && !link.role.includes(normalizedRole)) return false;
+    return true;
+  });
+
   return (
     <div className="min-h-screen bg-slate-100">
       <div className="flex min-h-screen">
         <aside className="hidden w-72 flex-col border-r border-slate-200 bg-slate-950 px-5 py-6 text-slate-100 lg:flex">
-          <Link to="/admin/dashboard" className="flex items-center gap-3 px-2 py-2">
+          <Link to={`${prefix}/dashboard`} className="flex items-center gap-3 px-2 py-2">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600">
               <ShieldCheck className="h-5 w-5" />
             </div>
@@ -43,7 +51,7 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
           </Link>
 
           <nav className="mt-8 space-y-1">
-            {links.map(({ to, label, icon: Icon }) => (
+            {filteredLinks.map(({ to, label, icon: Icon }) => (
               <NavLink
                 key={to}
                 to={to}

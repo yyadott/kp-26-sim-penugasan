@@ -6,23 +6,26 @@ import { AnggotaLayout } from '@/layouts/AnggotaLayout';
 import { LoginPage } from '@/pages/auth/LoginPage';
 import { ForgotPasswordPage } from '@/pages/auth/ForgotPasswordPage';
 import { ProtectedRoute } from '@/routes/ProtectedRoute';
+import { SuperAdminRoutes } from '@/routes/SuperAdminRoutes';
 import { AdminRoutes } from '@/routes/AdminRoutes';
 import { AnggotaRoutes } from '@/routes/AnggotaRoutes';
 
 const HomeRedirect = () => {
   const { user } = useAuth();
   const normalizedRole = user?.role?.toUpperCase() || 'PEGAWAI';
-  const isAdmin = normalizedRole === 'SUPER_ADMIN' || normalizedRole === 'ADMIN';
 
-  return <Navigate to={isAdmin ? '/admin/dashboard' : '/anggota/dashboard'} replace />;
+  if (normalizedRole === 'SUPER_ADMIN') return <Navigate to="/super-admin/dashboard" replace />;
+  if (normalizedRole === 'ADMIN') return <Navigate to="/admin/dashboard" replace />;
+  return <Navigate to="/anggota/dashboard" replace />;
 };
 
 const RoleRedirect = ({ to }: { to: string }) => {
   const { user } = useAuth();
   const normalizedRole = user?.role?.toUpperCase() || 'PEGAWAI';
-  const isAdmin = normalizedRole === 'SUPER_ADMIN' || normalizedRole === 'ADMIN';
 
-  return <Navigate to={isAdmin ? `/admin${to}` : `/anggota${to}`} replace />;
+  if (normalizedRole === 'SUPER_ADMIN') return <Navigate to={`/super-admin${to}`} replace />;
+  if (normalizedRole === 'ADMIN') return <Navigate to={`/admin${to}`} replace />;
+  return <Navigate to={`/anggota${to}`} replace />;
 };
 
 export const AppRoutes = () => {
@@ -38,6 +41,17 @@ export const AppRoutes = () => {
       <Route path="/absensi" element={<ProtectedRoute><RoleRedirect to="/absensi" /></ProtectedRoute>} />
       <Route path="/pemetaan" element={<ProtectedRoute><RoleRedirect to="/pemetaan" /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><RoleRedirect to="/profile" /></ProtectedRoute>} />
+
+      <Route
+        path="/super-admin/*"
+        element={
+          <ProtectedRoute requiredRole="super-admin">
+            <AdminLayout>
+              <SuperAdminRoutes />
+            </AdminLayout>
+          </ProtectedRoute>
+        }
+      />
 
       <Route
         path="/admin/*"

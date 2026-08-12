@@ -2,7 +2,7 @@ import { Navigate } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 
-type RequiredRole = 'admin' | 'anggota';
+type RequiredRole = 'super-admin' | 'admin' | 'anggota';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -17,14 +17,20 @@ export const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) 
   }
 
   const normalizedRole = user?.role?.toUpperCase() || 'PEGAWAI';
-  const isAdmin = normalizedRole === 'SUPER_ADMIN' || normalizedRole === 'ADMIN';
+  const isSuperAdmin = normalizedRole === 'SUPER_ADMIN';
+  const isAdmin = normalizedRole === 'ADMIN';
+  const isPegawai = normalizedRole === 'PEGAWAI';
 
-  if (requiredRole === 'admin' && !isAdmin) {
-    return <Navigate to="/anggota/dashboard" replace />;
+  if (requiredRole === 'super-admin' && !isSuperAdmin) {
+    return <Navigate to={isAdmin ? "/admin/dashboard" : "/anggota/dashboard"} replace />;
   }
 
-  if (requiredRole === 'anggota' && isAdmin) {
-    return <Navigate to="/admin/dashboard" replace />;
+  if (requiredRole === 'admin' && !isAdmin) {
+    return <Navigate to={isSuperAdmin ? "/super-admin/dashboard" : "/anggota/dashboard"} replace />;
+  }
+
+  if (requiredRole === 'anggota' && !isPegawai) {
+    return <Navigate to={isSuperAdmin ? "/super-admin/dashboard" : "/admin/dashboard"} replace />;
   }
 
   return <>{children}</>;
