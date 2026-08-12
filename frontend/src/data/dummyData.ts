@@ -10,7 +10,7 @@ import type {
 export const dummyPegawaiList: Pegawai[] = [
   {
     id: 'peg-01',
-    nama: 'Taryadi, S.Kom.',
+    nama: 'Taryadi',
     nip: '2350081041',
     unitKerja: 'RBI',
     jabatan: 'Super Admin',
@@ -68,6 +68,28 @@ export const dummyPegawaiList: Pegawai[] = [
     fotoAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=150',
     role: 'PEGAWAI',
   },
+  {
+    id: 'peg-07',
+    nama: 'Arnest, S.Kom.',
+    nip: '200101010001',
+    unitKerja: 'Fastingkom',
+    jabatan: 'Anggota',
+    email: 'anggota.demo@pemda.go.id',
+    username: 'anggota',
+    fotoAvatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=150',
+    role: 'PEGAWAI',
+  },
+  {
+    id: 'peg-08',
+    nama: 'Admin Tugas',
+    nip: '2350081042',
+    unitKerja: 'RBI',
+    jabatan: 'Admin Penugasan',
+    email: 'admin.tugas@pemda.go.id',
+    username: 'admintugas',
+    fotoAvatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=150',
+    role: 'ADMIN',
+  },
 ];
 
 // Data Ajuan Surat Tugas & Workflow Stage
@@ -87,7 +109,7 @@ export const dummyAjuanSuratTugas: AjuanSuratTugas[] = [
     deskripsi: 'Peninjauan dan installasi perangkat gateway sensor presensi & CCTV terintegrasi pada pos pantau wilayah utara.',
     status: 'SURAT_TERBIT',
     workflow: [
-      { stage: 'DRAFT', label: 'Pengajuan Draft ST', actor: 'Taryadi, S.Kom.', tanggal: '2026-07-25 09:00', status: 'COMPLETED', catatan: 'Draft berhasil dibuat.' },
+      { stage: 'DRAFT', label: 'Pengajuan Draft ST', actor: 'Taryadi', tanggal: '2026-07-25 09:00', status: 'COMPLETED', catatan: 'Draft berhasil dibuat.' },
       { stage: 'VERIFIKASI_SUBBAGIAN', label: 'Verifikasi Subbagian Umum', actor: 'Kabag Umum RBI', tanggal: '2026-07-26 11:30', status: 'COMPLETED', catatan: 'Dokumen dan kelengkapan penugasan disetujui.' },
       { stage: 'PERSETUJUAN_PIMPINAN', label: 'Persetujuan Kepala Dinas', actor: 'Kadin RBI', tanggal: '2026-07-26 15:45', status: 'COMPLETED', catatan: 'Disetujui. Segera laksanakan tugas.' },
       { stage: 'SURAT_TERBIT', label: 'Penerbitan Surat Tugas Resmi', actor: 'Tata Usaha', tanggal: '2026-07-27 08:00', status: 'COMPLETED', catatan: 'Surat Tugas dengan nomor ST/084/RBI/VII/2026 resmi diterbitkan.' }
@@ -129,7 +151,7 @@ export const dummyAjuanSuratTugas: AjuanSuratTugas[] = [
     deskripsi: 'Monitoring pelaksanaan rekayasa lalu lintas dan dokumentasi wilayah rawan.',
     status: 'PERSETUJUAN_PIMPINAN',
     workflow: [
-      { stage: 'DRAFT', label: 'Pengajuan Draft ST', actor: 'Taryadi, S.Kom.', tanggal: '2026-08-01 13:10', status: 'COMPLETED', catatan: 'Draft berhasil dibuat.' },
+      { stage: 'DRAFT', label: 'Pengajuan Draft ST', actor: 'Taryadi', tanggal: '2026-08-01 13:10', status: 'COMPLETED', catatan: 'Draft berhasil dibuat.' },
       { stage: 'VERIFIKASI_SUBBAGIAN', label: 'Verifikasi Subbagian Umum', actor: 'Kasubag Dishub', tanggal: '2026-08-02 08:30', status: 'COMPLETED', catatan: 'Dokumen lengkap.' },
       { stage: 'PERSETUJUAN_PIMPINAN', label: 'Persetujuan Pimpinan', actor: 'Kepala Dishub', tanggal: '2026-08-03 12:00', status: 'IN_PROGRESS', catatan: 'Sedang diproses.' },
       { stage: 'SURAT_TERBIT', label: 'Penerbitan Surat Tugas Resmi', actor: 'Tata Usaha', status: 'PENDING' },
@@ -171,7 +193,7 @@ export const dummyAjuanSuratTugas: AjuanSuratTugas[] = [
     deskripsi: 'Peninjauan fasilitas drainase dan peta lokasi perbaikan.',
     status: 'SURAT_TERBIT',
     workflow: [
-      { stage: 'DRAFT', label: 'Pengajuan Draft ST', actor: 'Taryadi, S.Kom.', tanggal: '2026-08-05 08:15', status: 'COMPLETED', catatan: 'Draft berhasil diverifikasi.' },
+      { stage: 'DRAFT', label: 'Pengajuan Draft ST', actor: 'Taryadi', tanggal: '2026-08-05 08:15', status: 'COMPLETED', catatan: 'Draft berhasil diverifikasi.' },
       { stage: 'VERIFIKASI_SUBBAGIAN', label: 'Verifikasi Subbagian Umum', actor: 'Kasubag DPU', tanggal: '2026-08-06 10:45', status: 'COMPLETED', catatan: 'Dokumen lengkap.' },
       { stage: 'PERSETUJUAN_PIMPINAN', label: 'Persetujuan Pimpinan', actor: 'Kepala DPU', tanggal: '2026-08-07 11:00', status: 'COMPLETED', catatan: 'Disetujui.' },
       { stage: 'SURAT_TERBIT', label: 'Penerbitan Surat Tugas Resmi', actor: 'Tata Usaha', tanggal: '2026-08-08 07:30', status: 'COMPLETED', catatan: 'Surat resmi diterbitkan.' },
@@ -234,7 +256,7 @@ export const dummyAjuanSuratTugas: AjuanSuratTugas[] = [
     deskripsi: 'Penugasan satu pegawai untuk pendataan fasilitas layanan.',
     status: 'DRAFT',
     workflow: [
-      { stage: 'DRAFT', label: 'Pengajuan Draft ST', actor: 'Taryadi, S.Kom.', tanggal: '2026-08-16 09:00', status: 'COMPLETED', catatan: 'Draft berhasil dibuat.' },
+      { stage: 'DRAFT', label: 'Pengajuan Draft ST', actor: 'Taryadi', tanggal: '2026-08-16 09:00', status: 'COMPLETED', catatan: 'Draft berhasil dibuat.' },
       { stage: 'VERIFIKASI_SUBBAGIAN', label: 'Verifikasi Subbagian Umum', actor: 'Kasubag RBI', status: 'PENDING' },
       { stage: 'PERSETUJUAN_PIMPINAN', label: 'Persetujuan Pimpinan', actor: 'Kepala RBI', status: 'PENDING' },
       { stage: 'SURAT_TERBIT', label: 'Penerbitan Surat Tugas Resmi', actor: 'Tata Usaha', status: 'PENDING' },
@@ -280,7 +302,7 @@ export const dummyRiwayatPresensiPribadi: PresensiItem[] = [
   {
     id: 'pr-01',
     pegawaiId: 'peg-01',
-    nama: 'Taryadi, S.Kom.',
+    nama: 'Taryadi',
     nip: '2350081041',
     unitKerja: 'RBI',
     tanggal: '2026-07-28',
@@ -293,7 +315,7 @@ export const dummyRiwayatPresensiPribadi: PresensiItem[] = [
   {
     id: 'pr-02',
     pegawaiId: 'peg-01',
-    nama: 'Taryadi, S.Kom.',
+    nama: 'Taryadi',
     nip: '2350081041',
     unitKerja: 'RBI',
     tanggal: '2026-07-27',
@@ -306,7 +328,7 @@ export const dummyRiwayatPresensiPribadi: PresensiItem[] = [
   {
     id: 'pr-03',
     pegawaiId: 'peg-01',
-    nama: 'Taryadi, S.Kom.',
+    nama: 'Taryadi',
     nip: '2350081041',
     unitKerja: 'RBI',
     tanggal: '2026-07-24',
@@ -319,7 +341,7 @@ export const dummyRiwayatPresensiPribadi: PresensiItem[] = [
   {
     id: 'pr-04',
     pegawaiId: 'peg-01',
-    nama: 'Taryadi, S.Kom.',
+    nama: 'Taryadi',
     nip: '2350081041',
     unitKerja: 'RBI',
     tanggal: '2026-07-23',
@@ -332,7 +354,7 @@ export const dummyRiwayatPresensiPribadi: PresensiItem[] = [
   {
     id: 'pr-05',
     pegawaiId: 'peg-01',
-    nama: 'Taryadi, S.Kom.',
+    nama: 'Taryadi',
     nip: '2350081041',
     unitKerja: 'RBI',
     tanggal: '2026-07-22',
@@ -347,17 +369,17 @@ export const dummyRiwayatPresensiPribadi: PresensiItem[] = [
 // Tambahan data untuk memastikan setiap unit memiliki contoh seluruh status presensi.
 const dummyPresensiStatusTambahan: PresensiItem[] = [
   {
-    id: 'pl-13', pegawaiId: 'peg-01', nama: 'Taryadi, S.Kom.', nip: '2350081041', unitKerja: 'RBI',
+    id: 'pl-13', pegawaiId: 'peg-01', nama: 'Taryadi', nip: '2350081041', unitKerja: 'RBI',
     tanggal: '2026-08-01', jamMasuk: '07:46', lokasiPresensiMasuk: 'Kantor RBI', jamKeluar: '16:00',
     lokasiPresensiKeluar: 'Kantor RBI', status: 'TERLAMBAT', terlambatMenit: 16,
   },
   {
-    id: 'pl-14', pegawaiId: 'peg-01', nama: 'Taryadi, S.Kom.', nip: '2350081041', unitKerja: 'RBI',
+    id: 'pl-14', pegawaiId: 'peg-01', nama: 'Taryadi', nip: '2350081041', unitKerja: 'RBI',
     tanggal: '2026-08-02', jamMasuk: '-', lokasiPresensiMasuk: '-', jamKeluar: '-', lokasiPresensiKeluar: '-',
     status: 'IZIN', keterangan: 'Izin keperluan keluarga',
   },
   {
-    id: 'pl-15', pegawaiId: 'peg-01', nama: 'Taryadi, S.Kom.', nip: '2350081041', unitKerja: 'RBI',
+    id: 'pl-15', pegawaiId: 'peg-01', nama: 'Taryadi', nip: '2350081041', unitKerja: 'RBI',
     tanggal: '2026-08-03', jamMasuk: '-', lokasiPresensiMasuk: '-', jamKeluar: '-', lokasiPresensiKeluar: '-',
     status: 'ALFA', keterangan: 'Tidak ada keterangan presensi',
   },
@@ -403,7 +425,7 @@ export const dummyPresensiPegawaiLain: PresensiItem[] = [
   {
     id: 'pl-01',
     pegawaiId: 'peg-01',
-    nama: 'Taryadi, S.Kom.',
+    nama: 'Taryadi',
     nip: '2350081041',
     unitKerja: 'RBI',
     tanggal: '2026-07-28',
@@ -433,7 +455,7 @@ export const dummyPresensiPegawaiLain: PresensiItem[] = [
   {
     id: 'pl-03',
     pegawaiId: 'peg-01',
-    nama: 'Taryadi, S.Kom.',
+    nama: 'Taryadi',
     nip: '2350081041',
     unitKerja: 'RBI',
     tanggal: '2026-07-29',
@@ -463,7 +485,7 @@ export const dummyPresensiPegawaiLain: PresensiItem[] = [
   {
     id: 'pl-05',
     pegawaiId: 'peg-01',
-    nama: 'Taryadi, S.Kom.',
+    nama: 'Taryadi',
     nip: '2350081041',
     unitKerja: 'RBI',
     tanggal: '2026-07-30',
@@ -493,7 +515,7 @@ export const dummyPresensiPegawaiLain: PresensiItem[] = [
   {
     id: 'pl-07',
     pegawaiId: 'peg-01',
-    nama: 'Taryadi, S.Kom.',
+    nama: 'Taryadi',
     nip: '2350081041',
     unitKerja: 'RBI',
     tanggal: '2026-07-31',
