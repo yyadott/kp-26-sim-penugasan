@@ -1,9 +1,22 @@
 import { Controller, Get } from '@nestjs/common';
+import { PrismaService } from '../../prisma/prisma.service';
+import { Tugas } from '@prisma/client';
 
 @Controller('dashboard')
 export class DashboardController {
+  constructor(private prisma: PrismaService) {}
+
   @Get()
-  getDashboard() {
+  async getDashboard() {
+    const activeAssignments = await this.prisma.tugas.count({
+      where: { status: 'BERJALAN' },
+    });
+
+    const recentTasks = await this.prisma.tugas.findMany({
+      take: 5,
+      orderBy: { dibuatPada: 'desc' },
+    });
+
     return {
       welcome: {
         unitKerja: 'RBI',
@@ -11,21 +24,19 @@ export class DashboardController {
         nama: 'Taryadi',
       },
       stats: {
-        activeAssignments: 3,
+        activeAssignments,
         attendanceToday: 95.45,
         draftApproval: 2,
         estimatedTukin: 7312500,
       },
-      recentAssignments: [
-        {
-          id: 'st-001',
-          nomorSurat: 'ST/084/RBI/VII/2026',
-          perihal: 'Pendampingan Integrasi Infrastruktur Network & IoT Monitoring Wilayah Utara',
-          unitKerja: 'RBI',
-          lokasiPenugasan: 'Kecamatan Lembang, Bandung Barat',
-          status: 'SURAT_TERBIT',
-        },
-      ],
+      recentAssignments: recentTasks.map((t: Tugas) => ({
+        id: t.id,
+        nomorSurat: t.kode,
+        perihal: t.judul,
+        unitKerja: 'RBI',
+        lokasiPenugasan: 'Bandung',
+        status: t.status === 'BERJALAN' ? 'SURAT_TERBIT' : 'SELESAI',
+      })),
       recentAttendance: [
         {
           id: 'att-001',

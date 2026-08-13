@@ -1,0 +1,52 @@
+datasource db {
+  provider = "sqlite"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  nama      String
+  email     String   @unique
+  password  String
+  role      String   // 'SUPER_ADMIN', 'ADMIN', 'PEGAWAI'
+  unitKerja String?  @default("RBI")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Anggota {
+  id           String   @id @default(cuid())
+  kodeAnggota  String   @unique
+  nama         String
+  nik          String?  @unique
+  alamat       String?
+  telepon      String?
+  tanggalMasuk DateTime @default(now())
+  status       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Tugas {
+  id         String   @id @default(cuid())
+  kode       String   @unique
+  judul      String
+  penerima   String
+  deadline   String?
+  status     String   @default("BERJALAN") // 'BERJALAN', 'SELESAI', 'ARSIP'
+  dibuatPada DateTime @default(now())
+}
+
+model Absensi {
+  id                  String   @id @default(cuid())
+  anggotaId           String
+  tanggal             String
+  jamMasuk            String
+  lokasiPresensiMasuk String
+  status              String   @default("HADIR") // 'HADIR', 'TERLAMBAT', 'IZIN', 'SAKIT', 'ALFA'
+  keterangan          String?
+  createdAt           DateTime @default(now())
+}
