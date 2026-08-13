@@ -18,6 +18,10 @@ import { SimpananPage } from '@/pages/super-admin/SimpananPage';
 import { NotifikasiPage } from '@/pages/super-admin/NotifikasiPage';
 import { LaporanPage } from '@/pages/super-admin/LaporanPage';
 import { ProfilePage } from '@/pages/super-admin/ProfilePage';
+import { AkunPage } from '@/pages/super-admin/AkunPage';
+import { PokjaPage } from '@/pages/super-admin/PokjaPage';
+import { AjuanPegawaiPage } from '@/pages/super-admin/AjuanPegawaiPage';
+import { RekapPenugasanPage } from '@/pages/super-admin/RekapPenugasanPage';
 
 export const SuperAdminRoutes = () => {
   return (
@@ -46,6 +50,10 @@ export const SuperAdminRoutes = () => {
       <Route path="notifikasi" element={<NotifikasiPage />} />
       <Route path="laporan" element={<LaporanPage />} />
       <Route path="profile" element={<ProfilePage />} />
+      <Route path="akun" element={<AkunPage />} />
+      <Route path="pokja" element={<PokjaPage />} />
+      <Route path="ajuan-pegawai" element={<AjuanPegawaiPage />} />
+      <Route path="rekap-penugasan" element={<RekapPenugasanPage />} />
       <Route path="*" element={<Navigate to="dashboard" replace />} />
     </Routes>
   );

@@ -8,7 +8,7 @@ export class DashboardController {
       welcome: {
         unitKerja: 'RBI',
         role: 'ADMIN',
-        nama: 'Taryadi, S.Kom.',
+        nama: 'Taryadi',
       },
       stats: {
         activeAssignments: 3,
@@ -29,7 +29,7 @@ export class DashboardController {
       recentAttendance: [
         {
           id: 'att-001',
-          nama: 'Taryadi, S.Kom.',
+          nama: 'Taryadi',
           nip: '2350081041',
           unitKerja: 'RBI',
           jamMasuk: '07:28',
