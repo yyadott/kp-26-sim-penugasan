@@ -8,6 +8,8 @@ import { MonitoringTugasPage } from '@/pages/admin/MonitoringTugasPage';
 import { PemetaanPage } from '@/pages/admin/PemetaanPage';
 import { NotifikasiPage } from '@/pages/admin/NotifikasiPage';
 import { ProfilePage } from '@/pages/admin/ProfilePage';
+import { AjuanPegawaiPage } from '@/pages/admin/AjuanPegawaiPage';
+import { DetailPegawaiPage } from '@/pages/admin/DetailPegawaiPage';
 
 export const AdminRoutes = () => {
   return (
@@ -16,6 +18,8 @@ export const AdminRoutes = () => {
       <Route path="dashboard" element={<DashboardPage />} />
 
       <Route path="tugas" element={<TugasPage />} />
+      <Route path="ajuan-pegawai" element={<AjuanPegawaiPage />} />
+      <Route path="ajuan-pegawai/:id" element={<DetailPegawaiPage />} />
       <Route path="tugas/buat" element={<BuatTugasPage />} />
       <Route path="tugas/edit" element={<EditTugasPage />} />
       <Route path="tugas/upload-surat" element={<UploadSuratPage />} />

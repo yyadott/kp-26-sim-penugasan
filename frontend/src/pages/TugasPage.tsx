@@ -18,6 +18,8 @@ import {
   ChevronDown,
 } from 'lucide-react';
 
+import { sendEmailNotification } from '@/utils/emailService';
+
 type CheckboxDropdownProps = {
   label: string;
   options: { value: string; label: string }[];
@@ -82,7 +84,7 @@ export const TugasPage = () => {
   const [formData, setFormData] = useState({
     perihal: '',
     unitKerja: 'RBI' as UnitKerjaType,
-    pegawaiId: dummyPegawaiList[0].id,
+    pegawaiIds: [dummyPegawaiList[0].id],
     tanggalMulai: '2026-08-01',
     tanggalSelesai: '2026-08-03',
     lokasiPenugasan: 'Kecamatan Bandung Tengah',
@@ -92,6 +94,7 @@ export const TugasPage = () => {
     koordinatLat: -6.9147,
     koordinatLng: 107.6098,
     deskripsi: '',
+    file: null as File | null,
   });
 
   useEffect(() => {
@@ -101,8 +104,9 @@ export const TugasPage = () => {
       .catch(() => setProvinces([]));
   }, []);
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    if (!formData.provinsiId) { setCities([]); return; }
+    if (!formData.provinsiId) { setTimeout(() => setCities([]), 0); return; }
     setIsWilayahLoading(true);
     fetch(`https://www.emsifa.com/api-wilayah-indonesia/api/regencies/${formData.provinsiId}.json`)
       .then((response) => response.ok ? response.json() : Promise.reject())
@@ -110,6 +114,27 @@ export const TugasPage = () => {
       .catch(() => setCities([]))
       .finally(() => setIsWilayahLoading(false));
   }, [formData.provinsiId]);
+
+  useEffect(() => {
+    if (formData.kotaId && cities.length > 0) {
+      const kotaName = cities.find(c => c.id === formData.kotaId)?.name;
+      if (kotaName) {
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${kotaName}, Indonesia`)
+          .then(res => res.json())
+          .then(data => {
+            if (data && data.length > 0) {
+              setFormData(prev => ({
+                ...prev,
+                koordinatLat: parseFloat(data[0].lat),
+                koordinatLng: parseFloat(data[0].lon)
+              }));
+            }
+          })
+          .catch(err => console.error("Geocoding failed", err));
+      }
+    }
+  }, [formData.kotaId, cities]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Filter list
   const filteredAjuan = ajuanList.filter((item) => {
@@ -186,9 +211,11 @@ export const TugasPage = () => {
     setOpenStatusId(null);
   };
 
-  const handleCreateDraft = (e: React.FormEvent) => {
+  const handleCreateDraft = async (e: React.FormEvent) => {
     e.preventDefault();
-    const assignedPegawai = dummyPegawaiList.find((p) => p.id === formData.pegawaiId) || dummyPegawaiList[0];
+    const assignedPegawai = dummyPegawaiList.filter((p) => formData.pegawaiIds.includes(p.id));
+    if (assignedPegawai.length === 0) assignedPegawai.push(dummyPegawaiList[0]);
+    
     const provinsi = provinces.find((item) => item.id === formData.provinsiId)?.name;
     const kota = cities.find((item) => item.id === formData.kotaId)?.name;
     const newId = `st-00${ajuanList.length + 1}`;
@@ -199,7 +226,7 @@ export const TugasPage = () => {
       nomorSurat: newNomor,
       perihal: formData.perihal,
       pengaju: dummyPegawaiList[0], // Logged in user
-      pegawaiDitugaskan: [assignedPegawai],
+      pegawaiDitugaskan: assignedPegawai,
       unitKerja: formData.unitKerja,
       tanggalMulai: formData.tanggalMulai,
       tanggalSelesai: formData.tanggalSelesai,
@@ -230,11 +257,30 @@ export const TugasPage = () => {
     };
 
     setAjuanList([newAjuan, ...ajuanList]);
+    
+    // Kirim notifikasi email
+    try {
+      for (const pegawai of assignedPegawai) {
+        await sendEmailNotification({
+          to_email: pegawai.email || 'user@example.com',
+          to_name: pegawai.nama,
+          nomor_surat: newAjuan.nomorSurat,
+          perihal: newAjuan.perihal,
+          tanggal_mulai: newAjuan.tanggalMulai,
+          tanggal_selesai: newAjuan.tanggalSelesai,
+          lokasi: newAjuan.lokasiPenugasan,
+          pesan_tambahan: newAjuan.deskripsi
+        });
+      }
+    } catch (err) {
+      console.error('Failed to send email notifications', err);
+    }
+
     setIsFormModalOpen(false);
     setFormData({
       perihal: '',
       unitKerja: 'RBI',
-      pegawaiId: dummyPegawaiList[0].id,
+      pegawaiIds: [dummyPegawaiList[0].id],
       tanggalMulai: '2026-08-01',
       tanggalSelesai: '2026-08-03',
       lokasiPenugasan: 'Kecamatan Bandung Tengah',
@@ -244,6 +290,7 @@ export const TugasPage = () => {
       koordinatLat: -6.9147,
       koordinatLng: 107.6098,
       deskripsi: '',
+      file: null,
     });
   };
 
@@ -833,9 +880,13 @@ export const TugasPage = () => {
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">Pegawai Ditugaskan</label>
                   <select
-                    value={formData.pegawaiId}
-                    onChange={(e) => setFormData({ ...formData, pegawaiId: e.target.value })}
-                    className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    multiple
+                    value={formData.pegawaiIds}
+                    onChange={(e) => {
+                      const options = Array.from(e.target.selectedOptions, option => option.value);
+                      setFormData({ ...formData, pegawaiIds: options });
+                    }}
+                    className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none h-24"
                   >
                     {dummyPegawaiList.map((p) => (
                       <option key={p.id} value={p.id}>
@@ -843,6 +894,7 @@ export const TugasPage = () => {
                       </option>
                     ))}
                   </select>
+                  <p className="text-xs text-slate-500 mt-1">Tahan tombol Ctrl/Cmd untuk memilih lebih dari satu pegawai.</p>
                 </div>
               </div>
 
@@ -897,6 +949,17 @@ export const TugasPage = () => {
                   onChange={(e) => setFormData({ ...formData, deskripsi: e.target.value })}
                   className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Upload Surat Tugas / Dokumen Pendukung</label>
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                  onChange={(e) => setFormData({ ...formData, file: e.target.files?.[0] || null })}
+                  className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                />
+                <p className="mt-1 text-[11px] text-slate-500">Format yang didukung: PDF, Word, Excel.</p>
               </div>
 
               <div className="pt-3 flex items-center justify-end gap-3 border-t border-slate-100">
