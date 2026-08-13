@@ -116,6 +116,7 @@ export const PenugasanMap = ({
         `);
 
         // Keep reference for cleanup
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (polygon as any)._linkedTooltip = tooltipLabel;
       }
 
