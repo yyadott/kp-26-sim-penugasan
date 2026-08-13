@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { dummyAjuanSuratTugas, dummyPegawaiList } from '@/data/dummyData';
 import { FileText, Calendar, Activity, ChevronDown } from 'lucide-react';
-import { format, differenceInDays, isToday, isThisWeek, isThisMonth } from 'date-fns';
+import { format, isToday, isThisWeek, isThisMonth } from 'date-fns';
 import { id } from 'date-fns/locale';
 
 // Utility for formatting date
@@ -333,11 +333,6 @@ const PenugasanBerlangsungTab = () => {
     // Adjust end date to the end of the day
     const taskEnd = new Date(t.tanggalSelesai);
     taskEnd.setHours(23, 59, 59, 999);
-    
-    const now = new Date();
-    // Berlangsung means current date is between start and end (or equal)
-    const isOngoing = now >= taskStart && now <= taskEnd;
-    
     // Fallback logic if we just want to filter by start date for the dropdown categories
     if (filter === 'TODAY') return isToday(taskStart);
     if (filter === 'WEEK') return isThisWeek(taskStart);
@@ -471,17 +466,6 @@ const RekapPenugasanTab = () => {
   );
 };
 
-
-const TABS = [
-  { id: 'rekap', label: 'Rekap Penugasan' },
-  { id: 'pegawai', label: 'Pegawai Penugasan' },
-  { id: 'laporan', label: 'Laporan Penugasan' },
-  { id: 'periode', label: 'Periode Penugasan' },
-  { id: 'pivot', label: 'Pivot Penugasan' },
-  { id: 'berlangsung', label: 'Penugasan Berlangsung' },
-  { id: 'draft', label: 'Draft Penugasan' },
-  { id: 'blokir', label: 'Blokir Penugasan' },
-];
 
 import { useSearchParams } from 'react-router-dom';
 
