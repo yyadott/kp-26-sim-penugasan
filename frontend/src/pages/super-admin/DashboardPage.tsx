@@ -25,9 +25,6 @@ import {
   X,
   FileCheck,
   CheckCircle2,
-  BarChart3,
-  Umbrella,
-  ArrowUpRight,
   Map as MapIcon,
   Calendar,
 } from 'lucide-react';
