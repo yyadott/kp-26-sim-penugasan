@@ -2,14 +2,17 @@ import { useState } from 'react';
 import { formatDate } from '@/utils/formatter';
 import { useAuth } from '@/hooks/useAuth';
 import { PenugasanMap } from '@/components/map/PenugasanMap';
+import { PenugasanCalendar } from '@/components/calendar/PenugasanCalendar';
 import {
   dummyAjuanSuratTugas,
   dummyPresensiPegawaiLain,
   dummyPresensiPribadi,
   UNIT_COLORS,
 } from '@/data/dummyData';
-import type { AjuanSuratTugas, LokasiPenugasanPegawai } from '@/types';
+import type { AjuanSuratTugas } from '@/types';
 import { Link } from 'react-router-dom';
+import { usePemetaanFilter } from '@/hooks/usePemetaanFilter';
+import { PemetaanFilterBar } from '@/components/penugasan/PemetaanFilterBar';
 import {
   FileText,
   CalendarCheck,
@@ -24,6 +27,8 @@ import {
   BarChart3,
   Umbrella,
   ArrowUpRight,
+  Map as MapIcon,
+  Calendar,
 } from 'lucide-react';
 
 export const DashboardPage = () => {
@@ -32,23 +37,19 @@ export const DashboardPage = () => {
 
   const [selectedAjuan, setSelectedAjuan] = useState<AjuanSuratTugas | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const ajuanMapLocations: LokasiPenugasanPegawai[] = dummyAjuanSuratTugas.map((item) => ({
-    id: `ajuan-${item.id}`,
-    suratTugasId: item.id,
-    nomorSurat: item.nomorSurat,
-    perihal: item.perihal,
-    pegawai: item.pegawaiDitugaskan[0] || item.pengaju,
-    unitKerja: item.unitKerja,
-    lokasi: item.lokasiPenugasan,
-    namaLokasi: item.lokasiSpesifik || item.lokasiPenugasan,
-    alamatLengkap: [item.lokasiSpesifik, item.lokasiPenugasan].filter(Boolean).join(', '),
-    koordinat: item.koordinat,
-    tanggalMulai: item.tanggalMulai,
-    tanggalSelesai: item.tanggalSelesai,
-    status: item.status === 'SURAT_TERBIT' ? 'AKTIF' : item.status === 'DITOLAK' ? 'SELESAI' : 'MENDATANG',
-    markerType: 'approvedAjuan',
-  }));
-  const activeLocations = ajuanMapLocations.filter((l) => l.status === 'AKTIF');
+  const [mapViewMode, setMapViewMode] = useState<'peta' | 'kalender'>('peta');
+  
+  const {
+    filterMode, handleModeChange,
+    selectedUnit, setSelectedUnit,
+    selectedPegawaiId, setSelectedPegawaiId,
+    searchQuery, setSearchQuery,
+    filteredLocations,
+    allPegawaiInPenugasan,
+    mapLocations,
+  } = usePemetaanFilter();
+
+  const activeLocations = mapLocations.filter((l) => l.status === 'AKTIF');
   const recentAjuan = dummyAjuanSuratTugas.slice(0, 8);
   const recentPresensi = dummyPresensiPegawaiLain.slice(0, 8);
   const rekapYear = 2026;
@@ -223,31 +224,73 @@ export const DashboardPage = () => {
 
       {/* Map Widget Section */}
       <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2">
               <MapPin className="w-5 h-5 text-blue-600" />
-              Visualisasi Pemetaan Lokasi Penugasan Pegawai
+              Sebaran Penugasan Pegawai
             </h3>
-            <p className="text-xs text-slate-500">Peta sebaran penugasan pegawai dari unit yang berbeda-beda secara realtime.</p>
+            <p className="text-xs text-slate-500">Visualisasi sebaran penugasan pegawai dari unit yang berbeda-beda secara realtime.</p>
           </div>
-          <Link
-            to="/pemetaan"
-            className="flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200 transition-colors"
-          >
-            <span>Lihat Detail</span>
-            <ChevronRight className="w-3.5 h-3.5" />
-          </Link>
+          <div className="flex items-center gap-2">
+            {/* View Mode Toggle */}
+            <div className="flex items-center bg-slate-100 rounded-xl p-1 gap-0.5">
+              <button
+                onClick={() => setMapViewMode('peta')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 ${mapViewMode === 'peta' ? 'bg-white text-blue-700 shadow-sm ring-1 ring-blue-200' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                <MapIcon className="w-3.5 h-3.5" />
+                Peta
+              </button>
+              <button
+                onClick={() => setMapViewMode('kalender')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 ${mapViewMode === 'kalender' ? 'bg-white text-blue-700 shadow-sm ring-1 ring-blue-200' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                <Calendar className="w-3.5 h-3.5" />
+                Kalender
+              </button>
+            </div>
+            
+            <Link
+              to="/super-admin/pemetaan"
+              className="flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200 transition-colors"
+            >
+              <span>Lihat Detail</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
         </div>
 
-        <PenugasanMap
-          locations={ajuanMapLocations}
-          height="h-[380px]"
-          showBoundary={false}
-          defaultCenter={[-2.5, 118]}
-          defaultZoom={5}
-          autoFitBounds={false}
+        {/* Filter Bar */}
+        <PemetaanFilterBar
+          filterMode={filterMode}
+          handleModeChange={handleModeChange}
+          selectedUnit={selectedUnit}
+          setSelectedUnit={setSelectedUnit}
+          selectedPegawaiId={selectedPegawaiId}
+          setSelectedPegawaiId={setSelectedPegawaiId}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          allPegawaiInPenugasan={allPegawaiInPenugasan}
+          mapLocations={mapLocations}
         />
+
+        {mapViewMode === 'peta' ? (
+          <PenugasanMap
+            locations={filteredLocations}
+            selectedUnit="ALL"
+            height="h-[450px]"
+            showBoundary={true}
+            defaultCenter={[-2.5, 118]}
+            defaultZoom={5}
+            autoFitBounds={false}
+          />
+        ) : (
+          <PenugasanCalendar
+            locations={filteredLocations}
+            height="h-[600px]"
+          />
+        )}
       </div>
 
       {/* Stacked Tables Layout: Recent Assignments & Attendance Log */}
