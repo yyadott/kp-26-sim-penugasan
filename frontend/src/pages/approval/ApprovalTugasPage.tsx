@@ -1,20 +1,24 @@
 import React, { useState } from 'react';
 import { dummyAjuanSuratTugas } from '@/data/dummyData';
+import { useAuth } from '@/hooks/useAuth';
 import { 
   FileText, CheckCircle2, XCircle, Clock, Eye, Download, 
   MapPin, Calendar as CalendarIcon, Users, Upload, X
 } from 'lucide-react';
 
 export const ApprovalTugasPage = () => {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'PENDING' | 'RIWAYAT'>('PENDING');
   const [confirmApproveId, setConfirmApproveId] = useState<string | null>(null);
 
-  // Filter for pending approvals (in real app, this would be based on user's specific stage, e.g. VERIFIKASI_SUBBAGIAN)
-  const pendingApprovals = dummyAjuanSuratTugas.filter(
+  // Ambil hanya data surat yang sesuai dengan "jalur" (Unit Kerja) user approval yang sedang login
+  const myUnitData = dummyAjuanSuratTugas.filter(t => t.unitKerja === user?.unitKerja);
+
+  const pendingApprovals = myUnitData.filter(
     t => t.status === 'VERIFIKASI_SUBBAGIAN' || t.status === 'PERSETUJUAN_PIMPINAN'
   );
 
-  const historyApprovals = dummyAjuanSuratTugas.filter(
+  const historyApprovals = myUnitData.filter(
     t => t.status === 'SURAT_TERBIT' || t.status === 'DITOLAK'
   );
 

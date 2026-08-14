@@ -26,15 +26,17 @@ export const DashboardPage = () => {
   const [selectedAjuan, setSelectedAjuan] = useState<AjuanSuratTugas | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [tableFilter, setTableFilter] = useState<'ALL' | 'APPROVED' | 'PENDING'>('ALL');
-  const recentAjuan = dummyAjuanSuratTugas.filter((item) => {
+  const myUnitData = dummyAjuanSuratTugas.filter(t => t.unitKerja === user?.unitKerja);
+
+  const recentAjuan = myUnitData.filter((item) => {
     if (tableFilter === 'APPROVED' && item.status !== 'SURAT_TERBIT') return false;
     if (tableFilter === 'PENDING' && item.status !== 'VERIFIKASI_SUBBAGIAN' && item.status !== 'PERSETUJUAN_PIMPINAN') return false;
     if (!selectedDate) return true;
     const itemDate = new Date(item.tanggalMulai);
     return itemDate.toDateString() === selectedDate.toDateString();
   }).slice(0, 8);
-  const approvedLettersCount = dummyAjuanSuratTugas.filter(item => item.status === 'SURAT_TERBIT').length;
-  const pendingLettersCount = dummyAjuanSuratTugas.filter(item => item.status === 'VERIFIKASI_SUBBAGIAN' || item.status === 'PERSETUJUAN_PIMPINAN').length;
+  const approvedLettersCount = myUnitData.filter(item => item.status === 'SURAT_TERBIT').length;
+  const pendingLettersCount = myUnitData.filter(item => item.status === 'VERIFIKASI_SUBBAGIAN' || item.status === 'PERSETUJUAN_PIMPINAN').length;
 
   const formatLokasiDisplay = (lokasi: string) => {
     const cleaned = lokasi.trim();

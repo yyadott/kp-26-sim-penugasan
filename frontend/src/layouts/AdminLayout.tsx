@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, type ReactNode } from 'react';
 import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import {
-  LayoutDashboard, CalendarCheck, FileText, MapPin, LogOut, ShieldCheck,
+  LayoutDashboard, CalendarCheck, FileText, LogOut, ShieldCheck,
   ChevronDown, ChevronUp, ClipboardList, Menu,
   ChartNoAxesCombined, KeyRound, Network, UserCircle2, Bell,
 } from 'lucide-react';
