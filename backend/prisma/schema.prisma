@@ -1,0 +1,179 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+model Departemen {
+  id    Int    @id @default(autoincrement())
+  name  String @db.VarChar(100)
+
+  users   User[]
+  dokumen Dokumen[]
+
+  @@map("departemen")
+}
+
+model Role {
+  id    Int    @id @default(autoincrement())
+  name  String @db.VarChar(100)
+
+  users              User[]
+  featureActivations FeatureActivation[]
+
+  @@map("role")
+}
+
+model Fitur {
+  id    Int    @id @default(autoincrement())
+  name  String @db.VarChar(100)
+
+  featureActivations FeatureActivation[]
+
+  @@map("fitur")
+}
+
+model FeatureActivation {
+  id       Int @id @default(autoincrement())
+  role_id  Int
+  fitur_id Int
+
+  role  Role  @relation(fields: [role_id], references: [id])
+  fitur Fitur @relation(fields: [fitur_id], references: [id])
+
+  @@map("feature_activation")
+}
+
+model User {
+  id            Int    @id @default(autoincrement())
+  nama          String @db.VarChar(100)
+  email         String @unique @db.VarChar(100)
+  password      String @db.VarChar(255)
+  departemen_id Int
+  role_id       Int
+
+  departemen       Departemen         @relation(fields: [departemen_id], references: [id])
+  role             Role               @relation(fields: [role_id], references: [id])
+  dokumen          Dokumen[]
+  dokumenPengajuan DokumenPengajuan[]
+
+  // Relasi baru ke SIM Penugasan
+  suratDiajukan     SuratTugas[]        @relation("PengajuTugas")
+  suratDitugaskan   SuratTugasPegawai[]
+  absensi           Absensi[]
+
+  @@map("users")
+}
+
+model JenisDokumen {
+  id    Int    @id @default(autoincrement())
+  name  String @db.VarChar(100)
+
+  dokumen Dokumen[]
+
+  @@map("jenis_dokumen")
+}
+
+model StatusDokumen {
+  id    Int    @id @default(autoincrement())
+  name  String @db.VarChar(100)
+
+  dokumenPengajuan DokumenPengajuan[]
+
+  @@map("status_dokumen")
+}
+
+model Pengajuan {
+  id    Int    @id @default(autoincrement())
+  name  String @db.VarChar(100)
+
+  dokumenPengajuan DokumenPengajuan[]
+
+  @@map("pengajuan")
+}
+
+model Dokumen {
+  id               Int    @id @default(autoincrement())
+  name             String @db.VarChar(150)
+  user_id          Int
+  departemen_id    Int
+  jenis_dokumen_id Int
+
+  user             User               @relation(fields: [user_id], references: [id])
+  departemen       Departemen         @relation(fields: [departemen_id], references: [id])
+  jenis_dokumen    JenisDokumen       @relation(fields: [jenis_dokumen_id], references: [id])
+  dokumenPengajuan DokumenPengajuan[]
+
+  @@map("dokumen")
+}
+
+model DokumenPengajuan {
+  id                Int      @id @default(autoincrement())
+  dokumen_id        Int
+  user_id           Int
+  pengajuan_id      Int
+  status_dokumen_id Int
+  tgl               DateTime
+
+  dokumen        Dokumen       @relation(fields: [dokumen_id], references: [id])
+  user           User          @relation(fields: [user_id], references: [id])
+  pengajuan      Pengajuan     @relation(fields: [pengajuan_id], references: [id])
+  status_dokumen StatusDokumen @relation(fields: [status_dokumen_id], references: [id])
+
+  @@map("dokumen_pengajuan")
+}
+
+// ----------------------------------------------------------------------
+// MODEL TAMBAHAN SIM PENUGASAN (SURAT TUGAS & ABSENSI)
+// ----------------------------------------------------------------------
+
+model SuratTugas {
+  id              String   @id @default(uuid())
+  nomorSurat      String   @db.VarChar(100)
+  perihal         String   @db.VarChar(255)
+  pengaju_id      Int
+  unitKerja       String   @db.VarChar(50)
+  tanggalMulai    String   @db.VarChar(20)
+  tanggalSelesai  String   @db.VarChar(20)
+  lokasiPenugasan String   @db.VarChar(255)
+  koordinatLat    Float?
+  koordinatLng    Float?
+  deskripsi       String?  @db.Text
+  status          String   @db.VarChar(50) // DRAFT, VERIFIKASI_SUBBAGIAN, PERSETUJUAN_PIMPINAN, SURAT_TERBIT, DITOLAK
+  fileDraftUrl    String?  @db.VarChar(255)
+  fileFixUrl      String?  @db.VarChar(255)
+
+  pengaju           User                @relation("PengajuTugas", fields: [pengaju_id], references: [id])
+  pegawaiDitugaskan SuratTugasPegawai[]
+
+  @@map("surat_tugas")
+}
+
+model SuratTugasPegawai {
+  id             String     @id @default(uuid())
+  surat_tugas_id String
+  user_id        Int
+
+  suratTugas     SuratTugas @relation(fields: [surat_tugas_id], references: [id], onDelete: Cascade)
+  user           User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("surat_tugas_pegawai")
+}
+
+model Absensi {
+  id                   String  @id @default(uuid())
+  user_id              Int
+  tanggal              String  @db.VarChar(20) // YYYY-MM-DD
+  jamMasuk             String  @db.VarChar(10) // HH:mm
+  lokasiPresensiMasuk  String  @db.VarChar(255)
+  jamKeluar            String? @db.VarChar(10)
+  lokasiPresensiKeluar String? @db.VarChar(255)
+  status               String  @db.VarChar(50) // HADIR, IZIN, SAKIT, ALFA, TERLAMBAT
+  keterangan           String? @db.Text
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("absensi")
+}

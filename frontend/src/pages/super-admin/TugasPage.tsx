@@ -1,9 +1,9 @@
-import { useState } from 'react';
-import { dummyAjuanSuratTugas, UNIT_COLORS } from '@/data/dummyData';
+import { useEffect, useState } from 'react';
+import { dummyAjuanSuratTugas, dummyPegawaiList, UNIT_COLORS } from '@/data/dummyData';
 import type { AjuanSuratTugas, UnitKerjaType } from '@/types';
-import { DraftAjuanModal } from '@/components/penugasan/DraftAjuanModal';
 import {
   FileText,
+  Plus,
   CheckCircle2,
   Clock,
   MapPin,
@@ -11,11 +11,14 @@ import {
   Eye,
   X,
   FileCheck,
+  Send,
   MoreHorizontal,
   Users,
   Hourglass,
   ChevronDown,
 } from 'lucide-react';
+
+import { sendEmailNotification } from '@/utils/emailService';
 
 type CheckboxDropdownProps = {
   label: string;
@@ -54,6 +57,7 @@ const CheckboxDropdown = ({ label, options, selected, isOpen, onToggle, onChange
 );
 
 export const TugasPage = () => {
+  type Wilayah = { id: string; name: string };
   const [ajuanList, setAjuanList] = useState<AjuanSuratTugas[]>(dummyAjuanSuratTugas);
   const [activeTab, setActiveTab] = useState<'DAFTAR' | 'WORKFLOW'>('DAFTAR');
   const [selectedUnits, setSelectedUnits] = useState<UnitKerjaType[]>([]);
@@ -71,9 +75,66 @@ export const TugasPage = () => {
   const [selectedPegawaiAjuan, setSelectedPegawaiAjuan] = useState<AjuanSuratTugas | null>(null);
   const [openStatusId, setOpenStatusId] = useState<string | null>(null);
   const [openActionId, setOpenActionId] = useState<string | null>(null);
-  const [isDraftModalOpen, setIsDraftModalOpen] = useState(false);
+  const [provinces, setProvinces] = useState<Wilayah[]>([]);
+  const [cities, setCities] = useState<Wilayah[]>([]);
+  const [isWilayahLoading, setIsWilayahLoading] = useState(false);
 
-  
+  // Modal Form Ajuan Baru
+  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    perihal: '',
+    unitKerja: 'RBI' as UnitKerjaType,
+    pegawaiIds: [dummyPegawaiList[0].id],
+    tanggalMulai: '2026-08-01',
+    tanggalSelesai: '2026-08-03',
+    lokasiPenugasan: 'Kecamatan Bandung Tengah',
+    lokasiSpesifik: '',
+    provinsiId: '',
+    kotaId: '',
+    koordinatLat: -6.9147,
+    koordinatLng: 107.6098,
+    deskripsi: '',
+    file: null as File | null,
+  });
+
+  useEffect(() => {
+    fetch('https://www.emsifa.com/api-wilayah-indonesia/api/provinces.json')
+      .then((response) => response.ok ? response.json() : Promise.reject())
+      .then((data: Wilayah[]) => setProvinces(data))
+      .catch(() => setProvinces([]));
+  }, []);
+
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (!formData.provinsiId) { setTimeout(() => setCities([]), 0); return; }
+    setIsWilayahLoading(true);
+    fetch(`https://www.emsifa.com/api-wilayah-indonesia/api/regencies/${formData.provinsiId}.json`)
+      .then((response) => response.ok ? response.json() : Promise.reject())
+      .then((data: Wilayah[]) => setCities(data))
+      .catch(() => setCities([]))
+      .finally(() => setIsWilayahLoading(false));
+  }, [formData.provinsiId]);
+
+  useEffect(() => {
+    if (formData.kotaId && cities.length > 0) {
+      const kotaName = cities.find(c => c.id === formData.kotaId)?.name;
+      if (kotaName) {
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${kotaName}, Indonesia`)
+          .then(res => res.json())
+          .then(data => {
+            if (data && data.length > 0) {
+              setFormData(prev => ({
+                ...prev,
+                koordinatLat: parseFloat(data[0].lat),
+                koordinatLng: parseFloat(data[0].lon)
+              }));
+            }
+          })
+          .catch(err => console.error("Geocoding failed", err));
+      }
+    }
+  }, [formData.kotaId, cities]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Filter list
   const filteredAjuan = ajuanList.filter((item) => {
@@ -150,9 +211,87 @@ export const TugasPage = () => {
     setOpenStatusId(null);
   };
 
-  const addDraftAjuan = (newAjuan: AjuanSuratTugas) => {
-    setAjuanList((currentList) => [newAjuan, ...currentList]);
-    setIsDraftModalOpen(false);
+  const handleCreateDraft = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const assignedPegawai = dummyPegawaiList.filter((p) => formData.pegawaiIds.includes(p.id));
+    if (assignedPegawai.length === 0) assignedPegawai.push(dummyPegawaiList[0]);
+    
+    const provinsi = provinces.find((item) => item.id === formData.provinsiId)?.name;
+    const kota = cities.find((item) => item.id === formData.kotaId)?.name;
+    const newId = `st-00${ajuanList.length + 1}`;
+    const newNomor = `DRAFT-ST/${formData.unitKerja.toUpperCase().replace(/\s+/g, '')}/2026/00${ajuanList.length + 1}`;
+
+    const newAjuan: AjuanSuratTugas = {
+      id: newId,
+      nomorSurat: newNomor,
+      perihal: formData.perihal,
+      pengaju: dummyPegawaiList[0], // Logged in user
+      pegawaiDitugaskan: assignedPegawai,
+      unitKerja: formData.unitKerja,
+      tanggalMulai: formData.tanggalMulai,
+      tanggalSelesai: formData.tanggalSelesai,
+      lokasiPenugasan: [kota, provinsi].filter(Boolean).join(', ') || formData.lokasiPenugasan,
+      lokasiSpesifik: formData.lokasiSpesifik,
+      koordinat: [formData.koordinatLat, formData.koordinatLng],
+      deskripsi: formData.deskripsi,
+      status: 'DRAFT',
+      workflow: [
+        {
+          stage: 'DRAFT',
+          label: 'Pengajuan Draft ST',
+          actor: dummyPegawaiList[0].nama,
+          tanggal: new Date().toISOString().replace('T', ' ').substring(0, 16),
+          status: 'COMPLETED',
+          catatan: 'Draft baru telah diajukan ke sistem.',
+        },
+        {
+          stage: 'VERIFIKASI_SUBBAGIAN',
+          label: 'Verifikasi Subbagian Umum',
+          actor: `Kasubag ${formData.unitKerja}`,
+          status: 'IN_PROGRESS',
+          catatan: 'Menunggu review dokumen persyaratan.',
+        },
+        { stage: 'PERSETUJUAN_PIMPINAN', label: 'Persetujuan Pimpinan', actor: 'Kepala Dinas', status: 'PENDING' },
+        { stage: 'SURAT_TERBIT', label: 'Penerbitan Surat Tugas Resmi', actor: 'Tata Usaha', status: 'PENDING' },
+      ],
+    };
+
+    setAjuanList([newAjuan, ...ajuanList]);
+    
+    // Kirim notifikasi email
+    try {
+      for (const pegawai of assignedPegawai) {
+        await sendEmailNotification({
+          to_email: pegawai.email || 'user@example.com',
+          to_name: pegawai.nama,
+          nomor_surat: newAjuan.nomorSurat,
+          perihal: newAjuan.perihal,
+          tanggal_mulai: newAjuan.tanggalMulai,
+          tanggal_selesai: newAjuan.tanggalSelesai,
+          lokasi: newAjuan.lokasiPenugasan,
+          pesan_tambahan: newAjuan.deskripsi
+        });
+      }
+    } catch (err) {
+      console.error('Failed to send email notifications', err);
+    }
+
+    setIsFormModalOpen(false);
+    setFormData({
+      perihal: '',
+      unitKerja: 'RBI',
+      pegawaiIds: [dummyPegawaiList[0].id],
+      tanggalMulai: '2026-08-01',
+      tanggalSelesai: '2026-08-03',
+      lokasiPenugasan: 'Kecamatan Bandung Tengah',
+      lokasiSpesifik: '',
+      provinsiId: '',
+      kotaId: '',
+      koordinatLat: -6.9147,
+      koordinatLng: 107.6098,
+      deskripsi: '',
+      file: null,
+    });
   };
 
   const getStatusBadge = (status: AjuanSuratTugas['status']) => {
@@ -189,9 +328,16 @@ export const TugasPage = () => {
             <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Manajemen Penugasan Pegawai</h2>
           </div>
           <p className="text-slate-500 text-sm mt-1">
-            Kelola proses ajuan surat tugas dan pelacakan status penugasan instansi.
+            Kelola proses ajuan surat tugas, alur persetujuan draft penugasan, dan pelacakan status penugasan instansi.
           </p>
         </div>
+        <button
+          onClick={() => setIsFormModalOpen(true)}
+          className="flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-md shadow-blue-500/20 transition-all cursor-pointer"
+        >
+          <Plus className="w-4 h-4" />
+          <span>Buat Draft Ajuan ST</span>
+        </button>
       </div>
 
       {/* Navigation, Filter Sidebar, and Table */}
@@ -687,12 +833,155 @@ export const TugasPage = () => {
       </div>
 
       {/* MODAL FORM BUAT DRAFT AJUAN BARU */}
-      <DraftAjuanModal
-        isOpen={isDraftModalOpen}
-        onClose={() => setIsDraftModalOpen(false)}
-        onSubmit={addDraftAjuan}
-        nextNumber={ajuanList.length + 1}
-      />
+      {isFormModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-xl w-full p-6 space-y-4 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2">
+                <Plus className="w-5 h-5 text-blue-600" />
+                Form Pengajuan Draft Surat Tugas
+              </h3>
+              <button
+                onClick={() => setIsFormModalOpen(false)}
+                className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateDraft} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Perihal Penugasan</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Contoh: Pendampingan Monitoring Posko Kesehatan..."
+                  value={formData.perihal}
+                  onChange={(e) => setFormData({ ...formData, perihal: e.target.value })}
+                  className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Unit Kerja Pengaju</label>
+                  <select
+                    value={formData.unitKerja}
+                    onChange={(e) => setFormData({ ...formData, unitKerja: e.target.value as UnitKerjaType })}
+                    className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  >
+                    <option value="RBI">RBI</option>
+                    <option value="Fastingkom">Fastingkom</option>
+                    <option value="Kepeg">Kepeg</option>
+                    <option value="PM">PM</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Pegawai Ditugaskan</label>
+                  <select
+                    multiple
+                    value={formData.pegawaiIds}
+                    onChange={(e) => {
+                      const options = Array.from(e.target.selectedOptions, option => option.value);
+                      setFormData({ ...formData, pegawaiIds: options });
+                    }}
+                    className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none h-24"
+                  >
+                    {dummyPegawaiList.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.nama} ({p.unitKerja})
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-slate-500 mt-1">Tahan tombol Ctrl/Cmd untuk memilih lebih dari satu pegawai.</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Tanggal Mulai</label>
+                  <input
+                    type="date"
+                    required
+                    value={formData.tanggalMulai}
+                    onChange={(e) => setFormData({ ...formData, tanggalMulai: e.target.value })}
+                    className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Tanggal Selesai</label>
+                  <input
+                    type="date"
+                    required
+                    value={formData.tanggalSelesai}
+                    onChange={(e) => setFormData({ ...formData, tanggalSelesai: e.target.value })}
+                    className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Domisili Lokasi Penugasan</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <select required value={formData.provinsiId} onChange={(e) => setFormData({ ...formData, provinsiId: e.target.value, kotaId: '' })} className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    <option value="">Pilih Provinsi</option>
+                    {provinces.map((wilayah) => <option key={wilayah.id} value={wilayah.id}>{wilayah.name}</option>)}
+                  </select>
+                  <select required value={formData.kotaId} disabled={!formData.provinsiId || isWilayahLoading} onChange={(e) => setFormData({ ...formData, kotaId: e.target.value })} className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:bg-slate-50">
+                    <option value="">Pilih Kota/Kabupaten</option>
+                    {cities.map((wilayah) => <option key={wilayah.id} value={wilayah.id}>{wilayah.name}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Lokasi Penugasan Spesifik</label>
+                <input type="text" required placeholder="Contoh: Kantor, lembaga, atau sekolah tujuan" value={formData.lokasiSpesifik} onChange={(e) => setFormData({ ...formData, lokasiSpesifik: e.target.value })} className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Deskripsi Tugas</label>
+                <textarea
+                  rows={3}
+                  placeholder="Penjelasan rinci mengenai agenda dan uraian tugas..."
+                  value={formData.deskripsi}
+                  onChange={(e) => setFormData({ ...formData, deskripsi: e.target.value })}
+                  className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Upload Surat Tugas / Dokumen Pendukung</label>
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                  onChange={(e) => setFormData({ ...formData, file: e.target.files?.[0] || null })}
+                  className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                />
+                <p className="mt-1 text-[11px] text-slate-500">Format yang didukung: PDF, Word, Excel.</p>
+              </div>
+
+              <div className="pt-3 flex items-center justify-end gap-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsFormModalOpen(false)}
+                  className="px-4 py-2 border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-bold rounded-xl transition-colors cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-md shadow-blue-500/20 transition-all cursor-pointer"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>Kirim Ajuan Draft</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

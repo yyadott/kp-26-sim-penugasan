@@ -14,7 +14,7 @@ export interface Pegawai {
   fotoAvatar?: string;
   email?: string;
   username?: string;
-  role?: 'SUPER_ADMIN' | 'ADMIN' | 'PEGAWAI';
+  role?: 'SUPER_ADMIN' | 'ADMIN' | 'PEGAWAI' | 'APPROVAL' | 'USER';
 }
 
 // History / Workflow Timeline item untuk Surat Tugas
