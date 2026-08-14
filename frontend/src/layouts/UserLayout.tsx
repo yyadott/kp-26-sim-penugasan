@@ -3,22 +3,22 @@ import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { LayoutDashboard, FileText, Send, ChartNoAxesCombined, CalendarCheck, CalendarDays, CalendarPlus, ChevronDown, Bell, UserCircle2, LogOut, ShieldCheck } from 'lucide-react';
 
-interface AnggotaLayoutProps {
+interface UserLayoutProps {
   children: ReactNode;
 }
 
 const links = [
-  { to: '/anggota/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/user/dashboard', label: 'Dashboard', icon: LayoutDashboard },
 ];
 
-export const AnggotaLayout = ({ children }: AnggotaLayoutProps) => {
+export const UserLayout = ({ children }: UserLayoutProps) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [absensiTerbuka, setAbsensiTerbuka] = useState(location.pathname.startsWith('/anggota/absensi'));
-  const [tugasTerbuka, setTugasTerbuka] = useState(location.pathname.startsWith('/anggota/tugas'));
-  const absensiAktif = location.pathname.startsWith('/anggota/absensi');
-  const tugasAktif = location.pathname.startsWith('/anggota/tugas');
+  const [absensiTerbuka, setAbsensiTerbuka] = useState(location.pathname.startsWith('/user/absensi'));
+  const [tugasTerbuka, setTugasTerbuka] = useState(location.pathname.startsWith('/user/tugas'));
+  const absensiAktif = location.pathname.startsWith('/user/absensi');
+  const tugasAktif = location.pathname.startsWith('/user/tugas');
 
   const handleLogout = () => {
     logout();
@@ -29,13 +29,13 @@ export const AnggotaLayout = ({ children }: AnggotaLayoutProps) => {
     <div className="min-h-screen bg-slate-100">
       <div className="flex min-h-screen">
         <aside className="hidden w-72 flex-col border-r border-slate-200 bg-white px-5 py-6 text-slate-700 lg:flex">
-          <Link to="/anggota/dashboard" className="flex items-center gap-3 px-2 py-2">
+          <Link to="/user/dashboard" className="flex items-center gap-3 px-2 py-2">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white">
               <ShieldCheck className="h-5 w-5" />
             </div>
             <div>
               <p className="text-sm font-semibold">SIM Penugasan</p>
-              <p className="text-xs text-slate-500">Anggota</p>
+              <p className="text-xs text-slate-500">User</p>
             </div>
           </Link>
 
@@ -66,13 +66,13 @@ export const AnggotaLayout = ({ children }: AnggotaLayoutProps) => {
               </button>
               {tugasTerbuka && (
                 <div className="mt-1 space-y-1 border-l border-slate-200 py-1 pl-4 ml-5">
-                  <NavLink to="/anggota/tugas/pengajuan" className={({ isActive }) => `flex items-center gap-2 rounded-lg px-3 py-2 text-xs transition ${isActive ? 'bg-blue-50 font-semibold text-blue-700' : 'text-slate-600 hover:bg-slate-100'}`}>
+                  <NavLink to="/user/tugas/pengajuan" className={({ isActive }) => `flex items-center gap-2 rounded-lg px-3 py-2 text-xs transition ${isActive ? 'bg-blue-50 font-semibold text-blue-700' : 'text-slate-600 hover:bg-slate-100'}`}>
                     <Send className="h-3.5 w-3.5" /> Proses Ajuan Surat Tugas
                   </NavLink>
-                  <NavLink to="/anggota/tugas/progres" className={({ isActive }) => `flex items-center gap-2 rounded-lg px-3 py-2 text-xs transition ${isActive ? 'bg-blue-50 font-semibold text-blue-700' : 'text-slate-600 hover:bg-slate-100'}`}>
+                  <NavLink to="/user/tugas/progres" className={({ isActive }) => `flex items-center gap-2 rounded-lg px-3 py-2 text-xs transition ${isActive ? 'bg-blue-50 font-semibold text-blue-700' : 'text-slate-600 hover:bg-slate-100'}`}>
                     <FileText className="h-3.5 w-3.5" /> Progres Surat Tugas
                   </NavLink>
-                  <NavLink to="/anggota/tugas/laporan" className={({ isActive }) => `flex items-center gap-2 rounded-lg px-3 py-2 text-xs transition ${isActive ? 'bg-blue-50 font-semibold text-blue-700' : 'text-slate-600 hover:bg-slate-100'}`}>
+                  <NavLink to="/user/tugas/laporan" className={({ isActive }) => `flex items-center gap-2 rounded-lg px-3 py-2 text-xs transition ${isActive ? 'bg-blue-50 font-semibold text-blue-700' : 'text-slate-600 hover:bg-slate-100'}`}>
                     <ChartNoAxesCombined className="h-3.5 w-3.5" /> Laporan
                   </NavLink>
                 </div>
@@ -92,10 +92,10 @@ export const AnggotaLayout = ({ children }: AnggotaLayoutProps) => {
               </button>
               {absensiTerbuka && (
                 <div className="mt-1 space-y-1 border-l border-slate-200 py-1 pl-4 ml-5">
-                  <NavLink to="/anggota/absensi/kehadiran" className={({ isActive }) => `flex items-center gap-2 rounded-lg px-3 py-2 text-xs transition ${isActive ? 'bg-blue-50 font-semibold text-blue-700' : 'text-slate-600 hover:bg-slate-100'}`}>
+                  <NavLink to="/user/absensi/kehadiran" className={({ isActive }) => `flex items-center gap-2 rounded-lg px-3 py-2 text-xs transition ${isActive ? 'bg-blue-50 font-semibold text-blue-700' : 'text-slate-600 hover:bg-slate-100'}`}>
                     <CalendarDays className="h-3.5 w-3.5" /> Absensi Kehadiran
                   </NavLink>
-                  <NavLink to="/anggota/absensi/cuti" className={({ isActive }) => `flex items-center gap-2 rounded-lg px-3 py-2 text-xs transition ${isActive ? 'bg-blue-50 font-semibold text-blue-700' : 'text-slate-600 hover:bg-slate-100'}`}>
+                  <NavLink to="/user/absensi/cuti" className={({ isActive }) => `flex items-center gap-2 rounded-lg px-3 py-2 text-xs transition ${isActive ? 'bg-blue-50 font-semibold text-blue-700' : 'text-slate-600 hover:bg-slate-100'}`}>
                     <CalendarPlus className="h-3.5 w-3.5" /> Izin & Cuti
                   </NavLink>
                 </div>
@@ -117,7 +117,7 @@ export const AnggotaLayout = ({ children }: AnggotaLayoutProps) => {
           </nav>
 
           <div className="mt-auto rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <p className="text-sm font-semibold">{user?.nama || 'Anggota'}</p>
+            <p className="text-sm font-semibold">{user?.nama || 'User'}</p>
             <p className="text-xs text-slate-500">{user?.unitKerja || 'Unit'} • {user?.role || 'PEGAWAI'}</p>
             <button
               type="button"
@@ -134,15 +134,15 @@ export const AnggotaLayout = ({ children }: AnggotaLayoutProps) => {
           <header className="border-b border-slate-200 bg-white px-4 py-4 shadow-sm sm:px-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-semibold text-slate-800">Area Anggota</p>
+                <p className="text-sm font-semibold text-slate-800">Area User</p>
                 <p className="text-xs text-slate-500">Pantau tugas dan aktivitas harian</p>
               </div>
               <div className="flex items-center gap-2">
-                <NavLink to="/anggota/notifikasi" aria-label="Notifikasi" title="Notifikasi" className={({ isActive }) => `relative flex h-9 w-9 items-center justify-center rounded-full transition ${isActive ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600 hover:bg-blue-50 hover:text-blue-700'}`}>
+                <NavLink to="/user/notifikasi" aria-label="Notifikasi" title="Notifikasi" className={({ isActive }) => `relative flex h-9 w-9 items-center justify-center rounded-full transition ${isActive ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600 hover:bg-blue-50 hover:text-blue-700'}`}>
                   <Bell className="h-4 w-4" />
                   <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-rose-500 ring-2 ring-white" />
                 </NavLink>
-                <NavLink to="/anggota/profile" aria-label="Profil" title="Profil" className={({ isActive }) => `flex h-9 w-9 items-center justify-center rounded-full transition ${isActive ? 'bg-blue-100 text-blue-700' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'}`}>
+                <NavLink to="/user/profile" aria-label="Profil" title="Profil" className={({ isActive }) => `flex h-9 w-9 items-center justify-center rounded-full transition ${isActive ? 'bg-blue-100 text-blue-700' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'}`}>
                   <UserCircle2 className="h-5 w-5" />
                 </NavLink>
               </div>

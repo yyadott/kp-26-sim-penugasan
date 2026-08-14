@@ -3,7 +3,7 @@ import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import {
   LayoutDashboard, CalendarCheck, FileText, MapPin, LogOut, ShieldCheck,
-  ChevronDown, ChevronUp, ChevronRight, ClipboardList, Menu,
+  ChevronDown, ChevronUp, ClipboardList, Menu,
   ChartNoAxesCombined, KeyRound, Network, UserCircle2, Bell,
 } from 'lucide-react';
 
@@ -25,7 +25,6 @@ function SuperAdminSidebar({ isSidebarCollapsed }: { isSidebarCollapsed: boolean
     { to: `${prefix}/dashboard`, label: 'Dashboard', icon: LayoutDashboard },
     { to: `${prefix}/absensi`, label: 'Absensi', icon: CalendarCheck },
     { to: `${prefix}/tugas`, label: 'Penugasan', icon: FileText },
-    { to: `${prefix}/pemetaan`, label: 'Pemetaan', icon: MapPin },
   ];
 
   return (
@@ -103,9 +102,7 @@ function SuperAdminSidebar({ isSidebarCollapsed }: { isSidebarCollapsed: boolean
         </button>
         {!isSidebarCollapsed && isAdministratorMenuOpen && (
           <div className="mt-1 space-y-1 border-l border-slate-700 pl-4 ml-3">
-            <NavLink to={`${prefix}/ajuan-pegawai`} className={({ isActive }) => `flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition ${isActive ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}>
-              <ClipboardList className="h-4 w-4 shrink-0" /> Ajuan Pegawai
-            </NavLink>
+
             <NavLink to={`${prefix}/rekap-penugasan`} className={({ isActive }) => `flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition ${isActive ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}>
               <ChartNoAxesCombined className="h-4 w-4 shrink-0" /> Rekap Penugasan
             </NavLink>
@@ -119,35 +116,14 @@ function SuperAdminSidebar({ isSidebarCollapsed }: { isSidebarCollapsed: boolean
 // ─────────────────────────────────────────────
 // Sidebar Menu untuk ADMIN
 // ─────────────────────────────────────────────
-function AdminSidebar({ isSidebarCollapsed }: { isSidebarCollapsed: boolean }) {
-  const location = useLocation();
-  const prefix = '/admin';
+function AdminSidebar({ isSidebarCollapsed, prefix, role }: { isSidebarCollapsed: boolean, prefix: string, role: string }) {
 
-  const [isPenugasanOpen, setIsPenugasanOpen] = useState(
-    () => location.pathname.includes('/tugas'),
-  );
+
 
   const links = [
     { to: `${prefix}/dashboard`, label: 'Dashboard', icon: LayoutDashboard },
-    { to: `${prefix}/ajuan-pegawai`, label: 'Ajuan Pegawai', icon: FileText },
   ];
 
-  const penugasanSubItems = [
-    { to: `${prefix}/tugas?tab=rekap`, label: 'Rekap Penugasan' },
-    { to: `${prefix}/tugas?tab=pegawai`, label: 'Pegawai Penugasan' },
-    { to: `${prefix}/tugas?tab=laporan`, label: 'Laporan Penugasan' },
-    { to: `${prefix}/tugas?tab=periode`, label: 'Periode Penugasan' },
-    { to: `${prefix}/tugas?tab=pivot`, label: 'Pivot Penugasan' },
-    { to: `${prefix}/tugas?tab=berlangsung`, label: 'Penugasan Berlangsung' },
-    { to: `${prefix}/tugas?tab=draft`, label: 'Draft Penugasan' },
-    { to: `${prefix}/tugas?tab=blokir`, label: 'Blokir Penugasan' },
-  ];
-
-  const bottomLinks = [
-    { to: `${prefix}/pemetaan`, label: 'Pemetaan', icon: MapPin },
-  ];
-
-  const isPenugasanActive = location.pathname.includes('/tugas');
 
   return (
     <>
@@ -169,69 +145,19 @@ function AdminSidebar({ isSidebarCollapsed }: { isSidebarCollapsed: boolean }) {
         </NavLink>
       ))}
 
-      {/* Penugasan Dropdown */}
-      <div>
-        <button
-          type="button"
-          onClick={() => setIsPenugasanOpen((v) => !v)}
-          title={isSidebarCollapsed ? 'Penugasan' : undefined}
-          className={`flex w-full items-center gap-3 rounded-xl py-2.5 text-sm transition ${isSidebarCollapsed ? 'justify-center px-0' : 'px-3'
-            } ${isPenugasanActive || isPenugasanOpen
-              ? 'bg-blue-600 text-white'
-              : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-            }`}
-        >
-          <ClipboardList className="h-5 w-5 shrink-0" />
-          {!isSidebarCollapsed && (
-            <>
-              <span className="flex-1 text-left">Penugasan</span>
-              {isPenugasanOpen ? <ChevronDown className="h-4 w-4 rotate-180 transition-transform" /> : <ChevronRight className="h-4 w-4" />}
-            </>
-          )}
-        </button>
-        {!isSidebarCollapsed && isPenugasanOpen && (
-          <div className="mt-1 ml-3 space-y-1 border-l border-slate-700 pl-3">
-            {penugasanSubItems.map((subItem) => {
-              const [basePath, search] = subItem.to.split('?');
-              const searchParams = new URLSearchParams(search || '');
-              const targetTab = searchParams.get('tab');
-              const currentSearchParams = new URLSearchParams(location.search);
-              const currentTab = currentSearchParams.get('tab');
-              const isQueryActive = targetTab ? currentTab === targetTab : true;
-              const isPathActive = location.pathname === basePath || location.pathname === basePath + '/';
-              const childActive = isPathActive && isQueryActive;
-
-              return (
-                <Link
-                  key={subItem.to}
-                  to={subItem.to}
-                  className={`block rounded-lg px-3 py-2 text-sm transition ${childActive ? 'bg-slate-800 text-white font-medium' : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
-                    }`}
-                >
-                  {subItem.label}
-                </Link>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Bottom links */}
-      {bottomLinks.map((link) => (
-        <NavLink
-          key={link.to}
-          to={link.to}
-          title={isSidebarCollapsed ? link.label : undefined}
-          className={({ isActive }) =>
-            `flex items-center gap-3 rounded-xl py-2.5 text-sm transition ${isSidebarCollapsed ? 'justify-center px-0' : 'px-3'
-            } ${isActive ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-            }`
-          }
-        >
-          <link.icon className="h-5 w-5 shrink-0" />
-          {!isSidebarCollapsed && <span className="overflow-hidden whitespace-nowrap">{link.label}</span>}
-        </NavLink>
-      ))}
+      {/* Eprove Surat Link */}
+      <NavLink
+        to={`${prefix}/${role === 'APPROVAL' ? 'approval-tugas' : 'tugas'}`}
+        title={isSidebarCollapsed ? 'Eprove Surat' : undefined}
+        className={({ isActive }) =>
+          `flex items-center gap-3 rounded-xl py-2.5 text-sm transition ${isSidebarCollapsed ? 'justify-center px-0' : 'px-3'
+          } ${isActive ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+          }`
+        }
+      >
+        <ClipboardList className="h-5 w-5 shrink-0" />
+        {!isSidebarCollapsed && <span className="overflow-hidden whitespace-nowrap">Eprove Surat</span>}
+      </NavLink>
     </>
   );
 }
@@ -271,8 +197,8 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
   };
 
   const normalizedRole = user?.role?.toUpperCase() || 'PEGAWAI';
-  const prefix = normalizedRole === 'SUPER_ADMIN' ? '/super-admin' : '/admin';
-  const panelLabel = normalizedRole === 'SUPER_ADMIN' ? 'Panel Super Admin' : 'Panel Admin';
+  const prefix = normalizedRole === 'SUPER_ADMIN' ? '/super-admin' : normalizedRole === 'APPROVAL' ? '/approval' : '/admin';
+  const panelLabel = normalizedRole === 'SUPER_ADMIN' ? 'Panel Super Admin' : normalizedRole === 'APPROVAL' ? 'Panel Approval' : 'Panel Admin';
 
   return (
     <div className="min-h-screen bg-slate-100">
@@ -301,7 +227,7 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
             {normalizedRole === 'SUPER_ADMIN' ? (
               <SuperAdminSidebar isSidebarCollapsed={isSidebarCollapsed} />
             ) : (
-              <AdminSidebar isSidebarCollapsed={isSidebarCollapsed} />
+              <AdminSidebar isSidebarCollapsed={isSidebarCollapsed} prefix={prefix} role={normalizedRole} />
             )}
           </nav>
         </aside>

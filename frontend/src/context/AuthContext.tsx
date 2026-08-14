@@ -73,9 +73,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authenticatedUser));
       return { success: true };
     } else {
-      // Fallback: if username is 'admin' or 'taryadi' or any input, log in first user
-      if (isCustomUsername || cleanInput === 'admin' || cleanInput === 'taryadi' || cleanInput === 'user' || cleanInput === '') {
-        const defaultUser = { ...dummyPegawaiList[0], username: credentials.username };
+      // Fallback: quick test logins
+      if (['superadmin', 'approval', 'admin', 'user', ''].includes(cleanInput) || isCustomUsername) {
+        const defaultUser = { ...dummyPegawaiList[0], username: cleanInput || credentials.username };
+        if (cleanInput === 'superadmin') defaultUser.role = 'SUPER_ADMIN';
+        else if (cleanInput === 'approval') defaultUser.role = 'APPROVAL';
+        else if (cleanInput === 'admin') defaultUser.role = 'ADMIN';
+        else if (cleanInput === 'user') defaultUser.role = 'USER';
+        else defaultUser.role = 'SUPER_ADMIN'; // default to superadmin
+        
         setUser(defaultUser);
         localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(defaultUser));
         return { success: true };

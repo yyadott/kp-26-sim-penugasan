@@ -2,30 +2,33 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { AuthLayout } from '@/layouts/AuthLayout';
 import { AdminLayout } from '@/layouts/AdminLayout';
-import { AnggotaLayout } from '@/layouts/AnggotaLayout';
+import { UserLayout } from '@/layouts/UserLayout';
 import { LoginPage } from '@/pages/auth/LoginPage';
 import { ForgotPasswordPage } from '@/pages/auth/ForgotPasswordPage';
 import { ProtectedRoute } from '@/routes/ProtectedRoute';
 import { SuperAdminRoutes } from '@/routes/SuperAdminRoutes';
 import { AdminRoutes } from '@/routes/AdminRoutes';
-import { AnggotaRoutes } from '@/routes/AnggotaRoutes';
+import { ApprovalRoutes } from '@/routes/ApprovalRoutes';
+import { UserRoutes } from '@/routes/UserRoutes';
 
 const HomeRedirect = () => {
   const { user } = useAuth();
-  const normalizedRole = user?.role?.toUpperCase() || 'PEGAWAI';
+  const normalizedRole = user?.role?.toUpperCase() || 'USER';
 
   if (normalizedRole === 'SUPER_ADMIN') return <Navigate to="/super-admin/dashboard" replace />;
   if (normalizedRole === 'ADMIN') return <Navigate to="/admin/dashboard" replace />;
-  return <Navigate to="/anggota/dashboard" replace />;
+  if (normalizedRole === 'APPROVAL') return <Navigate to="/approval/dashboard" replace />;
+  return <Navigate to="/user/dashboard" replace />;
 };
 
 const RoleRedirect = ({ to }: { to: string }) => {
   const { user } = useAuth();
-  const normalizedRole = user?.role?.toUpperCase() || 'PEGAWAI';
+  const normalizedRole = user?.role?.toUpperCase() || 'USER';
 
   if (normalizedRole === 'SUPER_ADMIN') return <Navigate to={`/super-admin${to}`} replace />;
   if (normalizedRole === 'ADMIN') return <Navigate to={`/admin${to}`} replace />;
-  return <Navigate to={`/anggota${to}`} replace />;
+  if (normalizedRole === 'APPROVAL') return <Navigate to={`/approval${to}`} replace />;
+  return <Navigate to={`/user${to}`} replace />;
 };
 
 export const AppRoutes = () => {
@@ -65,12 +68,23 @@ export const AppRoutes = () => {
       />
 
       <Route
-        path="/anggota/*"
+        path="/approval/*"
         element={
-          <ProtectedRoute requiredRole="anggota">
-            <AnggotaLayout>
-              <AnggotaRoutes />
-            </AnggotaLayout>
+          <ProtectedRoute requiredRole="approval">
+            <AdminLayout>
+              <ApprovalRoutes />
+            </AdminLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/user/*"
+        element={
+          <ProtectedRoute requiredRole="user">
+            <UserLayout>
+              <UserRoutes />
+            </UserLayout>
           </ProtectedRoute>
         }
       />
