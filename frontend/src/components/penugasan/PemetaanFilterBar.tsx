@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useMemo } from 'react';
 import { Search, Filter, Users, User, Globe, ChevronDown, X } from 'lucide-react';
 import { UNIT_COLORS } from '@/data/dummyData';
 import type { FilterMode } from '@/hooks/usePemetaanFilter';
-import type { LokasiPenugasanPegawai } from '@/types';
+import type { LokasiPenugasanPegawai, Pegawai } from '@/types';
 
 interface PemetaanFilterBarProps {
   filterMode: FilterMode;
@@ -13,7 +13,7 @@ interface PemetaanFilterBarProps {
   setSelectedPegawaiId: (val: string) => void;
   searchQuery: string;
   setSearchQuery: (val: string) => void;
-  allPegawaiInPenugasan: any[];
+  allPegawaiInPenugasan: Pegawai[];
   mapLocations: LokasiPenugasanPegawai[];
 }
 

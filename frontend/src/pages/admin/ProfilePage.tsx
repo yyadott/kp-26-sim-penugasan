@@ -1,99 +1,109 @@
-import { useState, type FormEvent } from 'react';
-import { CheckCircle2, Eye, EyeOff, Save } from 'lucide-react';
+import { useState } from 'react';
+import { Eye, EyeOff, KeyRound, UserRound, Save } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
 export const ProfilePage = () => {
-  const { user, updateCredentials } = useAuth();
-  const [username, setUsername] = useState(user?.username || 'yadiyudi');
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const { user, getDemoCredentials, updateCredentials } = useAuth();
+  const credentials = getDemoCredentials();
+  const username = credentials.username;
+  const currentPassword = credentials.password;
+  const [showPassword, setShowPassword] = useState(false);
+  const [showOldPassword, setShowOldPassword] = useState(false);
+  const [oldPasswordInput, setOldPasswordInput] = useState('');
+  const [usernameInput, setUsernameInput] = useState(username);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [message, setMessage] = useState('');
 
-  const submit = (event: FormEvent) => {
+  if (!user) return null;
+
+  const handleSave = (event: React.FormEvent) => {
     event.preventDefault();
-    setMessage(null);
-    const result = updateCredentials({ username, currentPassword, newPassword });
-    setMessage({ type: result.success ? 'success' : 'error', text: result.message || 'Perubahan tidak dapat disimpan.' });
-    if (result.success) {
-      setCurrentPassword('');
-      setNewPassword('');
+    if (!usernameInput.trim() || !oldPasswordInput.trim() || !passwordInput.trim()) {
+      setMessage('Username, password lama, dan password baru wajib diisi.');
+      return;
     }
+    if (oldPasswordInput !== currentPassword) {
+      setMessage('Password lama tidak sesuai.');
+      return;
+    }
+    updateCredentials({ username: usernameInput, currentPassword: oldPasswordInput, newPassword: passwordInput });
+    setMessage('Profil berhasil diperbarui!');
+    setOldPasswordInput('');
+    setPasswordInput('');
+    setShowPassword(false);
+    setMessage('Perubahan username dan password berhasil disimpan.');
   };
 
-  const passwordInput = (
-    label: string,
-    value: string,
-    onChange: (value: string) => void,
-    visible: boolean,
-    setVisible: (visible: boolean) => void,
-    placeholder: string,
-  ) => (
-    <div>
-      <label className="mb-2 block text-sm font-bold text-slate-700">{label}</label>
-      <div className="relative">
-        <input
-          type={visible ? 'text' : 'password'} value={value} onChange={(event) => onChange(event.target.value)}
-          placeholder={placeholder} className="w-full rounded-2xl border border-[#d9e2f0] bg-[#f7f9fc] py-3.5 pl-4 pr-12 font-mono text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
-        />
-        <button type="button" onClick={() => setVisible(!visible)} aria-label={visible ? 'Sembunyikan password' : 'Tampilkan password'} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#8ea2c4] hover:text-blue-600">
-          {visible ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-        </button>
-      </div>
-    </div>
-  );
-
   return (
-    <div className="min-h-full bg-white">
-      <section className="bg-gradient-to-r from-[#1e42e8] to-[#3932d8] px-7 py-6 text-white sm:px-10">
-        <h1 className="text-[28px] font-extrabold tracking-tight">Profil Saya</h1>
-        <p className="mt-1 text-base font-medium text-blue-50">Informasi akun pengguna Super Admin.</p>
-      </section>
-
-      <main className="mx-auto max-w-4xl px-7 py-7 sm:px-10">
-        <div className="flex items-center gap-5 border-b border-slate-200 pb-6">
-          <img src={user?.fotoAvatar || `${import.meta.env.BASE_URL}pp-navbar-2.jpg`} alt={user?.nama || 'Foto profil'} className="h-[88px] w-[88px] rounded-2xl border-2 border-slate-200 object-cover shadow-sm" />
-          <div>
-            <h2 className="text-xl font-extrabold text-slate-900">{user?.nama}</h2>
-            <p className="mt-1 font-mono text-sm text-[#57709b]">NIP. {user?.nip}</p>
-          </div>
+    <div className="mx-auto max-w-3xl p-6">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="bg-gradient-to-r from-blue-700 to-indigo-700 px-6 py-8 text-white">
+          <h1 className="text-2xl font-bold">Profil Saya</h1>
+          <p className="mt-1 text-sm text-blue-100">Informasi akun pengguna Admin.</p>
         </div>
 
-        <form onSubmit={submit} className="mt-6 space-y-5">
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+        <form onSubmit={handleSave} className="space-y-5 p-6">
+          <div className="flex items-center gap-4 border-b border-slate-100 pb-5">
+            <img
+              src={user.fotoAvatar || `${import.meta.env.BASE_URL}pp-navbar-2.jpg`}
+              alt={user.nama}
+              className="h-20 w-20 rounded-2xl border-2 border-blue-100 object-cover shadow-sm"
+            />
             <div>
-              <label className="mb-2 block text-sm font-bold text-slate-700">Nama</label>
-              <input readOnly value={user?.nama || ''} className="w-full rounded-2xl border border-[#d9e2f0] bg-[#f7f9fc] px-4 py-3.5 text-base text-slate-800 outline-none" />
+              <h2 className="text-lg font-bold text-slate-800">{user.nama}</h2>
+              <p className="font-mono text-sm text-slate-500">NIP. {user.nip}</p>
+            </div>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-1.5 block text-xs font-bold text-slate-600">Nama</label>
+              <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-700">
+                {/* <UserRound className="h-4 w-4 text-slate-400" /> */}
+                <span>{user.nama}</span>
+              </div>
             </div>
             <div>
-              <label className="mb-2 block text-sm font-bold text-slate-700">NIP</label>
-              <input readOnly value={user?.nip || ''} className="w-full rounded-2xl border border-[#d9e2f0] bg-[#f7f9fc] px-4 py-3.5 font-mono text-sm text-slate-800 outline-none" />
+              <label className="mb-1.5 block text-xs font-bold text-slate-600">NIP</label>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 font-mono text-sm text-slate-700">{user.nip}</div>
             </div>
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-bold text-slate-700">Username</label>
-            <div className="relative">
-              <input value={username} onChange={(event) => setUsername(event.target.value)} className="w-full rounded-2xl border border-[#d9e2f0] bg-[#f7f9fc] px-4 py-3.5 text-base text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100" />
+            <label className="mb-1.5 block text-xs font-bold text-slate-600">Username</label>
+            <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-700">
+              <UserRound className="h-4 w-4 text-slate-400" />
+              <input value={usernameInput} onChange={(event) => setUsernameInput(event.target.value)} className="w-full bg-transparent outline-none" />
             </div>
           </div>
 
-          {passwordInput('Password Lama', currentPassword, setCurrentPassword, showCurrentPassword, setShowCurrentPassword, 'Masukkan password lama')}
           <div>
-            {passwordInput('Password Baru', newPassword, setNewPassword, showNewPassword, setShowNewPassword, 'Masukkan password baru')}
-            <p className="mt-2 text-xs text-[#758fbc]">Masukkan password baru untuk mengubah password akun.</p>
+            <label className="mb-1.5 block text-xs font-bold text-slate-600">Password Lama</label>
+            <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5">
+              <KeyRound className="h-4 w-4 text-slate-400" />
+              <input type={showOldPassword ? 'text' : 'password'} value={oldPasswordInput} onChange={(event) => setOldPasswordInput(event.target.value)} placeholder="Masukkan password lama" className="flex-1 bg-transparent font-mono text-sm text-slate-700 outline-none" />
+              <button type="button" onClick={() => setShowOldPassword((visible) => !visible)} className="text-slate-400 hover:text-blue-600" aria-label={showOldPassword ? 'Sembunyikan password lama' : 'Tampilkan password lama'}>
+                {showOldPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
           </div>
 
-          {message && <div className={`flex items-center gap-2 rounded-xl border px-4 py-3 text-sm ${message.type === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-red-200 bg-red-50 text-red-700'}`}>
-            {message.type === 'success' && <CheckCircle2 className="h-4 w-4 shrink-0" />}{message.text}
-          </div>}
-
-          <button type="submit" className="inline-flex items-center gap-2 rounded-xl bg-[#1f5eff] px-5 py-3 font-bold text-white shadow-md shadow-blue-500/20 transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300">
-            <Save className="h-5 w-5" />Simpan Perubahan
+          <div>
+            <label className="mb-1.5 block text-xs font-bold text-slate-600">Password Baru</label>
+            <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5">
+              <KeyRound className="h-4 w-4 text-slate-400" />
+              <input type={showPassword ? 'text' : 'password'} value={passwordInput} onChange={(event) => setPasswordInput(event.target.value)} placeholder="Masukkan password baru" className="flex-1 bg-transparent font-mono text-sm text-slate-700 outline-none" />
+              <button type="button" onClick={() => setShowPassword((visible) => !visible)} className="text-slate-400 hover:text-blue-600" aria-label={showPassword ? 'Sembunyikan password' : 'Tampilkan password'}>
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+            <p className="mt-1.5 text-[11px] text-slate-400">Masukkan password baru untuk mengubah password akun.</p>
+          </div>
+          {message && <p className="rounded-lg bg-blue-50 px-3 py-2 text-xs font-medium text-blue-700">{message}</p>}
+          <button type="submit" className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-blue-700">
+            <Save className="h-4 w-4" /> Simpan Perubahan
           </button>
         </form>
-      </main>
+      </div>
     </div>
   );
 };

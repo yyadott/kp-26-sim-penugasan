@@ -34,6 +34,13 @@ export const AbsensiPage = () => {
   const [tanggalHariIni, setTanggalHariIni] = useState(() => new Date());
   const [calendarMonthOffset, setCalendarMonthOffset] = useState(0);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('tab') === 'pegawai-lain') {
+      setActiveTab('PEGAWAI_LAIN');
+    }
+  }, []);
+
   // Perbarui tanggal secara berkala agar panel tetap mengikuti tanggal perangkat.
   useEffect(() => {
     const timer = window.setInterval(() => setTanggalHariIni(new Date()), 60_000);

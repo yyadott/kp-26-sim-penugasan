@@ -27,6 +27,9 @@ import {
   CheckCircle2,
   Map as MapIcon,
   Calendar,
+  BarChart3,
+  Umbrella,
+  ArrowUpRight,
 } from 'lucide-react';
 
 export const DashboardPage = () => {
@@ -132,6 +135,99 @@ export const DashboardPage = () => {
           <div className="mt-4">
             <span className="text-3xl font-black text-amber-800">2</span>
             <span className="text-xs text-slate-500 block mt-0.5">Ajuan Tahap Verifikasi</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Charts Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Rekap Penugasan 2026 (Spans 2 columns) */}
+        <div className="lg:col-span-2 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col h-[280px]">
+          <div className="flex justify-between items-start mb-6">
+            <div className="flex gap-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+                <BarChart3 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-800 text-[15px]">Rekap Penugasan 2026</h3>
+                <p className="text-[12px] text-slate-500 mt-0.5">Total pegawai yang tercatat dalam penugasan per bulan.</p>
+              </div>
+            </div>
+            <Link to="../rekap-penugasan" className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors rounded-lg text-xs font-bold whitespace-nowrap">
+              Lihat rekap <ArrowUpRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+          
+          {/* Bar Chart */}
+          <div className="flex-1 flex items-end justify-between gap-1.5 sm:gap-2 px-1">
+            {[
+              { label: 'JAN', h: '6%' },
+              { label: 'FEB', h: '6%' },
+              { label: 'MAR', h: '6%' },
+              { label: 'APR', h: '6%' },
+              { label: 'MEI', h: '6%' },
+              { label: 'JUN', h: '6%' },
+              { label: 'JUL', h: '25%' },
+              { label: 'AGT', h: '95%' },
+              { label: 'SEP', h: '6%' },
+              { label: 'OKT', h: '6%' },
+              { label: 'NOV', h: '6%' },
+              { label: 'DES', h: '6%' },
+            ].map((item, idx) => (
+              <div key={idx} className="flex flex-col items-center flex-1 group">
+                <div className="w-full max-w-[36px] bg-slate-50 rounded-t-lg h-[130px] relative overflow-hidden flex items-end">
+                  <div 
+                    className={`w-full rounded-t-lg transition-all duration-500 ease-out ${item.label === 'AGT' || item.label === 'JUL' ? 'bg-gradient-to-t from-blue-600 to-blue-400' : 'bg-blue-500'}`}
+                    style={{ height: item.h }}
+                  ></div>
+                </div>
+                <span className="text-[10px] sm:text-xs font-bold text-slate-400 mt-3">{item.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Rekap Izin & Cuti (Spans 1 column) */}
+        <div className="lg:col-span-1 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col h-[280px]">
+          <div className="flex justify-between items-start mb-6">
+            <div className="flex gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+                <Umbrella className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-800 text-[15px]">Rekap Izin & Cuti</h3>
+                <p className="text-[12px] text-slate-500 mt-0.5">Kuota izin/cuti tahun 2026.</p>
+              </div>
+            </div>
+            <Link to="../absensi?tab=pegawai-lain" className="text-xs font-bold text-blue-600 hover:underline whitespace-nowrap mt-1">Detail</Link>
+          </div>
+          
+          {/* Donut Chart and Stats */}
+          <div className="flex-1 flex items-center justify-center gap-6">
+            {/* SVG Donut */}
+            <div className="relative w-28 h-28 shrink-0">
+              <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="40" stroke="currentColor" strokeWidth="12" fill="transparent" className="text-slate-100" />
+                <circle cx="50" cy="50" r="40" stroke="currentColor" strokeWidth="12" fill="transparent" strokeDasharray="251.2" strokeDashoffset={251.2 * (1 - 0.73)} strokeLinecap="round" className="text-emerald-500" />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-xl font-black text-slate-800">73%</span>
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Tersisa</span>
+              </div>
+            </div>
+            
+            {/* Stats */}
+            <div className="flex flex-col gap-4">
+              <div>
+                <div className="text-xl font-black text-emerald-700">11</div>
+                <div className="text-xs font-medium text-slate-500">Sisa hari izin/cuti</div>
+              </div>
+              <div className="h-px bg-slate-100 w-full"></div>
+              <div>
+                <div className="text-xl font-black text-slate-700">4</div>
+                <div className="text-xs font-medium text-slate-500">Hari telah terpakai</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>

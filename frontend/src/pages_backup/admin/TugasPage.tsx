@@ -347,7 +347,7 @@ const PenugasanBerlangsungTab = () => {
         <h3 className="font-semibold text-slate-800">Filter Penugasan Berlangsung</h3>
         <select 
           value={filter} 
-          onChange={(e) => setFilter(e.target.value as any)}
+          onChange={(e) => setFilter(e.target.value as 'ALL' | 'TODAY' | 'WEEK' | 'MONTH')}
           className="w-full sm:w-auto bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium cursor-pointer"
         >
           <option value="ALL">Semua</option>

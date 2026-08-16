@@ -1,10 +1,26 @@
 import { useState, useRef, useEffect, type ReactNode } from 'react';
-import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import {
-  LayoutDashboard, CalendarCheck, FileText, LogOut, ShieldCheck,
-  ChevronDown, ChevronUp, ClipboardList, Menu,
-  ChartNoAxesCombined, KeyRound, Network, UserCircle2, Bell,
+  LayoutDashboard,
+  CalendarCheck,
+  FileText,
+  MapPin,
+  Bell,
+  UserCircle2,
+  LogOut,
+  ShieldCheck,
+  ChevronDown,
+  ChevronUp,
+  ChevronRight,
+  ClipboardList,
+  Menu,
+  ChartNoAxesCombined,
+  KeyRound,
+  Network,
+  Users,
+  CheckSquare,
+  History
 } from 'lucide-react';
 
 // ─────────────────────────────────────────────
@@ -23,27 +39,21 @@ function SuperAdminSidebar({ isSidebarCollapsed }: { isSidebarCollapsed: boolean
 
   const links = [
     { to: `${prefix}/dashboard`, label: 'Dashboard', icon: LayoutDashboard },
+    { to: `${prefix}/anggota`, label: 'Pegawai', icon: Users },
     { to: `${prefix}/absensi`, label: 'Absensi', icon: CalendarCheck },
     { to: `${prefix}/tugas`, label: 'Penugasan', icon: FileText },
+    { to: `${prefix}/pemetaan`, label: 'Pemetaan', icon: MapPin },
   ];
 
   return (
     <>
       {links.map((link) => (
-        <NavLink
-          key={link.to}
-          to={link.to}
-          end={link.to.endsWith('/dashboard')}
-          title={isSidebarCollapsed ? link.label : undefined}
-          className={({ isActive }) =>
-            `flex items-center gap-3 rounded-xl py-2.5 text-sm transition ${isSidebarCollapsed ? 'justify-center px-0' : 'px-3'
-            } ${isActive ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-            }`
-          }
-        >
-          <link.icon className="h-5 w-5 shrink-0" />
-          {!isSidebarCollapsed && <span className="overflow-hidden whitespace-nowrap">{link.label}</span>}
-        </NavLink>
+        <SidebarMenuItem 
+          key={link.label} 
+          link={link} 
+          currentPath={location.pathname} 
+          isSidebarCollapsed={isSidebarCollapsed} 
+        />
       ))}
 
       {/* Superadmin Section */}
@@ -102,7 +112,9 @@ function SuperAdminSidebar({ isSidebarCollapsed }: { isSidebarCollapsed: boolean
         </button>
         {!isSidebarCollapsed && isAdministratorMenuOpen && (
           <div className="mt-1 space-y-1 border-l border-slate-700 pl-4 ml-3">
-
+            <NavLink to={`${prefix}/ajuan-pegawai`} className={({ isActive }) => `flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition ${isActive ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}>
+              <FileText className="h-4 w-4 shrink-0" /> Ajuan Pegawai
+            </NavLink>
             <NavLink to={`${prefix}/rekap-penugasan`} className={({ isActive }) => `flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition ${isActive ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}>
               <ChartNoAxesCombined className="h-4 w-4 shrink-0" /> Rekap Penugasan
             </NavLink>
@@ -114,20 +126,18 @@ function SuperAdminSidebar({ isSidebarCollapsed }: { isSidebarCollapsed: boolean
 }
 
 // ─────────────────────────────────────────────
-// Sidebar Menu untuk ADMIN
+// Sidebar Menu untuk APPROVAL
 // ─────────────────────────────────────────────
-function AdminSidebar({ isSidebarCollapsed, prefix, role }: { isSidebarCollapsed: boolean, prefix: string, role: string }) {
-
-
-
+function ApprovalSidebar({ isSidebarCollapsed, prefix }: { isSidebarCollapsed: boolean, prefix: string }) {
   const links = [
     { to: `${prefix}/dashboard`, label: 'Dashboard', icon: LayoutDashboard },
+    { to: `${prefix}/approval-tugas`, label: 'Approval Tugas', icon: CheckSquare },
+    { to: `${prefix}/surat-tugas`, label: 'Surat Tugas', icon: FileText },
+    { to: `${prefix}/riwayat-approval`, label: 'Riwayat Approval', icon: History },
   ];
-
 
   return (
     <>
-      {/* Top links */}
       {links.map((link) => (
         <NavLink
           key={link.to}
@@ -144,26 +154,103 @@ function AdminSidebar({ isSidebarCollapsed, prefix, role }: { isSidebarCollapsed
           {!isSidebarCollapsed && <span className="overflow-hidden whitespace-nowrap">{link.label}</span>}
         </NavLink>
       ))}
-
-      {/* Eprove Surat Link */}
-      <NavLink
-        to={`${prefix}/${role === 'APPROVAL' ? 'approval-tugas' : 'tugas'}`}
-        title={isSidebarCollapsed ? 'Eprove Surat' : undefined}
-        className={({ isActive }) =>
-          `flex items-center gap-3 rounded-xl py-2.5 text-sm transition ${isSidebarCollapsed ? 'justify-center px-0' : 'px-3'
-          } ${isActive ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-          }`
-        }
-      >
-        <ClipboardList className="h-5 w-5 shrink-0" />
-        {!isSidebarCollapsed && <span className="overflow-hidden whitespace-nowrap">Eprove Surat</span>}
-      </NavLink>
     </>
   );
 }
 
 // ─────────────────────────────────────────────
-// AdminLayout (shared shell for Super Admin & Admin)
+// SidebarMenuItem untuk mendukung Dropdown di ADMIN
+// ─────────────────────────────────────────────
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function SidebarMenuItem({ link, currentPath, isSidebarCollapsed }: { link: any; currentPath: string, isSidebarCollapsed: boolean }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const location = useLocation();
+  const Icon = link.icon;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const isChildActive = link.items?.some((item: any) => {
+    const [basePath, search] = item.to.split('?');
+    const searchParams = new URLSearchParams(search || '');
+    const targetTab = searchParams.get('tab');
+    const currentSearchParams = new URLSearchParams(location.search);
+    const currentTab = currentSearchParams.get('tab');
+    const isQueryActive = targetTab ? currentTab === targetTab : true;
+    const isPathActive = currentPath === basePath || currentPath === basePath + '/';
+    return isPathActive && isQueryActive;
+  });
+  const isActive = currentPath === link.to || isChildActive;
+
+  if (link.items) {
+    return (
+      <div className="flex flex-col">
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          title={isSidebarCollapsed ? link.label : undefined}
+          className={`flex w-full items-center justify-between rounded-xl py-2.5 text-sm transition ${isSidebarCollapsed ? 'justify-center px-0' : 'px-3'
+            } ${isActive || isOpen ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+            }`}
+        >
+          <div className="flex items-center gap-3">
+            <Icon className="h-5 w-5 shrink-0" />
+            {!isSidebarCollapsed && <span className="overflow-hidden whitespace-nowrap">{link.label}</span>}
+          </div>
+          {!isSidebarCollapsed && (
+            isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />
+          )}
+        </button>
+        {!isSidebarCollapsed && isOpen && (
+          <div className="mt-1 ml-3 flex flex-col space-y-1 border-l border-slate-700 pl-3">
+            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+            {link.items.map((subItem: any) => {
+              const [basePath, search] = subItem.to.split('?');
+              const searchParams = new URLSearchParams(search || '');
+              const targetTab = searchParams.get('tab');
+              const currentSearchParams = new URLSearchParams(location.search);
+              const currentTab = currentSearchParams.get('tab');
+
+              const isQueryActive = targetTab ? currentTab === targetTab : true;
+              const isPathActive = currentPath === basePath || currentPath === basePath + '/';
+              const childActive = isPathActive && isQueryActive;
+
+              const SubIcon = subItem.icon;
+              return (
+                <Link
+                  key={subItem.to}
+                  to={subItem.to}
+                  className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition ${childActive ? 'bg-slate-800 text-white font-medium' : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+                    }`}
+                >
+                  {SubIcon && <SubIcon className="h-4 w-4 shrink-0" />}
+                  {subItem.label}
+                </Link>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <NavLink
+      to={link.to}
+      end={link.to.endsWith('/dashboard')}
+      title={isSidebarCollapsed ? link.label : undefined}
+      className={({ isActive: navActive }) =>
+        `flex items-center gap-3 rounded-xl py-2.5 text-sm transition ${isSidebarCollapsed ? 'justify-center px-0' : 'px-3'
+        } ${navActive ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+        }`
+      }
+    >
+      <Icon className="h-5 w-5 shrink-0" />
+      {!isSidebarCollapsed && <span className="overflow-hidden whitespace-nowrap">{link.label}</span>}
+    </NavLink>
+  );
+}
+
+// ─────────────────────────────────────────────
+// AdminLayout (shared shell for Super Admin, Admin, Approval)
 // ─────────────────────────────────────────────
 interface AdminLayoutProps {
   children: ReactNode;
@@ -172,6 +259,8 @@ interface AdminLayoutProps {
 export const AdminLayout = ({ children }: AdminLayoutProps) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
@@ -197,8 +286,41 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
   };
 
   const normalizedRole = user?.role?.toUpperCase() || 'PEGAWAI';
+
   const prefix = normalizedRole === 'SUPER_ADMIN' ? '/super-admin' : normalizedRole === 'APPROVAL' ? '/approval' : '/admin';
   const panelLabel = normalizedRole === 'SUPER_ADMIN' ? 'Panel Super Admin' : normalizedRole === 'APPROVAL' ? 'Panel Approval' : 'Panel Admin';
+
+  // Admin Links for Admin Role ONLY
+  const adminLinks = [
+    { to: `${prefix}/dashboard`, label: 'Dashboard', icon: LayoutDashboard },
+    { to: `${prefix}/anggota`, label: 'Pegawai', icon: Users },
+    { to: `${prefix}/absensi`, label: 'Absensi', icon: CalendarCheck },
+    {
+      to: '#',
+      label: 'Penugasan',
+      icon: ClipboardList,
+      items: [
+        { to: `${prefix}/tugas?tab=rekap`, label: 'Rekap Penugasan' },
+        { to: `${prefix}/tugas?tab=pegawai`, label: 'Pegawai Penugasan' },
+        { to: `${prefix}/tugas?tab=laporan`, label: 'Laporan Penugasan' },
+        { to: `${prefix}/tugas?tab=periode`, label: 'Periode Penugasan' },
+        { to: `${prefix}/tugas?tab=pivot`, label: 'Pivot Penugasan' },
+        { to: `${prefix}/tugas?tab=berlangsung`, label: 'Penugasan Berlangsung' },
+        { to: `${prefix}/tugas?tab=draft`, label: 'Draft Penugasan' },
+        { to: `${prefix}/tugas?tab=blokir`, label: 'Blokir Penugasan' },
+      ]
+    },
+    { to: `${prefix}/pemetaan`, label: 'Pemetaan', icon: MapPin },
+    {
+      to: '#',
+      label: 'Administrator',
+      icon: ShieldCheck,
+      items: [
+        { to: `${prefix}/ajuan-pegawai`, label: 'Ajuan Pegawai', icon: FileText },
+        { to: `${prefix}/rekap-penugasan`, label: 'Rekap Penugasan', icon: ChartNoAxesCombined }
+      ]
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-slate-100">
@@ -207,7 +329,7 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
         <aside className={`hidden flex-col bg-slate-950 py-6 text-slate-100 lg:flex transition-all duration-300 ${isSidebarCollapsed ? 'w-20 px-2' : 'w-72 px-5'}`}>
           {/* Logo & Title */}
           <Link to={`${prefix}/dashboard`} className={`flex items-center gap-3 py-2 ${isSidebarCollapsed ? 'justify-center' : 'px-2'}`}>
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white">
               <img
                 src={`${import.meta.env.BASE_URL}logo-kemendikdasmen.ico`}
                 alt="Logo"
@@ -222,12 +344,16 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
             )}
           </Link>
 
-          {/* Navigation — role-specific */}
+          {/* Navigation */}
           <nav className="mt-8 space-y-1">
             {normalizedRole === 'SUPER_ADMIN' ? (
               <SuperAdminSidebar isSidebarCollapsed={isSidebarCollapsed} />
+            ) : normalizedRole === 'APPROVAL' ? (
+              <ApprovalSidebar isSidebarCollapsed={isSidebarCollapsed} prefix={prefix} />
             ) : (
-              <AdminSidebar isSidebarCollapsed={isSidebarCollapsed} prefix={prefix} role={normalizedRole} />
+              adminLinks.map((link) => (
+                <SidebarMenuItem key={link.label} link={link} currentPath={location.pathname} isSidebarCollapsed={isSidebarCollapsed} />
+              ))
             )}
           </nav>
         </aside>
