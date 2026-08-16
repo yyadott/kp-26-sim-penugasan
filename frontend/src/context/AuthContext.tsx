@@ -11,6 +11,7 @@ export interface AuthContextType {
   logout: () => void;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const AUTH_STORAGE_KEY = 'sim_penugasan_user';
@@ -33,6 +34,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (stored) {
         const parsed = JSON.parse(stored);
         if (parsed.id === 'peg-01') parsed.role = 'SUPER_ADMIN';
+        if (parsed.id === 'peg-07') parsed.nama = 'Arnest, S.Kom.';
         if (!parsed.fotoAvatar || parsed.fotoAvatar.includes('unsplash') || parsed.id === 'peg-01') {
           parsed.fotoAvatar = `${import.meta.env.BASE_URL}pp-navbar-2.jpg`;
         }
@@ -61,18 +63,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const nipMatch = p.nip.toLowerCase() === cleanInput;
       const emailPrefixMatch = p.email?.toLowerCase().split('@')[0] === cleanInput;
       const nameMatch = p.nama.toLowerCase().includes(cleanInput);
-      return nipMatch || emailPrefixMatch || nameMatch;
+      const usernameMatch = p.username?.toLowerCase() === cleanInput;
+      return nipMatch || emailPrefixMatch || nameMatch || usernameMatch;
     });
 
     if (foundUser) {
-      const authenticatedUser = { ...foundUser, username: credentials.username };
+      const authenticatedUser = { ...foundUser, username: foundUser.username || credentials.username };
       setUser(authenticatedUser);
       localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authenticatedUser));
       return { success: true };
     } else {
-      // Fallback: if username is 'admin' or 'taryadi' or any input, log in first user
-      if (isCustomUsername || cleanInput === 'admin' || cleanInput === 'taryadi' || cleanInput === 'user' || cleanInput === '') {
-        const defaultUser = { ...dummyPegawaiList[0], username: credentials.username };
+      // Fallback: quick test logins
+      if (['superadmin', 'approval', 'admin', 'user', ''].includes(cleanInput) || isCustomUsername) {
+        const defaultUser = { ...dummyPegawaiList[0], username: cleanInput || credentials.username };
+        if (cleanInput === 'superadmin') defaultUser.role = 'SUPER_ADMIN';
+        else if (cleanInput === 'approval') defaultUser.role = 'APPROVAL';
+        else if (cleanInput === 'admin') defaultUser.role = 'ADMIN';
+        else if (cleanInput === 'user') defaultUser.role = 'USER';
+        else defaultUser.role = 'SUPER_ADMIN'; // default to superadmin
+        
         setUser(defaultUser);
         localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(defaultUser));
         return { success: true };

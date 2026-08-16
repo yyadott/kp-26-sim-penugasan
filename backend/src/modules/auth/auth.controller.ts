@@ -9,7 +9,7 @@ export class AuthController {
       token: 'dummy-jwt-token',
       user: {
         id: 'peg-01',
-        nama: 'Taryadi, S.Kom.',
+        nama: 'Taryadi',
         email: body.email,
         role: 'ADMIN',
         unitKerja: 'RBI',

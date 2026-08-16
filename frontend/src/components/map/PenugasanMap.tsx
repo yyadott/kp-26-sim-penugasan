@@ -116,6 +116,7 @@ export const PenugasanMap = ({
         `);
 
         // Keep reference for cleanup
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (polygon as any)._linkedTooltip = tooltipLabel;
       }
 
@@ -150,6 +151,7 @@ export const PenugasanMap = ({
 
       const marker = L.marker(loc.koordinat, { icon: customIcon }).addTo(map);
       bounds.extend(loc.koordinat);
+      const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${loc.koordinat[0]},${loc.koordinat[1]}`;
 
       // HTML Popup Content
       // Defensive check untuk pegawai yang mungkin undefined
@@ -196,6 +198,7 @@ export const PenugasanMap = ({
               <span class="px-1.5 py-0.5 rounded text-[10px] font-bold ${loc.status === 'AKTIF' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
         }">${loc.status}</span>
             </div>
+            <a href="${googleMapsUrl}" target="_blank" rel="noopener noreferrer" style="display: block; margin-top: 10px; padding: 7px 10px; border-radius: 6px; background: #2563eb; color: #fff; text-align: center; font-size: 11px; font-weight: 600; text-decoration: none;">Buka di Google Maps</a>
           </div>
         </div>
       `;

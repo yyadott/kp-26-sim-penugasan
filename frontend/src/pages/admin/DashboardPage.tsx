@@ -1,15 +1,19 @@
 import { useState } from 'react';
 import { formatDate } from '@/utils/formatter';
 import { useAuth } from '@/hooks/useAuth';
+import { CalendarWidget } from '@/components/ui/CalendarWidget';
 import { PenugasanMap } from '@/components/map/PenugasanMap';
+import { PenugasanCalendar } from '@/components/calendar/PenugasanCalendar';
 import {
   dummyAjuanSuratTugas,
   dummyPresensiPegawaiLain,
   dummyPresensiPribadi,
   UNIT_COLORS,
 } from '@/data/dummyData';
-import type { AjuanSuratTugas, LokasiPenugasanPegawai } from '@/types';
+import type { AjuanSuratTugas } from '@/types';
 import { Link } from 'react-router-dom';
+import { usePemetaanFilter } from '@/hooks/usePemetaanFilter';
+import { PemetaanFilterBar } from '@/components/penugasan/PemetaanFilterBar';
 import {
   FileText,
   CalendarCheck,
@@ -21,31 +25,33 @@ import {
   X,
   FileCheck,
   CheckCircle2,
+  Map as MapIcon,
+  Calendar,
+  BarChart3,
+  Umbrella,
+  ArrowUpRight,
 } from 'lucide-react';
 
 export const DashboardPage = () => {
   const { user } = useAuth();
   const todayFormatted = formatDate(new Date().toISOString());
 
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedAjuan, setSelectedAjuan] = useState<AjuanSuratTugas | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const ajuanMapLocations: LokasiPenugasanPegawai[] = dummyAjuanSuratTugas.map((item) => ({
-    id: `ajuan-${item.id}`,
-    suratTugasId: item.id,
-    nomorSurat: item.nomorSurat,
-    perihal: item.perihal,
-    pegawai: item.pegawaiDitugaskan[0] || item.pengaju,
-    unitKerja: item.unitKerja,
-    lokasi: item.lokasiPenugasan,
-    namaLokasi: item.lokasiSpesifik || item.lokasiPenugasan,
-    alamatLengkap: [item.lokasiSpesifik, item.lokasiPenugasan].filter(Boolean).join(', '),
-    koordinat: item.koordinat,
-    tanggalMulai: item.tanggalMulai,
-    tanggalSelesai: item.tanggalSelesai,
-    status: item.status === 'SURAT_TERBIT' ? 'AKTIF' : item.status === 'DITOLAK' ? 'SELESAI' : 'MENDATANG',
-    markerType: 'approvedAjuan',
-  }));
-  const activeLocations = ajuanMapLocations.filter((l) => l.status === 'AKTIF');
+  const [mapViewMode, setMapViewMode] = useState<'peta' | 'kalender'>('peta');
+
+  const {
+    filterMode, handleModeChange,
+    selectedUnit, setSelectedUnit,
+    selectedPegawaiId, setSelectedPegawaiId,
+    searchQuery, setSearchQuery,
+    filteredLocations,
+    allPegawaiInPenugasan,
+    mapLocations,
+  } = usePemetaanFilter();
+
+  const activeLocations = mapLocations.filter((l) => l.status === 'AKTIF');
   const recentAjuan = dummyAjuanSuratTugas.slice(0, 8);
   const recentPresensi = dummyPresensiPegawaiLain.slice(0, 8);
 
@@ -133,33 +139,168 @@ export const DashboardPage = () => {
         </div>
       </div>
 
+      {/* Charts Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Rekap Penugasan 2026 (Spans 2 columns) */}
+        <div className="lg:col-span-2 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col h-[280px]">
+          <div className="flex justify-between items-start mb-6">
+            <div className="flex gap-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+                <BarChart3 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-800 text-[15px]">Rekap Penugasan 2026</h3>
+                <p className="text-[12px] text-slate-500 mt-0.5">Total pegawai yang tercatat dalam penugasan per bulan.</p>
+              </div>
+            </div>
+            <Link to="../rekap-penugasan" className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors rounded-lg text-xs font-bold whitespace-nowrap">
+              Lihat rekap <ArrowUpRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+          
+          {/* Bar Chart */}
+          <div className="flex-1 flex items-end justify-between gap-1.5 sm:gap-2 px-1">
+            {[
+              { label: 'JAN', h: '6%' },
+              { label: 'FEB', h: '6%' },
+              { label: 'MAR', h: '6%' },
+              { label: 'APR', h: '6%' },
+              { label: 'MEI', h: '6%' },
+              { label: 'JUN', h: '6%' },
+              { label: 'JUL', h: '25%' },
+              { label: 'AGT', h: '95%' },
+              { label: 'SEP', h: '6%' },
+              { label: 'OKT', h: '6%' },
+              { label: 'NOV', h: '6%' },
+              { label: 'DES', h: '6%' },
+            ].map((item, idx) => (
+              <div key={idx} className="flex flex-col items-center flex-1 group">
+                <div className="w-full max-w-[36px] bg-slate-50 rounded-t-lg h-[130px] relative overflow-hidden flex items-end">
+                  <div 
+                    className={`w-full rounded-t-lg transition-all duration-500 ease-out ${item.label === 'AGT' || item.label === 'JUL' ? 'bg-gradient-to-t from-blue-600 to-blue-400' : 'bg-blue-500'}`}
+                    style={{ height: item.h }}
+                  ></div>
+                </div>
+                <span className="text-[10px] sm:text-xs font-bold text-slate-400 mt-3">{item.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Rekap Izin & Cuti (Spans 1 column) */}
+        <div className="lg:col-span-1 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col h-[280px]">
+          <div className="flex justify-between items-start mb-6">
+            <div className="flex gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+                <Umbrella className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-800 text-[15px]">Rekap Izin & Cuti</h3>
+                <p className="text-[12px] text-slate-500 mt-0.5">Kuota izin/cuti tahun 2026.</p>
+              </div>
+            </div>
+            <Link to="../absensi?tab=pegawai-lain" className="text-xs font-bold text-blue-600 hover:underline whitespace-nowrap mt-1">Detail</Link>
+          </div>
+          
+          {/* Donut Chart and Stats */}
+          <div className="flex-1 flex items-center justify-center gap-6">
+            {/* SVG Donut */}
+            <div className="relative w-28 h-28 shrink-0">
+              <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="40" stroke="currentColor" strokeWidth="12" fill="transparent" className="text-slate-100" />
+                <circle cx="50" cy="50" r="40" stroke="currentColor" strokeWidth="12" fill="transparent" strokeDasharray="251.2" strokeDashoffset={251.2 * (1 - 0.73)} strokeLinecap="round" className="text-emerald-500" />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-xl font-black text-slate-800">73%</span>
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Tersisa</span>
+              </div>
+            </div>
+            
+            {/* Stats */}
+            <div className="flex flex-col gap-4">
+              <div>
+                <div className="text-xl font-black text-emerald-700">11</div>
+                <div className="text-xs font-medium text-slate-500">Sisa hari izin/cuti</div>
+              </div>
+              <div className="h-px bg-slate-100 w-full"></div>
+              <div>
+                <div className="text-xl font-black text-slate-700">4</div>
+                <div className="text-xs font-medium text-slate-500">Hari telah terpakai</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Map Widget Section */}
       <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2">
               <MapPin className="w-5 h-5 text-blue-600" />
-              Visualisasi Pemetaan Lokasi Penugasan Pegawai
+              Sebaran Penugasan Pegawai
             </h3>
-            <p className="text-xs text-slate-500">Peta sebaran penugasan pegawai dari unit yang berbeda-beda secara realtime.</p>
+            <p className="text-xs text-slate-500">Visualisasi sebaran penugasan pegawai dari unit yang berbeda-beda secara realtime.</p>
           </div>
-          <Link
-            to="/pemetaan"
-            className="flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200 transition-colors"
-          >
-            <span>Lihat Detail</span>
-            <ChevronRight className="w-3.5 h-3.5" />
-          </Link>
+          <div className="flex items-center gap-2">
+            {/* View Mode Toggle */}
+            <div className="flex items-center bg-slate-100 rounded-xl p-1 gap-0.5">
+              <button
+                onClick={() => setMapViewMode('peta')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 ${mapViewMode === 'peta' ? 'bg-white text-blue-700 shadow-sm ring-1 ring-blue-200' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                <MapIcon className="w-3.5 h-3.5" />
+                Peta
+              </button>
+              <button
+                onClick={() => setMapViewMode('kalender')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 ${mapViewMode === 'kalender' ? 'bg-white text-blue-700 shadow-sm ring-1 ring-blue-200' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                <Calendar className="w-3.5 h-3.5" />
+                Kalender
+              </button>
+            </div>
+
+            <Link
+              to="/admin/pemetaan"
+              className="flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200 transition-colors"
+            >
+              <span>Lihat Detail</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
         </div>
 
-        <PenugasanMap
-          locations={ajuanMapLocations}
-          height="h-[380px]"
-          showBoundary={false}
-          defaultCenter={[-2.5, 118]}
-          defaultZoom={5}
-          autoFitBounds={false}
+        {/* Filter Bar */}
+        <PemetaanFilterBar
+          filterMode={filterMode}
+          handleModeChange={handleModeChange}
+          selectedUnit={selectedUnit}
+          setSelectedUnit={setSelectedUnit}
+          selectedPegawaiId={selectedPegawaiId}
+          setSelectedPegawaiId={setSelectedPegawaiId}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          allPegawaiInPenugasan={allPegawaiInPenugasan}
+          mapLocations={mapLocations}
         />
+
+        {mapViewMode === 'peta' ? (
+          <PenugasanMap
+            locations={filteredLocations}
+            selectedUnit="ALL"
+            height="h-[450px]"
+            showBoundary={true}
+            defaultCenter={[-2.5, 118]}
+            defaultZoom={5}
+            autoFitBounds={false}
+          />
+        ) : (
+          <PenugasanCalendar
+            locations={filteredLocations}
+            height="h-[600px]"
+          />
+        )}
       </div>
 
       {/* Stacked Tables Layout: Recent Assignments & Attendance Log */}
@@ -233,49 +374,57 @@ export const DashboardPage = () => {
           </div>
         </div>
 
-        {/* Ringkasan Presensi Pegawai Hari Ini */}
-        <div className="w-full bg-white rounded-2xl border-2 border-slate-300 p-6 shadow-sm space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-200">
-            <h3 className="font-bold text-slate-800 text-base flex items-center gap-2">
-              <UserCheck className="w-4 h-4 text-emerald-600" />
-              Ringkasan Presensi Pegawai Hari Ini
-            </h3>
-            <Link to="/absensi" className="text-sm font-semibold text-blue-600 hover:underline">
-              Lihat Detail
-            </Link>
+        {/* Presensi & Calendar Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Ringkasan Presensi Pegawai Hari Ini */}
+          <div className="lg:col-span-3 bg-white rounded-2xl border-2 border-slate-300 p-6 shadow-sm space-y-4 overflow-hidden">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+              <h3 className="font-bold text-slate-800 text-base flex items-center gap-2">
+                <UserCheck className="w-4 h-4 text-emerald-600" />
+                Ringkasan Presensi Pegawai Hari Ini
+              </h3>
+              <Link to="/absensi" className="text-sm font-semibold text-blue-600 hover:underline">
+                Lihat Detail
+              </Link>
+            </div>
+
+            <div className="overflow-x-auto pb-2">
+              <div className="flex gap-4 min-w-max">
+                {recentPresensi.map((p) => {
+                  const unitColor = UNIT_COLORS[p.unitKerja] || { bg: 'bg-slate-100', text: 'text-slate-800' };
+
+                  return (
+                    <div key={p.id} className="w-[260px] shrink-0 rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3 shadow-sm">
+                      <div className="space-y-1">
+                        <h4 className="font-bold text-slate-900 text-sm">{p.nama}</h4>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${unitColor.bg} ${unitColor.text}`}>
+                            {p.unitKerja}
+                          </span>
+                          <span className="text-xs text-slate-400 font-mono">NIP: {p.nip}</span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2 text-sm">
+                        <div className="rounded-lg bg-white border border-slate-200 p-2">
+                          <div className="text-[11px] font-semibold uppercase text-slate-500">Masuk</div>
+                          <div className="font-mono font-bold text-emerald-700">{p.jamMasuk}</div>
+                        </div>
+                        <div className="rounded-lg bg-white border border-slate-200 p-2">
+                          <div className="text-[11px] font-semibold uppercase text-slate-500">Keluar</div>
+                          <div className="font-mono text-slate-700">{p.jamKeluar || '-'}</div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
 
-          <div className="overflow-x-auto pb-2">
-            <div className="flex gap-4 min-w-max">
-              {recentPresensi.map((p) => {
-                const unitColor = UNIT_COLORS[p.unitKerja] || { bg: 'bg-slate-100', text: 'text-slate-800' };
-
-                return (
-                  <div key={p.id} className="w-[260px] shrink-0 rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3 shadow-sm">
-                    <div className="space-y-1">
-                      <h4 className="font-bold text-slate-900 text-sm">{p.nama}</h4>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${unitColor.bg} ${unitColor.text}`}>
-                          {p.unitKerja}
-                        </span>
-                        <span className="text-xs text-slate-400 font-mono">NIP: {p.nip}</span>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2 text-sm">
-                      <div className="rounded-lg bg-white border border-slate-200 p-2">
-                        <div className="text-[11px] font-semibold uppercase text-slate-500">Masuk</div>
-                        <div className="font-mono font-bold text-emerald-700">{p.jamMasuk}</div>
-                      </div>
-                      <div className="rounded-lg bg-white border border-slate-200 p-2">
-                        <div className="text-[11px] font-semibold uppercase text-slate-500">Keluar</div>
-                        <div className="font-mono text-slate-700">{p.jamKeluar || '-'}</div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+          {/* Calendar Widget */}
+          <div className="lg:col-span-1">
+            <CalendarWidget selectedDate={selectedDate} onSelectDate={setSelectedDate} />
           </div>
         </div>
       </div>

@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
-import { dummyAjuanSuratTugas, dummyPegawaiList, UNIT_COLORS } from '@/data/dummyData';
+import { useState } from 'react';
+import { dummyAjuanSuratTugas, UNIT_COLORS } from '@/data/dummyData';
 import type { AjuanSuratTugas, UnitKerjaType } from '@/types';
+import { DraftAjuanModal } from '@/components/penugasan/DraftAjuanModal';
 import {
   FileText,
-  Plus,
   CheckCircle2,
   Clock,
   MapPin,
@@ -11,7 +11,6 @@ import {
   Eye,
   X,
   FileCheck,
-  Send,
   MoreHorizontal,
   Users,
   Hourglass,
@@ -55,7 +54,6 @@ const CheckboxDropdown = ({ label, options, selected, isOpen, onToggle, onChange
 );
 
 export const TugasPage = () => {
-  type Wilayah = { id: string; name: string };
   const [ajuanList, setAjuanList] = useState<AjuanSuratTugas[]>(dummyAjuanSuratTugas);
   const [activeTab, setActiveTab] = useState<'DAFTAR' | 'WORKFLOW'>('DAFTAR');
   const [selectedUnits, setSelectedUnits] = useState<UnitKerjaType[]>([]);
@@ -73,43 +71,9 @@ export const TugasPage = () => {
   const [selectedPegawaiAjuan, setSelectedPegawaiAjuan] = useState<AjuanSuratTugas | null>(null);
   const [openStatusId, setOpenStatusId] = useState<string | null>(null);
   const [openActionId, setOpenActionId] = useState<string | null>(null);
-  const [provinces, setProvinces] = useState<Wilayah[]>([]);
-  const [cities, setCities] = useState<Wilayah[]>([]);
-  const [isWilayahLoading, setIsWilayahLoading] = useState(false);
+  const [isDraftModalOpen, setIsDraftModalOpen] = useState(false);
 
-  // Modal Form Ajuan Baru
-  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
-  const [formData, setFormData] = useState({
-    perihal: '',
-    unitKerja: 'RBI' as UnitKerjaType,
-    pegawaiId: dummyPegawaiList[0].id,
-    tanggalMulai: '2026-08-01',
-    tanggalSelesai: '2026-08-03',
-    lokasiPenugasan: 'Kecamatan Bandung Tengah',
-    lokasiSpesifik: '',
-    provinsiId: '',
-    kotaId: '',
-    koordinatLat: -6.9147,
-    koordinatLng: 107.6098,
-    deskripsi: '',
-  });
-
-  useEffect(() => {
-    fetch('https://www.emsifa.com/api-wilayah-indonesia/api/provinces.json')
-      .then((response) => response.ok ? response.json() : Promise.reject())
-      .then((data: Wilayah[]) => setProvinces(data))
-      .catch(() => setProvinces([]));
-  }, []);
-
-  useEffect(() => {
-    if (!formData.provinsiId) { setCities([]); return; }
-    setIsWilayahLoading(true);
-    fetch(`https://www.emsifa.com/api-wilayah-indonesia/api/regencies/${formData.provinsiId}.json`)
-      .then((response) => response.ok ? response.json() : Promise.reject())
-      .then((data: Wilayah[]) => setCities(data))
-      .catch(() => setCities([]))
-      .finally(() => setIsWilayahLoading(false));
-  }, [formData.provinsiId]);
+  
 
   // Filter list
   const filteredAjuan = ajuanList.filter((item) => {
@@ -186,65 +150,9 @@ export const TugasPage = () => {
     setOpenStatusId(null);
   };
 
-  const handleCreateDraft = (e: React.FormEvent) => {
-    e.preventDefault();
-    const assignedPegawai = dummyPegawaiList.find((p) => p.id === formData.pegawaiId) || dummyPegawaiList[0];
-    const provinsi = provinces.find((item) => item.id === formData.provinsiId)?.name;
-    const kota = cities.find((item) => item.id === formData.kotaId)?.name;
-    const newId = `st-00${ajuanList.length + 1}`;
-    const newNomor = `DRAFT-ST/${formData.unitKerja.toUpperCase().replace(/\s+/g, '')}/2026/00${ajuanList.length + 1}`;
-
-    const newAjuan: AjuanSuratTugas = {
-      id: newId,
-      nomorSurat: newNomor,
-      perihal: formData.perihal,
-      pengaju: dummyPegawaiList[0], // Logged in user
-      pegawaiDitugaskan: [assignedPegawai],
-      unitKerja: formData.unitKerja,
-      tanggalMulai: formData.tanggalMulai,
-      tanggalSelesai: formData.tanggalSelesai,
-      lokasiPenugasan: [kota, provinsi].filter(Boolean).join(', ') || formData.lokasiPenugasan,
-      lokasiSpesifik: formData.lokasiSpesifik,
-      koordinat: [formData.koordinatLat, formData.koordinatLng],
-      deskripsi: formData.deskripsi,
-      status: 'DRAFT',
-      workflow: [
-        {
-          stage: 'DRAFT',
-          label: 'Pengajuan Draft ST',
-          actor: dummyPegawaiList[0].nama,
-          tanggal: new Date().toISOString().replace('T', ' ').substring(0, 16),
-          status: 'COMPLETED',
-          catatan: 'Draft baru telah diajukan ke sistem.',
-        },
-        {
-          stage: 'VERIFIKASI_SUBBAGIAN',
-          label: 'Verifikasi Subbagian Umum',
-          actor: `Kasubag ${formData.unitKerja}`,
-          status: 'IN_PROGRESS',
-          catatan: 'Menunggu review dokumen persyaratan.',
-        },
-        { stage: 'PERSETUJUAN_PIMPINAN', label: 'Persetujuan Pimpinan', actor: 'Kepala Dinas', status: 'PENDING' },
-        { stage: 'SURAT_TERBIT', label: 'Penerbitan Surat Tugas Resmi', actor: 'Tata Usaha', status: 'PENDING' },
-      ],
-    };
-
-    setAjuanList([newAjuan, ...ajuanList]);
-    setIsFormModalOpen(false);
-    setFormData({
-      perihal: '',
-      unitKerja: 'RBI',
-      pegawaiId: dummyPegawaiList[0].id,
-      tanggalMulai: '2026-08-01',
-      tanggalSelesai: '2026-08-03',
-      lokasiPenugasan: 'Kecamatan Bandung Tengah',
-      lokasiSpesifik: '',
-      provinsiId: '',
-      kotaId: '',
-      koordinatLat: -6.9147,
-      koordinatLng: 107.6098,
-      deskripsi: '',
-    });
+  const addDraftAjuan = (newAjuan: AjuanSuratTugas) => {
+    setAjuanList((currentList) => [newAjuan, ...currentList]);
+    setIsDraftModalOpen(false);
   };
 
   const getStatusBadge = (status: AjuanSuratTugas['status']) => {
@@ -281,16 +189,9 @@ export const TugasPage = () => {
             <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Manajemen Penugasan Pegawai</h2>
           </div>
           <p className="text-slate-500 text-sm mt-1">
-            Kelola proses ajuan surat tugas, alur persetujuan draft penugasan, dan pelacakan status penugasan instansi.
+            Kelola proses ajuan surat tugas dan pelacakan status penugasan instansi.
           </p>
         </div>
-        <button
-          onClick={() => setIsFormModalOpen(true)}
-          className="flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-md shadow-blue-500/20 transition-all cursor-pointer"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Buat Draft Ajuan ST</span>
-        </button>
       </div>
 
       {/* Navigation, Filter Sidebar, and Table */}
@@ -786,139 +687,12 @@ export const TugasPage = () => {
       </div>
 
       {/* MODAL FORM BUAT DRAFT AJUAN BARU */}
-      {isFormModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-xl w-full p-6 space-y-4 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2">
-                <Plus className="w-5 h-5 text-blue-600" />
-                Form Pengajuan Draft Surat Tugas
-              </h3>
-              <button
-                onClick={() => setIsFormModalOpen(false)}
-                className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateDraft} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Perihal Penugasan</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Contoh: Pendampingan Monitoring Posko Kesehatan..."
-                  value={formData.perihal}
-                  onChange={(e) => setFormData({ ...formData, perihal: e.target.value })}
-                  className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Unit Kerja Pengaju</label>
-                  <select
-                    value={formData.unitKerja}
-                    onChange={(e) => setFormData({ ...formData, unitKerja: e.target.value as UnitKerjaType })}
-                    className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  >
-                    <option value="RBI">RBI</option>
-                    <option value="Fastingkom">Fastingkom</option>
-                    <option value="Kepeg">Kepeg</option>
-                    <option value="PM">PM</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Pegawai Ditugaskan</label>
-                  <select
-                    value={formData.pegawaiId}
-                    onChange={(e) => setFormData({ ...formData, pegawaiId: e.target.value })}
-                    className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  >
-                    {dummyPegawaiList.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.nama} ({p.unitKerja})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Tanggal Mulai</label>
-                  <input
-                    type="date"
-                    required
-                    value={formData.tanggalMulai}
-                    onChange={(e) => setFormData({ ...formData, tanggalMulai: e.target.value })}
-                    className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Tanggal Selesai</label>
-                  <input
-                    type="date"
-                    required
-                    value={formData.tanggalSelesai}
-                    onChange={(e) => setFormData({ ...formData, tanggalSelesai: e.target.value })}
-                    className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Domisili Lokasi Penugasan</label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <select required value={formData.provinsiId} onChange={(e) => setFormData({ ...formData, provinsiId: e.target.value, kotaId: '' })} className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                    <option value="">Pilih Provinsi</option>
-                    {provinces.map((wilayah) => <option key={wilayah.id} value={wilayah.id}>{wilayah.name}</option>)}
-                  </select>
-                  <select required value={formData.kotaId} disabled={!formData.provinsiId || isWilayahLoading} onChange={(e) => setFormData({ ...formData, kotaId: e.target.value })} className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:bg-slate-50">
-                    <option value="">Pilih Kota/Kabupaten</option>
-                    {cities.map((wilayah) => <option key={wilayah.id} value={wilayah.id}>{wilayah.name}</option>)}
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Lokasi Penugasan Spesifik</label>
-                <input type="text" required placeholder="Contoh: Kantor, lembaga, atau sekolah tujuan" value={formData.lokasiSpesifik} onChange={(e) => setFormData({ ...formData, lokasiSpesifik: e.target.value })} className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Deskripsi Tugas</label>
-                <textarea
-                  rows={3}
-                  placeholder="Penjelasan rinci mengenai agenda dan uraian tugas..."
-                  value={formData.deskripsi}
-                  onChange={(e) => setFormData({ ...formData, deskripsi: e.target.value })}
-                  className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                />
-              </div>
-
-              <div className="pt-3 flex items-center justify-end gap-3 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setIsFormModalOpen(false)}
-                  className="px-4 py-2 border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-bold rounded-xl transition-colors cursor-pointer"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  className="flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-md shadow-blue-500/20 transition-all cursor-pointer"
-                >
-                  <Send className="w-3.5 h-3.5" />
-                  <span>Kirim Ajuan Draft</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <DraftAjuanModal
+        isOpen={isDraftModalOpen}
+        onClose={() => setIsDraftModalOpen(false)}
+        onSubmit={addDraftAjuan}
+        nextNumber={ajuanList.length + 1}
+      />
     </div>
   );
 };

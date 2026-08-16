@@ -210,15 +210,23 @@ export const PemetaanPage = () => {
                     </div>
                   </div>
 
-                  <div className="text-[11px] text-slate-600 bg-white p-2 rounded-lg border border-slate-200 space-y-1">
-                    <div className="flex items-center gap-1 font-semibold text-slate-800">
-                      <MapPin className="w-3 h-3 text-rose-500 shrink-0" />
-                      <span>{loc.lokasi}</span>
+                    <div className="text-[11px] text-slate-600 bg-white p-2 rounded-lg border border-slate-200 space-y-1">
+                      <div className="flex items-center gap-1 font-semibold text-slate-800">
+                        <MapPin className="w-3 h-3 text-rose-500 shrink-0" />
+                        <span>{loc.lokasi}</span>
+                      </div>
+                      <p className="text-[10px] text-slate-400 leading-tight mb-2">{loc.alamatLengkap}</p>
+                      <a 
+                        href={`https://www.google.com/maps/search/?api=1&query=${loc.koordinat[0]},${loc.koordinat[1]}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="inline-flex items-center gap-1 text-[10px] bg-blue-50 text-blue-600 font-bold px-2.5 py-1 rounded-md hover:bg-blue-100 transition-colors w-full justify-center mt-1"
+                      >
+                        Buka di Google Maps
+                      </a>
                     </div>
-                    <p className="text-[10px] text-slate-400 leading-tight">{loc.alamatLengkap}</p>
                   </div>
-                </div>
-              );
+                );
             })}
           </div>
         </div>

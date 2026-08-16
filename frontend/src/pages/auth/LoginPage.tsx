@@ -16,8 +16,7 @@ import {
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const { login, isAuthenticated, getDemoCredentials } = useAuth();
-  const { username: demoUsername, password: demoPassword } = getDemoCredentials();
+  const { login, isAuthenticated } = useAuth();
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -78,11 +77,6 @@ export const LoginPage: React.FC = () => {
     }, 600);
   };
 
-  const fillDemoAccount = () => {
-    setUsername(demoUsername);
-    setPassword(demoPassword);
-    setErrorMsg(null);
-  };
 
   return (
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4 bg-slate-100">
@@ -214,16 +208,55 @@ export const LoginPage: React.FC = () => {
             </button>
           </form>
 
-          {/* Quick Demo Button */}
+          {/* Quick Demo Buttons */}
           <div className="pt-4 border-t border-slate-100 text-center">
-            <p className="text-[11px] text-slate-500 mb-2">Menguji aplikasi secara cepat?</p>
-            <button
-              type="button"
-              onClick={fillDemoAccount}
-              className="text-xs text-blue-600 hover:text-blue-800 font-semibold underline underline-offset-2 cursor-pointer"
-            >
-              Isi Otomatis Kredensial Demo ({demoUsername})
-            </button>
+            <p className="text-[11px] text-slate-500 mb-2.5">Menguji aplikasi secara cepat?</p>
+            <div className="flex flex-col gap-2 max-w-xs mx-auto">
+              <button
+                type="button"
+                onClick={() => {
+                  setUsername('superadmin');
+                  setPassword('password123');
+                  setErrorMsg(null);
+                }}
+                className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg font-semibold transition cursor-pointer"
+              >
+                <span>Super Admin: superadmin</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setUsername('approval');
+                  setPassword('password123');
+                  setErrorMsg(null);
+                }}
+                className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs text-amber-600 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg font-semibold transition cursor-pointer"
+              >
+                <span>Approval: approval</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setUsername('admin');
+                  setPassword('password123');
+                  setErrorMsg(null);
+                }}
+                className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-lg font-semibold transition cursor-pointer"
+              >
+                <span>Admin: admin</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setUsername('user');
+                  setPassword('password123');
+                  setErrorMsg(null);
+                }}
+                className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs text-emerald-600 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg font-semibold transition cursor-pointer"
+              >
+                <span>User: user</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
