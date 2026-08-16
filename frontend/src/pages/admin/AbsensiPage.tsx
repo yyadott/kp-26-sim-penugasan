@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   dummyPresensiPribadi,
   dummyRiwayatPresensiPribadi,
@@ -33,6 +33,13 @@ export const AbsensiPage = () => {
   const [activeTab, setActiveTab] = useState<'PRIBADI' | 'PEGAWAI_LAIN'>('PRIBADI');
   const [tanggalHariIni, setTanggalHariIni] = useState(() => new Date());
   const [calendarMonthOffset, setCalendarMonthOffset] = useState(0);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('tab') === 'pegawai-lain') {
+      setActiveTab('PEGAWAI_LAIN');
+    }
+  }, []);
 
   // Perbarui tanggal secara berkala agar panel tetap mengikuti tanggal perangkat.
   useEffect(() => {

@@ -1,987 +1,509 @@
-import { useEffect, useState } from 'react';
-import { dummyAjuanSuratTugas, dummyPegawaiList, UNIT_COLORS } from '@/data/dummyData';
-import type { AjuanSuratTugas, UnitKerjaType } from '@/types';
-import {
-  FileText,
-  Plus,
-  CheckCircle2,
-  Clock,
-  MapPin,
-  Filter,
-  Eye,
-  X,
-  FileCheck,
-  Send,
-  MoreHorizontal,
-  Users,
-  Hourglass,
-  ChevronDown,
-} from 'lucide-react';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { dummyAjuanSuratTugas, dummyPegawaiList } from '@/data/dummyData';
+import { FileText, Calendar, Activity, ChevronDown } from 'lucide-react';
+import { format, isToday, isThisWeek, isThisMonth } from 'date-fns';
+import { id } from 'date-fns/locale';
 
-import { sendEmailNotification } from '@/utils/emailService';
+// Utility for formatting date
+const formatDate = (dateStr: string) => format(new Date(dateStr), 'dd MMMM yyyy', { locale: id });
 
-type CheckboxDropdownProps = {
-  label: string;
-  options: { value: string; label: string }[];
-  selected: string[];
-  isOpen: boolean;
-  onToggle: () => void;
-  onChange: (value: string) => void;
-  onReset: () => void;
+// Status Badge Component
+const StatusBadge = ({ status }: { status: string }) => {
+  const styles: Record<string, string> = {
+    DRAFT: 'bg-slate-100 text-slate-700 ring-slate-600/10',
+    VERIFIKASI_SUBBAGIAN: 'bg-amber-50 text-amber-700 ring-amber-600/10',
+    PERSETUJUAN_PIMPINAN: 'bg-blue-50 text-blue-700 ring-blue-600/10',
+    SURAT_TERBIT: 'bg-emerald-50 text-emerald-700 ring-emerald-600/10',
+    DITOLAK: 'bg-red-50 text-red-700 ring-red-600/10',
+  };
+  return (
+    <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${styles[status] || styles.DRAFT}`}>
+      {status.replace(/_/g, ' ')}
+    </span>
+  );
 };
 
-const CheckboxDropdown = ({ label, options, selected, isOpen, onToggle, onChange, onReset }: CheckboxDropdownProps) => (
-  <div className="relative">
-    <p className="mb-2 text-sm font-medium text-slate-800">{label}</p>
-    <button type="button" onClick={onToggle} className="flex w-full items-center justify-between gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-600 transition-colors hover:border-blue-400 hover:bg-blue-50" aria-expanded={isOpen}>
-      <span className="max-w-[190px] truncate">{selected.length === 0 ? `Pilih ${label}` : `${selected.length} dipilih`}</span>
-      <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-    </button>
-    {isOpen && (
-      <div className={`absolute right-0 z-40 max-h-72 w-60 overflow-y-auto rounded-xl border border-slate-200 bg-white p-2 shadow-xl ${label === 'Status' ? 'bottom-full mb-2' : 'top-full mt-2'}`} onMouseLeave={onToggle}>
-        <div className="flex items-center justify-between border-b border-slate-100 px-2 pb-2">
-          <span className="text-xs font-bold text-slate-700">{label}</span>
-          {selected.length > 0 && <button type="button" onClick={onReset} className="text-[11px] font-semibold text-blue-600 hover:underline">Reset</button>}
-        </div>
-        <div className="space-y-1 pt-2">
-          {options.map((option) => (
-            <label key={option.value} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-xs text-slate-700 hover:bg-slate-50">
-              <input type="checkbox" checked={selected.includes(option.value)} onChange={() => onChange(option.value)} className="h-4 w-4 rounded border-slate-300 accent-blue-600 focus:ring-blue-500" />
-              <span className="truncate">{option.label}</span>
-            </label>
+// 1. Pegawai Penugasan (Tabel Pegawai dan Tugas Aktifnya)
+const PegawaiPenugasanTab = () => {
+  const activeTasks = dummyAjuanSuratTugas.filter(t => t.status === 'SURAT_TERBIT' || t.status === 'PERSETUJUAN_PIMPINAN');
+  const pegawaiWithTasks = dummyPegawaiList.map(pegawai => {
+    const tasks = activeTasks.filter(t => t.pegawaiDitugaskan.some(p => p.id === pegawai.id));
+    return { ...pegawai, activeTasks: tasks };
+  }).filter(p => p.activeTasks.length > 0);
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-left text-sm">
+        <thead className="bg-slate-50 text-slate-600 border-b border-slate-200">
+          <tr>
+            <th className="px-6 py-4 font-semibold">Pegawai</th>
+            <th className="px-6 py-4 font-semibold">Unit Kerja</th>
+            <th className="px-6 py-4 font-semibold">Tugas Aktif</th>
+            <th className="px-6 py-4 font-semibold">Jumlah Tugas</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-slate-200">
+          {pegawaiWithTasks.map(p => (
+            <tr key={p.id} className="hover:bg-slate-50 transition">
+              <td className="px-6 py-4">
+                <div className="flex items-center gap-3">
+                  <img src={p.fotoAvatar} alt={p.nama} className="h-10 w-10 rounded-full object-cover border border-slate-200" />
+                  <div>
+                    <p className="font-semibold text-slate-800">{p.nama}</p>
+                    <p className="text-xs text-slate-500">NIP. {p.nip}</p>
+                  </div>
+                </div>
+              </td>
+              <td className="px-6 py-4"><span className="text-blue-700 bg-blue-50 px-2 py-1 rounded-md text-xs font-medium">{p.unitKerja}</span></td>
+              <td className="px-6 py-4">
+                <ul className="list-disc list-inside text-slate-600 space-y-1">
+                  {p.activeTasks.map(t => <li key={t.id} className="truncate max-w-xs" title={t.perihal}>{t.nomorSurat}</li>)}
+                </ul>
+              </td>
+              <td className="px-6 py-4 font-semibold text-slate-700">{p.activeTasks.length} Tugas</td>
+            </tr>
           ))}
+          {pegawaiWithTasks.length === 0 && <tr><td colSpan={4} className="px-6 py-8 text-center text-slate-500">Tidak ada pegawai yang sedang bertugas.</td></tr>}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
+// Tooltip component untuk daftar pegawai (Tampilan Awan)
+const PegawaiTooltip = ({ pegawaiList }: { pegawaiList: typeof dummyPegawaiList }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  
+  if (!pegawaiList || pegawaiList.length === 0) return <span className="text-slate-400">-</span>;
+  
+  return (
+    <div className="relative inline-block">
+      <button 
+        onClick={() => setIsOpen(!isOpen)}
+        onBlur={() => setTimeout(() => setIsOpen(false), 200)}
+        className="flex items-center gap-1 hover:bg-slate-100 px-2 py-1 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-blue-100"
+      >
+        <span className="font-medium text-slate-700">{pegawaiList[0].nama}</span>
+        {pegawaiList.length > 1 && (
+          <span className="text-xs bg-blue-100 text-blue-700 font-bold px-1.5 py-0.5 rounded-full shadow-sm">
+            +{pegawaiList.length - 1}
+          </span>
+        )}
+      </button>
+      
+      {isOpen && (
+        <div className="absolute z-50 mt-2 left-0 w-max max-w-xs bg-white border border-slate-200 shadow-xl rounded-2xl p-4 animate-in fade-in zoom-in-95 duration-200">
+          <div className="absolute -top-2 left-6 w-4 h-4 bg-white border-t border-l border-slate-200 transform rotate-45"></div>
+          <div className="relative z-10">
+            <h4 className="text-xs font-bold text-slate-500 mb-2 uppercase tracking-wider border-b border-slate-100 pb-1">Pegawai Ditugaskan</h4>
+            <ul className="space-y-2 max-h-48 overflow-y-auto pr-2">
+              {pegawaiList.map(p => (
+                <li key={p.id} className="flex items-center gap-2 text-sm text-slate-700">
+                  <img src={p.fotoAvatar} alt={p.nama} className="w-6 h-6 rounded-full object-cover border border-slate-200" />
+                  <span className="font-medium">{p.nama}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
-      </div>
-    )}
+      )}
+    </div>
+  );
+};
+
+// Generic Table Component for tasks
+const GenericTaskTable = ({ tasks, emptyMsg }: { tasks: typeof dummyAjuanSuratTugas, emptyMsg: string }) => (
+  <div className="overflow-x-auto">
+    <table className="w-full text-left text-sm">
+      <thead className="bg-slate-50 text-slate-600 border-b border-slate-200">
+        <tr>
+          <th className="px-6 py-4 font-semibold">Nomor Surat</th>
+          <th className="px-6 py-4 font-semibold">Perihal</th>
+          <th className="px-6 py-4 font-semibold">Tanggal Mulai</th>
+          <th className="px-6 py-4 font-semibold">Tanggal Berakhir</th>
+          <th className="px-6 py-4 font-semibold">Pegawai Ditugaskan</th>
+          <th className="px-6 py-4 font-semibold">Status</th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-slate-200">
+        {tasks.map(t => (
+          <tr key={t.id} className="hover:bg-slate-50 transition">
+            <td className="px-6 py-4 font-medium text-slate-800">{t.nomorSurat}</td>
+            <td className="px-6 py-4 text-slate-600 max-w-xs truncate" title={t.perihal}>{t.perihal}</td>
+            <td className="px-6 py-4 text-slate-600">{formatDate(t.tanggalMulai)}</td>
+            <td className="px-6 py-4 text-slate-600">{formatDate(t.tanggalSelesai)}</td>
+            <td className="px-6 py-4"><PegawaiTooltip pegawaiList={t.pegawaiDitugaskan} /></td>
+            <td className="px-6 py-4"><StatusBadge status={t.status} /></td>
+          </tr>
+        ))}
+        {tasks.length === 0 && <tr><td colSpan={6} className="px-6 py-8 text-center text-slate-500">{emptyMsg}</td></tr>}
+      </tbody>
+    </table>
   </div>
 );
 
-export const TugasPage = () => {
-  type Wilayah = { id: string; name: string };
-  const [ajuanList, setAjuanList] = useState<AjuanSuratTugas[]>(dummyAjuanSuratTugas);
-  const [activeTab, setActiveTab] = useState<'DAFTAR' | 'WORKFLOW'>('DAFTAR');
-  const [selectedUnits, setSelectedUnits] = useState<UnitKerjaType[]>([]);
-  const [isUnitFilterOpen, setIsUnitFilterOpen] = useState(false);
-  const [openFilter, setOpenFilter] = useState<string | null>(null);
-  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
-  const [selectedApplicants, setSelectedApplicants] = useState<string[]>([]);
-  const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
-  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
-  const [selectedSpecificLocations, setSelectedSpecificLocations] = useState<string[]>([]);
+// 2. Laporan Penugasan (SURAT_TERBIT)
+const LaporanPenugasanTab = () => {
+  const [expandedPegawaiId, setExpandedPegawaiId] = useState<string | null>(null);
 
-  // Modal Detail Workflow / Timeline
-  const [selectedAjuan, setSelectedAjuan] = useState<AjuanSuratTugas | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedPegawaiAjuan, setSelectedPegawaiAjuan] = useState<AjuanSuratTugas | null>(null);
-  const [openStatusId, setOpenStatusId] = useState<string | null>(null);
-  const [openActionId, setOpenActionId] = useState<string | null>(null);
-  const [provinces, setProvinces] = useState<Wilayah[]>([]);
-  const [cities, setCities] = useState<Wilayah[]>([]);
-  const [isWilayahLoading, setIsWilayahLoading] = useState(false);
-
-  // Modal Form Ajuan Baru
-  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
-  const [formData, setFormData] = useState({
-    perihal: '',
-    unitKerja: 'RBI' as UnitKerjaType,
-    pegawaiIds: [dummyPegawaiList[0].id],
-    tanggalMulai: '2026-08-01',
-    tanggalSelesai: '2026-08-03',
-    lokasiPenugasan: 'Kecamatan Bandung Tengah',
-    lokasiSpesifik: '',
-    provinsiId: '',
-    kotaId: '',
-    koordinatLat: -6.9147,
-    koordinatLng: 107.6098,
-    deskripsi: '',
-    file: null as File | null,
-  });
-
-  useEffect(() => {
-    fetch('https://www.emsifa.com/api-wilayah-indonesia/api/provinces.json')
-      .then((response) => response.ok ? response.json() : Promise.reject())
-      .then((data: Wilayah[]) => setProvinces(data))
-      .catch(() => setProvinces([]));
-  }, []);
-
-  /* eslint-disable react-hooks/set-state-in-effect */
-  useEffect(() => {
-    if (!formData.provinsiId) { setTimeout(() => setCities([]), 0); return; }
-    setIsWilayahLoading(true);
-    fetch(`https://www.emsifa.com/api-wilayah-indonesia/api/regencies/${formData.provinsiId}.json`)
-      .then((response) => response.ok ? response.json() : Promise.reject())
-      .then((data: Wilayah[]) => setCities(data))
-      .catch(() => setCities([]))
-      .finally(() => setIsWilayahLoading(false));
-  }, [formData.provinsiId]);
-
-  useEffect(() => {
-    if (formData.kotaId && cities.length > 0) {
-      const kotaName = cities.find(c => c.id === formData.kotaId)?.name;
-      if (kotaName) {
-        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${kotaName}, Indonesia`)
-          .then(res => res.json())
-          .then(data => {
-            if (data && data.length > 0) {
-              setFormData(prev => ({
-                ...prev,
-                koordinatLat: parseFloat(data[0].lat),
-                koordinatLng: parseFloat(data[0].lon)
-              }));
-            }
-          })
-          .catch(err => console.error("Geocoding failed", err));
-      }
-    }
-  }, [formData.kotaId, cities]);
-  /* eslint-enable react-hooks/set-state-in-effect */
-
-  // Filter list
-  const filteredAjuan = ajuanList.filter((item) => {
-    const matchesUnit = selectedUnits.length === 0 || selectedUnits.includes(item.unitKerja);
-    const matchesStatus = selectedStatuses.length === 0 || selectedStatuses.includes(item.status);
-    const matchesApplicant = selectedApplicants.length === 0 || selectedApplicants.includes(item.pengaju.nama);
-    const matchesAssignee = selectedAssignees.length === 0 || item.pegawaiDitugaskan.some((pegawai) => selectedAssignees.includes(pegawai.nama));
-    const matchesLocation = selectedLocations.length === 0 || selectedLocations.includes(item.lokasiPenugasan);
-    const matchesSpecificLocation = selectedSpecificLocations.length === 0 || selectedSpecificLocations.includes(item.lokasiSpesifik || '');
-    return matchesUnit && matchesStatus && matchesApplicant && matchesAssignee && matchesLocation && matchesSpecificLocation;
-  });
-
-  const unitOptions: UnitKerjaType[] = ['RBI', 'Fastingkom', 'Kepeg', 'PM'];
-  const statusOptions = [
-    { value: 'SURAT_TERBIT', label: 'Diapprove' },
-    { value: 'VERIFIKASI_SUBBAGIAN', label: 'Diproses' },
-    { value: 'PERSETUJUAN_PIMPINAN', label: 'Diproses (Pimpinan)' },
-    { value: 'DRAFT', label: 'Draft' },
-    { value: 'DITOLAK', label: 'Dibatalkan' },
-  ];
-  const applicantOptions = Array.from(new Map(ajuanList.map((item) => [item.pengaju.nama, item.pengaju.nama]))).map(([value, label]) => ({ value, label }));
-  const assigneeOptions = Array.from(new Map(ajuanList.flatMap((item) => item.pegawaiDitugaskan).map((pegawai) => [pegawai.nama, pegawai.nama]))).map(([value, label]) => ({ value, label }));
-  const locationOptions = Array.from(new Set(ajuanList.map((item) => item.lokasiPenugasan))).map((value) => ({ value, label: value }));
-  const specificLocationOptions = Array.from(new Set(ajuanList.map((item) => item.lokasiSpesifik).filter(Boolean) as string[])).map((value) => ({ value, label: value }));
-
-  const toggleUnitFilter = (unit: UnitKerjaType) => {
-    setSelectedUnits((currentUnits) => currentUnits.includes(unit)
-      ? currentUnits.filter((currentUnit) => currentUnit !== unit)
-      : [...currentUnits, unit]);
-  };
-
-  const toggleFilterValue = (setter: React.Dispatch<React.SetStateAction<string[]>>, value: string) => {
-    setter((current) => current.includes(value) ? current.filter((item) => item !== value) : [...current, value]);
-  };
-
-  const resetFilters = () => {
-    setSelectedUnits([]);
-    setSelectedStatuses([]);
-    setSelectedApplicants([]);
-    setSelectedAssignees([]);
-    setSelectedLocations([]);
-    setSelectedSpecificLocations([]);
-    setIsUnitFilterOpen(false);
-    setOpenFilter(null);
-  };
-
-  const formatLokasiKhusus = (lokasi: string) => {
-    const cleaned = lokasi.trim();
-    if (!cleaned) return '';
-    let result = cleaned.replace(/,?\s*jawa barat$/i, '').trim();
-    result = result.replace(/^kecamatan\s+/i, '').trim();
-    result = result.replace(/^desa\s+/i, '').trim();
-    result = result.replace(/^kelurahan\s+/i, '').trim();
-    result = result.replace(/^kota\s+/i, 'Kota ').trim();
-    result = result.replace(/^kabupaten\s+/i, 'Kabupaten ').trim();
-    return `${result}, Jawa Barat`;
-  };
-
-  const formatTanggal = (tanggal: string) => {
-    const [tahun, bulan, hari] = tanggal.split('-');
-    return `${hari}/${bulan}/${tahun}`;
-  };
-
-  const formatRentangTanggal = (tanggalMulai: string, tanggalSelesai: string) => {
-    const mulai = formatTanggal(tanggalMulai);
-    return tanggalMulai === tanggalSelesai ? mulai : `${mulai} s/d ${formatTanggal(tanggalSelesai)}`;
-  };
-
-  const updateStatusAjuan = (id: string, status: AjuanSuratTugas['status']) => {
-    setAjuanList((currentList) => currentList.map((item) => (
-      item.id === id ? { ...item, status } : item
-    )));
-    setSelectedAjuan((current) => current?.id === id ? { ...current, status } : current);
-    setOpenStatusId(null);
-  };
-
-  const handleCreateDraft = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const assignedPegawai = dummyPegawaiList.filter((p) => formData.pegawaiIds.includes(p.id));
-    if (assignedPegawai.length === 0) assignedPegawai.push(dummyPegawaiList[0]);
-    
-    const provinsi = provinces.find((item) => item.id === formData.provinsiId)?.name;
-    const kota = cities.find((item) => item.id === formData.kotaId)?.name;
-    const newId = `st-00${ajuanList.length + 1}`;
-    const newNomor = `DRAFT-ST/${formData.unitKerja.toUpperCase().replace(/\s+/g, '')}/2026/00${ajuanList.length + 1}`;
-
-    const newAjuan: AjuanSuratTugas = {
-      id: newId,
-      nomorSurat: newNomor,
-      perihal: formData.perihal,
-      pengaju: dummyPegawaiList[0], // Logged in user
-      pegawaiDitugaskan: assignedPegawai,
-      unitKerja: formData.unitKerja,
-      tanggalMulai: formData.tanggalMulai,
-      tanggalSelesai: formData.tanggalSelesai,
-      lokasiPenugasan: [kota, provinsi].filter(Boolean).join(', ') || formData.lokasiPenugasan,
-      lokasiSpesifik: formData.lokasiSpesifik,
-      koordinat: [formData.koordinatLat, formData.koordinatLng],
-      deskripsi: formData.deskripsi,
-      status: 'DRAFT',
-      workflow: [
-        {
-          stage: 'DRAFT',
-          label: 'Pengajuan Draft ST',
-          actor: dummyPegawaiList[0].nama,
-          tanggal: new Date().toISOString().replace('T', ' ').substring(0, 16),
-          status: 'COMPLETED',
-          catatan: 'Draft baru telah diajukan ke sistem.',
-        },
-        {
-          stage: 'VERIFIKASI_SUBBAGIAN',
-          label: 'Verifikasi Subbagian Umum',
-          actor: `Kasubag ${formData.unitKerja}`,
-          status: 'IN_PROGRESS',
-          catatan: 'Menunggu review dokumen persyaratan.',
-        },
-        { stage: 'PERSETUJUAN_PIMPINAN', label: 'Persetujuan Pimpinan', actor: 'Kepala Dinas', status: 'PENDING' },
-        { stage: 'SURAT_TERBIT', label: 'Penerbitan Surat Tugas Resmi', actor: 'Tata Usaha', status: 'PENDING' },
-      ],
-    };
-
-    setAjuanList([newAjuan, ...ajuanList]);
-    
-    // Kirim notifikasi email
-    try {
-      for (const pegawai of assignedPegawai) {
-        await sendEmailNotification({
-          to_email: pegawai.email || 'user@example.com',
-          to_name: pegawai.nama,
-          nomor_surat: newAjuan.nomorSurat,
-          perihal: newAjuan.perihal,
-          tanggal_mulai: newAjuan.tanggalMulai,
-          tanggal_selesai: newAjuan.tanggalSelesai,
-          lokasi: newAjuan.lokasiPenugasan,
-          pesan_tambahan: newAjuan.deskripsi
-        });
-      }
-    } catch (err) {
-      console.error('Failed to send email notifications', err);
-    }
-
-    setIsFormModalOpen(false);
-    setFormData({
-      perihal: '',
-      unitKerja: 'RBI',
-      pegawaiIds: [dummyPegawaiList[0].id],
-      tanggalMulai: '2026-08-01',
-      tanggalSelesai: '2026-08-03',
-      lokasiPenugasan: 'Kecamatan Bandung Tengah',
-      lokasiSpesifik: '',
-      provinsiId: '',
-      kotaId: '',
-      koordinatLat: -6.9147,
-      koordinatLng: 107.6098,
-      deskripsi: '',
-      file: null,
-    });
-  };
-
-  const getStatusBadge = (status: AjuanSuratTugas['status']) => {
-    const statusIsApproved = status === 'SURAT_TERBIT';
-    const statusIsRejected = status === 'DITOLAK';
-    const label = statusIsApproved ? 'Diapprove' : statusIsRejected ? 'Dibatalkan' : 'Diproses';
-    const classes = statusIsApproved
-      ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-      : statusIsRejected
-        ? 'bg-rose-100 text-rose-800 border border-rose-300'
-        : 'bg-slate-100 text-slate-700 border border-slate-300';
-
-    return (
-      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${classes}`}>
-        {statusIsApproved ? (
-          <CheckCircle2 className="w-3.5 h-3.5" />
-        ) : statusIsRejected ? (
-          <X className="w-3.5 h-3.5 text-rose-600" />
-        ) : (
-          <Hourglass className="w-3.5 h-3.5" />
-        )}
-        {label}
-      </span>
-    );
-  };
+  const pegawaiWithTasks = dummyPegawaiList.map(pegawai => {
+    // Collect all tasks for this employee
+    const tasks = dummyAjuanSuratTugas.filter(t => t.pegawaiDitugaskan.some(p => p.id === pegawai.id));
+    return { ...pegawai, allTasks: tasks };
+  }).filter(p => p.allTasks.length > 0);
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
-      {/* Header Section */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
-        <div>
-          <div className="flex items-center gap-2">
-            <FileText className="w-7 h-7 text-blue-600" />
-            <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Manajemen Penugasan Pegawai</h2>
-          </div>
-          <p className="text-slate-500 text-sm mt-1">
-            Kelola proses ajuan surat tugas, alur persetujuan draft penugasan, dan pelacakan status penugasan instansi.
-          </p>
+    <div className="overflow-x-auto">
+      <table className="w-full text-left text-sm">
+        <thead className="bg-slate-50 text-slate-600 border-b border-slate-200">
+          <tr>
+            <th className="px-6 py-4 font-semibold">Pegawai</th>
+            <th className="px-6 py-4 font-semibold">Unit Kerja</th>
+            <th className="px-6 py-4 font-semibold text-center">Total Penugasan</th>
+            <th className="px-6 py-4 font-semibold text-right">Aksi</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-slate-200">
+          {pegawaiWithTasks.map(p => (
+            <React.Fragment key={p.id}>
+              <tr 
+                className={`hover:bg-slate-50 transition cursor-pointer ${expandedPegawaiId === p.id ? 'bg-blue-50/50' : ''}`}
+                onClick={() => setExpandedPegawaiId(expandedPegawaiId === p.id ? null : p.id)}
+              >
+                <td className="px-6 py-4">
+                  <div className="flex items-center gap-3">
+                    <img src={p.fotoAvatar} alt={p.nama} className="h-10 w-10 rounded-full object-cover border border-slate-200" />
+                    <div>
+                      <p className="font-semibold text-slate-800">{p.nama}</p>
+                      <p className="text-xs text-slate-500">NIP. {p.nip}</p>
+                    </div>
+                  </div>
+                </td>
+                <td className="px-6 py-4">
+                  <span className="text-blue-700 bg-blue-50 px-2 py-1 rounded-md text-xs font-medium">{p.unitKerja}</span>
+                </td>
+                <td className="px-6 py-4 text-center font-semibold text-slate-700">
+                  <span className="bg-slate-100 text-slate-700 px-2.5 py-1 rounded-full text-xs">{p.allTasks.length} Penugasan</span>
+                </td>
+                <td className="px-6 py-4">
+                  <div className="flex justify-end">
+                    <button className="text-blue-600 hover:text-blue-800 font-medium text-xs flex items-center gap-1 bg-white border border-blue-200 px-3 py-1.5 rounded-lg shadow-sm hover:bg-blue-50 transition-colors">
+                      {expandedPegawaiId === p.id ? 'Tutup Detail' : 'Lihat Detail'}
+                      <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${expandedPegawaiId === p.id ? 'rotate-180' : ''}`} />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              {expandedPegawaiId === p.id && (
+                <tr className="bg-slate-50 border-b border-slate-200">
+                  <td colSpan={4} className="p-0">
+                    <div className="p-6">
+                      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+                        <div className="px-5 py-3 border-b border-slate-200 bg-white flex justify-between items-center">
+                          <h4 className="font-bold text-slate-700">Rincian Penugasan: {p.nama}</h4>
+                        </div>
+                        <GenericTaskTable tasks={p.allTasks} emptyMsg="Belum ada penugasan." />
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </React.Fragment>
+          ))}
+          {pegawaiWithTasks.length === 0 && (
+            <tr>
+              <td colSpan={4} className="px-6 py-8 text-center text-slate-500">Belum ada data laporan penugasan pegawai.</td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
+// 3. Periode Penugasan (Timeline/Date view)
+const PeriodePenugasanTab = () => {
+  const currentDate = new Date();
+  const [selectedMonth, setSelectedMonth] = useState<string>(String(currentDate.getMonth() + 1));
+  const [selectedYear, setSelectedYear] = useState<string>(String(currentDate.getFullYear()));
+
+  const filteredTasks = dummyAjuanSuratTugas.filter(t => {
+    const taskDate = new Date(t.tanggalMulai);
+    const matchMonth = selectedMonth === 'ALL' || String(taskDate.getMonth() + 1) === selectedMonth;
+    const matchYear = selectedYear === 'ALL' || String(taskDate.getFullYear()) === selectedYear;
+    return matchMonth && matchYear;
+  });
+
+  const sortedTasks = [...filteredTasks].sort((a, b) => new Date(b.tanggalMulai).getTime() - new Date(a.tanggalMulai).getTime());
+
+  const months = [
+    { value: 'ALL', label: 'Semua Bulan' },
+    { value: '1', label: 'Januari' },
+    { value: '2', label: 'Februari' },
+    { value: '3', label: 'Maret' },
+    { value: '4', label: 'April' },
+    { value: '5', label: 'Mei' },
+    { value: '6', label: 'Juni' },
+    { value: '7', label: 'Juli' },
+    { value: '8', label: 'Agustus' },
+    { value: '9', label: 'September' },
+    { value: '10', label: 'Oktober' },
+    { value: '11', label: 'November' },
+    { value: '12', label: 'Desember' },
+  ];
+
+  const availableYears = Array.from(new Set(dummyAjuanSuratTugas.map(t => new Date(t.tanggalMulai).getFullYear()))).sort().reverse();
+  const years = ['ALL', ...availableYears.map(String)];
+  if (!availableYears.includes(currentDate.getFullYear()) && !years.includes(String(currentDate.getFullYear()))) {
+     years.splice(1, 0, String(currentDate.getFullYear()));
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
+        <h3 className="font-semibold text-slate-800">Filter Periode Penugasan</h3>
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <select 
+            value={selectedMonth} 
+            onChange={(e) => setSelectedMonth(e.target.value)}
+            className="w-full sm:w-auto bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium cursor-pointer"
+          >
+            {months.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+          </select>
+          <select 
+            value={selectedYear} 
+            onChange={(e) => setSelectedYear(e.target.value)}
+            className="w-full sm:w-auto bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium cursor-pointer"
+          >
+            {years.map(y => <option key={y} value={y}>{y === 'ALL' ? 'Semua Tahun' : y}</option>)}
+          </select>
         </div>
-        <button
-          onClick={() => setIsFormModalOpen(true)}
-          className="flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-md shadow-blue-500/20 transition-all cursor-pointer"
+      </div>
+      <GenericTaskTable tasks={sortedTasks} emptyMsg="Tidak ada data penugasan pada periode ini." />
+    </div>
+  );
+};
+
+// 4. Pivot Penugasan
+const PivotPenugasanTab = () => {
+  const units = Array.from(new Set(dummyAjuanSuratTugas.map(t => t.unitKerja)));
+  const statuses = ['DRAFT', 'VERIFIKASI_SUBBAGIAN', 'PERSETUJUAN_PIMPINAN', 'SURAT_TERBIT', 'DITOLAK'];
+  
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-center text-sm border border-slate-200 rounded-xl overflow-hidden">
+        <thead className="bg-slate-50 text-slate-600 border-b border-slate-200">
+          <tr>
+            <th className="px-6 py-4 font-semibold text-left border-r border-slate-200">Unit Kerja</th>
+            {statuses.map(s => <th key={s} className="px-4 py-4 font-semibold border-r border-slate-200">{s.replace(/_/g, ' ')}</th>)}
+            <th className="px-6 py-4 font-bold bg-blue-50 text-blue-800">Total</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-slate-200">
+          {units.map(unit => {
+            const unitTasks = dummyAjuanSuratTugas.filter(t => t.unitKerja === unit);
+            return (
+              <tr key={unit} className="hover:bg-slate-50">
+                <td className="px-6 py-4 font-medium text-left border-r border-slate-200">{unit}</td>
+                {statuses.map(status => (
+                  <td key={status} className="px-4 py-4 border-r border-slate-200 text-slate-600">
+                    {unitTasks.filter(t => t.status === status).length || '-'}
+                  </td>
+                ))}
+                <td className="px-6 py-4 font-bold bg-blue-50/50 text-blue-800">{unitTasks.length}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
+// 5. Penugasan Berlangsung
+const PenugasanBerlangsungTab = () => {
+  const [filter, setFilter] = useState<'ALL' | 'TODAY' | 'WEEK' | 'MONTH'>('ALL');
+
+  const filteredTasks = dummyAjuanSuratTugas.filter(t => {
+    if (t.status !== 'SURAT_TERBIT') return false;
+    
+    // Check if the current date is within the start and end dates
+    const taskStart = new Date(t.tanggalMulai);
+    // Adjust end date to the end of the day
+    const taskEnd = new Date(t.tanggalSelesai);
+    taskEnd.setHours(23, 59, 59, 999);
+    // Fallback logic if we just want to filter by start date for the dropdown categories
+    if (filter === 'TODAY') return isToday(taskStart);
+    if (filter === 'WEEK') return isThisWeek(taskStart);
+    if (filter === 'MONTH') return isThisMonth(taskStart);
+    
+    return true; // For 'ALL' it just returns all 'SURAT_TERBIT' which are ongoing/terbit
+  });
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
+        <h3 className="font-semibold text-slate-800">Filter Penugasan Berlangsung</h3>
+        <select 
+          value={filter} 
+          onChange={(e) => setFilter(e.target.value as 'ALL' | 'TODAY' | 'WEEK' | 'MONTH')}
+          className="w-full sm:w-auto bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium cursor-pointer"
         >
-          <Plus className="w-4 h-4" />
-          <span>Buat Draft Ajuan ST</span>
+          <option value="ALL">Semua</option>
+          <option value="TODAY">Hari Ini</option>
+          <option value="WEEK">Minggu Ini</option>
+          <option value="MONTH">Bulan Ini</option>
+        </select>
+      </div>
+      <GenericTaskTable tasks={filteredTasks} emptyMsg="Tidak ada penugasan berlangsung pada kategori ini." />
+    </div>
+  );
+};
+
+// 6. Draft Penugasan
+const DraftPenugasanTab = () => <GenericTaskTable tasks={dummyAjuanSuratTugas.filter(t => t.status === 'DRAFT')} emptyMsg="Tidak ada draft penugasan." />;
+
+// 6. Blokir Penugasan (Ditolak)
+const BlokirPenugasanTab = () => <GenericTaskTable tasks={dummyAjuanSuratTugas.filter(t => t.status === 'DITOLAK')} emptyMsg="Tidak ada penugasan yang diblokir atau ditolak." />;
+
+// Removed JPPenugasanTab
+
+// 8. Rekap Penugasan (Dashboard)
+const RekapPenugasanTab = () => {
+  const currentDate = new Date();
+  const [selectedMonth, setSelectedMonth] = useState<string>(String(currentDate.getMonth() + 1));
+  const [selectedYear, setSelectedYear] = useState<string>(String(currentDate.getFullYear()));
+
+  const filteredTasks = dummyAjuanSuratTugas.filter(t => {
+    const taskDate = new Date(t.tanggalMulai);
+    const matchMonth = selectedMonth === 'ALL' || String(taskDate.getMonth() + 1) === selectedMonth;
+    const matchYear = selectedYear === 'ALL' || String(taskDate.getFullYear()) === selectedYear;
+    return matchMonth && matchYear;
+  });
+
+  const counts = {
+    total: filteredTasks.length,
+    selesai: filteredTasks.filter(t => t.status === 'SURAT_TERBIT').length,
+    proses: filteredTasks.filter(t => t.status === 'VERIFIKASI_SUBBAGIAN' || t.status === 'PERSETUJUAN_PIMPINAN').length,
+    draft: filteredTasks.filter(t => t.status === 'DRAFT').length
+  };
+
+  const months = [
+    { value: 'ALL', label: 'Semua Bulan' },
+    { value: '1', label: 'Januari' },
+    { value: '2', label: 'Februari' },
+    { value: '3', label: 'Maret' },
+    { value: '4', label: 'April' },
+    { value: '5', label: 'Mei' },
+    { value: '6', label: 'Juni' },
+    { value: '7', label: 'Juli' },
+    { value: '8', label: 'Agustus' },
+    { value: '9', label: 'September' },
+    { value: '10', label: 'Oktober' },
+    { value: '11', label: 'November' },
+    { value: '12', label: 'Desember' },
+  ];
+
+  const availableYears = Array.from(new Set(dummyAjuanSuratTugas.map(t => new Date(t.tanggalMulai).getFullYear()))).sort().reverse();
+  const years = ['ALL', ...availableYears.map(String)];
+  
+  if (!availableYears.includes(currentDate.getFullYear()) && !years.includes(String(currentDate.getFullYear()))) {
+     years.splice(1, 0, String(currentDate.getFullYear()));
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
+        <h3 className="font-semibold text-slate-800">Filter Periode Rekapitulasi</h3>
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <select 
+            value={selectedMonth} 
+            onChange={(e) => setSelectedMonth(e.target.value)}
+            className="w-full sm:w-auto bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium cursor-pointer"
+          >
+            {months.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+          </select>
+          <select 
+            value={selectedYear} 
+            onChange={(e) => setSelectedYear(e.target.value)}
+            className="w-full sm:w-auto bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium cursor-pointer"
+          >
+            {years.map(y => <option key={y} value={y}>{y === 'ALL' ? 'Semua Tahun' : y}</option>)}
+          </select>
+        </div>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {[
+          { label: 'Total Penugasan', value: counts.total, icon: FileText, color: 'text-blue-600', bg: 'bg-blue-100' },
+          { label: 'Selesai / Terbit', value: counts.selesai, icon: Calendar, color: 'text-emerald-600', bg: 'bg-emerald-100' },
+          { label: 'Dalam Proses', value: counts.proses, icon: Activity, color: 'text-amber-600', bg: 'bg-amber-100' },
+          { label: 'Draft', value: counts.draft, icon: FileText, color: 'text-slate-600', bg: 'bg-slate-100' },
+        ].map(stat => (
+          <div key={stat.label} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-4">
+              <div className={`rounded-lg p-3 ${stat.bg} ${stat.color}`}>
+                <stat.icon className="h-6 w-6" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-slate-500">{stat.label}</p>
+                <p className="text-2xl font-bold text-slate-800">{stat.value}</p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      
+      <div className="rounded-2xl border border-slate-200 overflow-hidden bg-white">
+        <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+          <h3 className="text-base font-bold text-slate-800">Daftar Penugasan</h3>
+          <span className="text-xs font-semibold bg-blue-100 text-blue-700 px-2.5 py-1 rounded-full">{filteredTasks.length} Data</span>
+        </div>
+        <GenericTaskTable tasks={filteredTasks} emptyMsg="Tidak ada data penugasan pada periode ini." />
+      </div>
+    </div>
+  );
+};
+
+
+import { useSearchParams } from 'react-router-dom';
+
+export const TugasPage = () => {
+  const [searchParams] = useSearchParams();
+  const activeTab = searchParams.get('tab') || 'rekap';
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'rekap': return <RekapPenugasanTab />;
+      case 'pegawai': return <PegawaiPenugasanTab />;
+      case 'laporan': return <LaporanPenugasanTab />;
+      case 'periode': return <PeriodePenugasanTab />;
+      case 'pivot': return <PivotPenugasanTab />;
+      case 'berlangsung': return <PenugasanBerlangsungTab />;
+      case 'draft': return <DraftPenugasanTab />;
+      case 'blokir': return <BlokirPenugasanTab />;
+      default: return null;
+    }
+  };
+
+  const navigate = useNavigate();
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+        <h1 className="text-2xl font-bold text-slate-800">Manajemen Penugasan</h1>
+        <button
+          onClick={() => navigate('/admin/tugas/buat')}
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition cursor-pointer"
+        >
+          Buat Tugas Baru
         </button>
       </div>
-
-      {/* Navigation, Filter Sidebar, and Table */}
-      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[300px_minmax(0,1fr)]">
-      <aside className="w-full rounded-2xl border border-slate-200 bg-white p-5 shadow-xs lg:sticky lg:top-6">
-        <h3 className="mb-5 text-3xl font-normal tracking-tight text-slate-800">Pencarian</h3>
-        <div className="flex flex-col items-start gap-4">
-        {/* Sub-menu Tabs */}
-        <div className="flex items-center bg-slate-200/70 p-1.5 rounded-xl text-sm font-medium w-fit">
-          <button
-            onClick={() => setActiveTab('DAFTAR')}
-            className={`px-4 py-2 rounded-lg transition-all cursor-pointer ${activeTab === 'DAFTAR' ? 'bg-white text-blue-700 font-bold shadow-xs' : 'text-slate-600 hover:text-slate-900'
-              }`}
-          >
-            Daftar Proses Ajuan ST ({ajuanList.length})
-          </button>
-        </div>
-        {/* Filter Controls */}
-        <div className="flex w-full flex-col items-stretch justify-start gap-4">
-          <div className="relative">
-            <p className="mb-2 text-sm font-medium text-slate-800">Unit Kerja</p>
-            <button
-              type="button"
-              onClick={() => setIsUnitFilterOpen((isOpen) => !isOpen)}
-              className="flex w-full items-center justify-start gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-600 transition-colors hover:border-blue-400 hover:bg-blue-50"
-              aria-expanded={isUnitFilterOpen}
-            >
-              <Filter className="h-4 w-4 text-slate-400" />
-              <span>
-                {selectedUnits.length === 0
-                  ? 'Semua Unit Kerja'
-                  : selectedUnits.length === 1
-                    ? selectedUnits[0]
-                    : `${selectedUnits.length} unit dipilih`}
-              </span>
-            </button>
-
-            {isUnitFilterOpen && (
-              <div
-                className="absolute right-0 top-full z-30 mt-2 w-56 rounded-xl border border-slate-200 bg-white p-2 shadow-xl"
-                onMouseLeave={() => setIsUnitFilterOpen(false)}
-              >
-                <div className="flex items-center justify-between border-b border-slate-100 px-2 pb-2">
-                  <span className="text-xs font-bold text-slate-700">Filter Unit Kerja</span>
-                  {selectedUnits.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setSelectedUnits([])}
-                      className="text-[11px] font-semibold text-blue-600 hover:underline"
-                    >
-                      Reset
-                    </button>
-                  )}
-                </div>
-                <div className="space-y-1 pt-2">
-                  {unitOptions.map((unit) => (
-                    <label key={unit} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-xs text-slate-700 hover:bg-slate-50">
-                      <input
-                        type="checkbox"
-                        checked={selectedUnits.includes(unit)}
-                        onChange={() => toggleUnitFilter(unit)}
-                        className="h-4 w-4 rounded border-slate-300 text-blue-600 accent-blue-600 focus:ring-blue-500"
-                      />
-                      <span>{unit}</span>
-                    </label>
-                  ))}
-                </div>
-                <p className="border-t border-slate-100 px-2 pt-2 text-[11px] text-slate-400">
-                  Kosongkan pilihan untuk menampilkan semua unit.
-                </p>
-              </div>
-            )}
-          </div>
-
-          <CheckboxDropdown
-            label="Pengaju"
-            options={applicantOptions}
-            selected={selectedApplicants}
-            isOpen={openFilter === 'applicant'}
-            onToggle={() => setOpenFilter(openFilter === 'applicant' ? null : 'applicant')}
-            onChange={(value) => toggleFilterValue(setSelectedApplicants, value)}
-            onReset={() => setSelectedApplicants([])}
-          />
-          <CheckboxDropdown
-            label="Pegawai Ditugaskan"
-            options={assigneeOptions}
-            selected={selectedAssignees}
-            isOpen={openFilter === 'assignee'}
-            onToggle={() => setOpenFilter(openFilter === 'assignee' ? null : 'assignee')}
-            onChange={(value) => toggleFilterValue(setSelectedAssignees, value)}
-            onReset={() => setSelectedAssignees([])}
-          />
-          <CheckboxDropdown
-            label="Domisili"
-            options={locationOptions}
-            selected={selectedLocations}
-            isOpen={openFilter === 'location'}
-            onToggle={() => setOpenFilter(openFilter === 'location' ? null : 'location')}
-            onChange={(value) => toggleFilterValue(setSelectedLocations, value)}
-            onReset={() => setSelectedLocations([])}
-          />
-          <CheckboxDropdown
-            label="Lokasi"
-            options={specificLocationOptions}
-            selected={selectedSpecificLocations}
-            isOpen={openFilter === 'specific'}
-            onToggle={() => setOpenFilter(openFilter === 'specific' ? null : 'specific')}
-            onChange={(value) => toggleFilterValue(setSelectedSpecificLocations, value)}
-            onReset={() => setSelectedSpecificLocations([])}
-          />
-          <CheckboxDropdown
-            label="Status"
-            options={statusOptions}
-            selected={selectedStatuses}
-            isOpen={openFilter === 'status'}
-            onToggle={() => setOpenFilter(openFilter === 'status' ? null : 'status')}
-            onChange={(value) => toggleFilterValue(setSelectedStatuses, value)}
-            onReset={() => setSelectedStatuses([])}
-          />
-
-          <button
-            type="button"
-            onClick={resetFilters}
-            className="mt-2 w-full rounded-lg bg-rose-500 px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-rose-600"
-          >
-            Reset Filter
-          </button>
-
-        </div>
-        </div>
-      </aside>
-
-      <main className="min-w-0">
-
-      {/* TAB 1: DAFTAR PROSES AJUAN SURAT TUGAS */}
-      {activeTab === 'DAFTAR' && (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-slate-600">
-              <thead className="bg-slate-50 text-slate-700 text-xs font-bold uppercase tracking-wider border-b border-slate-200">
-                <tr>
-                  <th className="px-6 py-4">Nomor & Perihal Surat</th>
-                  <th className="px-6 py-4">Unit Kerja & Pengaju</th>
-                  <th className="px-6 py-4">Pegawai Ditugaskan</th>
-                  <th className="px-6 py-4">Tanggal & Domisili</th>
-                  <th className="px-6 py-4">Lokasi</th>
-                  <th className="px-6 py-4">Status</th>
-                  <th className="px-6 py-4 text-right">Aksi</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filteredAjuan.map((item) => {
-                  const unitColor = UNIT_COLORS[item.unitKerja] || { bg: 'bg-slate-100', text: 'text-slate-800' };
-
-                  return (
-                    <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="px-6 py-4 min-w-[430px]">
-                        <span className="font-mono text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 block w-fit mb-1">
-                          {item.nomorSurat}
-                        </span>
-                        <p className="font-semibold text-slate-800 whitespace-nowrap">{item.perihal}</p>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold ${unitColor.bg} ${unitColor.text} mb-1`}>
-                          {item.unitKerja}
-                        </span>
-                        <p className="text-xs font-medium text-slate-600">Oleh: {item.pengaju.nama}</p>
-                        <p className="text-[11px] text-slate-500">NIP: {item.pengaju.nip}</p>
-                      </td>
-                      <td className="px-6 py-4 min-w-[170px] align-top">
-                        {item.pegawaiDitugaskan.length === 1 ? (
-                          <p className="text-xs font-semibold text-slate-800 whitespace-nowrap">
-                            {item.pegawaiDitugaskan[0].nama}
-                          </p>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => setSelectedPegawaiAjuan(item)}
-                            className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-xs font-bold text-blue-700 transition-colors hover:bg-blue-100"
-                            aria-label={`Lihat ${item.pegawaiDitugaskan.length} pegawai yang ditugaskan`}
-                          >
-                            <Users className="h-3.5 w-3.5" />
-                            {item.pegawaiDitugaskan.length} Pegawai
-                          </button>
-                        )}
-                      </td>
-                      <td className="px-6 py-4">
-                        <p className="text-xs font-semibold text-slate-800">
-                          {formatRentangTanggal(item.tanggalMulai, item.tanggalSelesai)}
-                        </p>
-                        <div className="flex items-center gap-1 text-slate-500 text-xs mt-0.5">
-                          <MapPin className="w-3.5 h-3.5 text-rose-500" />
-                          <span>{formatLokasiKhusus(item.lokasiPenugasan)}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 min-w-[190px] align-top">
-                        <p className="text-xs font-semibold text-slate-800 whitespace-nowrap">{item.lokasiSpesifik || '-'}</p>
-                      </td>
-                      <td
-                        className="relative px-6 py-4"
-                        onMouseLeave={() => setOpenStatusId((current) => current === item.id ? null : current)}
-                      >
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setOpenStatusId(openStatusId === item.id ? null : item.id);
-                            setOpenActionId(null);
-                          }}
-                          className="cursor-pointer rounded-full focus:outline-none focus:ring-2 focus:ring-blue-300"
-                          aria-label={`Ubah status ajuan ${item.nomorSurat}`}
-                          aria-expanded={openStatusId === item.id}
-                        >
-                          {getStatusBadge(item.status)}
-                        </button>
-                        {openStatusId === item.id && (
-                          <div className="absolute left-6 top-14 z-20 w-40 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg">
-                            <button type="button" onClick={() => updateStatusAjuan(item.id, 'SURAT_TERBIT')} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-semibold text-emerald-700 hover:bg-emerald-50">
-                              <CheckCircle2 className="w-4 h-4" /> Diapprove
-                            </button>
-                            <button type="button" onClick={() => updateStatusAjuan(item.id, 'VERIFIKASI_SUBBAGIAN')} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-semibold text-slate-600 hover:bg-slate-100">
-                              <Hourglass className="w-4 h-4" /> Diproses
-                            </button>
-                            <button type="button" onClick={() => updateStatusAjuan(item.id, 'DITOLAK')} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-semibold text-rose-700 hover:bg-rose-50">
-                              <X className="w-4 h-4" /> Dibatalkan
-                            </button>
-                          </div>
-                        )}
-                      </td>
-                      <td
-                        className="relative px-6 py-4 text-right"
-                        onMouseLeave={() => setOpenActionId((current) => current === item.id ? null : current)}
-                      >
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setOpenActionId(openActionId === item.id ? null : item.id);
-                            setOpenStatusId(null);
-                          }}
-                          className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-slate-100 p-2 text-slate-600 hover:bg-blue-50 hover:text-blue-700 transition-colors cursor-pointer"
-                          aria-label={`Aksi ajuan ${item.nomorSurat}`}
-                          aria-expanded={openActionId === item.id}
-                        >
-                          <MoreHorizontal className="w-4 h-4" />
-                        </button>
-                        {openActionId === item.id && (
-                          <div className="absolute right-6 top-14 z-20 w-36 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg text-left">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSelectedAjuan(item);
-                                setIsModalOpen(true);
-                                setOpenActionId(null);
-                              }}
-                              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-700"
-                            >
-                              <Eye className="w-3.5 h-3.5" />
-                              Lihat Alur Draft
-                            </button>
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* TAB 2: ALUR DRAFT & APPROVAL WORKFLOW */}
-      {activeTab === 'WORKFLOW' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* List Ajuan Selector */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-3">
-            <h3 className="font-bold text-slate-800 text-base flex items-center gap-2">
-              <FileCheck className="w-5 h-5 text-blue-600" />
-              Pilih Ajuan Surat Tugas
-            </h3>
-            <p className="text-xs text-slate-500">Klik ajuan di bawah untuk meninjau alur draft & persetujuan secara mendalam.</p>
-            <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
-              {filteredAjuan.map((item) => (
-                <div
-                  key={item.id}
-                  onClick={() => setSelectedAjuan(item)}
-                  className={`p-3.5 rounded-xl border transition-all cursor-pointer ${selectedAjuan?.id === item.id
-                    ? 'border-blue-500 bg-blue-50/50 shadow-xs'
-                    : 'border-slate-200 bg-white hover:border-slate-300'
-                    }`}
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-[11px] font-mono font-bold text-blue-700">{item.nomorSurat}</span>
-                    {getStatusBadge(item.status)}
-                  </div>
-                  <h4 className="font-semibold text-slate-800 text-xs line-clamp-1">{item.perihal}</h4>
-                  <p className="text-[11px] text-slate-500 mt-1">{item.unitKerja} • {item.lokasiPenugasan}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Detailed Stepper View */}
-          <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
-            {selectedAjuan ? (
-              <div className="space-y-6">
-                <div className="pb-4 border-b border-slate-100 flex items-start justify-between">
-                  <div>
-                    <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded border border-blue-200">
-                      {selectedAjuan.nomorSurat}
-                    </span>
-                    <h3 className="text-lg font-bold text-slate-800 mt-2">{selectedAjuan.perihal}</h3>
-                    <p className="text-xs text-slate-500 mt-1">
-                      Pengaju: <span className="font-semibold text-slate-700">{selectedAjuan.pengaju.nama}</span> ({selectedAjuan.unitKerja})
-                    </p>
-                  </div>
-                  <div>{getStatusBadge(selectedAjuan.status)}</div>
-                </div>
-
-                {/* Vertical Stepper Timeline */}
-                <div>
-                  <h4 className="font-bold text-sm text-slate-800 mb-4">Tahapan Alur Persetujuan Draft ST:</h4>
-                  <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
-                    {selectedAjuan.workflow.map((step, idx) => {
-                      const isDone = step.status === 'COMPLETED';
-                      const isInProgress = step.status === 'IN_PROGRESS';
-
-                      return (
-                        <div key={idx} className="relative flex items-start gap-4">
-                          {/* Dot Badge */}
-                          <div
-                            className={`absolute -left-6 top-0.5 w-5 h-5 rounded-full flex items-center justify-center border-2 bg-white text-xs ${isDone
-                              ? 'border-emerald-500 text-emerald-600'
-                              : isInProgress
-                                ? 'border-blue-500 text-blue-600 animate-pulse'
-                                : 'border-slate-300 text-slate-400'
-                              }`}
-                          >
-                            {isDone ? (
-                              <CheckCircle2 className="w-4 h-4 fill-emerald-500 text-white" />
-                            ) : isInProgress ? (
-                              <Clock className="w-4 h-4 text-blue-600" />
-                            ) : (
-                              <div className="w-1.5 h-1.5 bg-slate-300 rounded-full" />
-                            )}
-                          </div>
-
-                          {/* Content Card */}
-                          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 w-full space-y-1">
-                            <div className="flex items-center justify-between">
-                              <h5 className="font-bold text-sm text-slate-800">{step.label}</h5>
-                              {step.tanggal && <span className="text-[11px] text-slate-400 font-mono">{step.tanggal}</span>}
-                            </div>
-                            <p className="text-xs text-slate-600">
-                              Pelaksana: <span className="font-semibold text-slate-800">{step.actor}</span>
-                            </p>
-                            {step.catatan && (
-                              <p className="text-xs text-slate-500 bg-white p-2.5 rounded-lg border border-slate-200 mt-2 italic">
-                                &quot;{step.catatan}&quot;
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-              </div>
-            </div>
-            </div>
-            ) : (
-              <div className="text-center py-16 text-slate-400 space-y-2">
-                <FileText className="w-12 h-12 mx-auto stroke-1 text-slate-300" />
-                <p className="text-sm font-medium">Pilih surat tugas di sebelah kiri untuk melihat alur persetujuan lengkap.</p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-      {/* MODAL DAFTAR PEGAWAI YANG DITUGASKAN */}
-      {selectedPegawaiAjuan && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div>
-                <h3 className="flex items-center gap-2 text-lg font-bold text-slate-800">
-                  <Users className="h-5 w-5 text-blue-600" />
-                  Daftar Pegawai Ditugaskan
-                </h3>
-                <p className="mt-1 text-xs text-slate-500">{selectedPegawaiAjuan.nomorSurat}</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedPegawaiAjuan(null)}
-                className="rounded-lg p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
-                aria-label="Tutup daftar pegawai"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="max-h-[60vh] space-y-3 overflow-y-auto">
-              {selectedPegawaiAjuan.pegawaiDitugaskan.map((pegawai, index) => (
-                <div key={pegawai.id} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                  <div className="flex items-start gap-3">
-                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700">
-                      {index + 1}
-                    </span>
-                    <div className="min-w-0 space-y-1 text-sm">
-                      <p className="font-bold text-slate-800">{pegawai.nama}</p>
-                      <p className="text-xs text-slate-600">NIP: {pegawai.nip}</p>
-                      <p className="text-xs font-semibold text-blue-700">Unit Kerja: {pegawai.unitKerja}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex justify-end border-t border-slate-100 pt-3">
-              <button
-                type="button"
-                onClick={() => setSelectedPegawaiAjuan(null)}
-                className="rounded-xl bg-slate-800 px-5 py-2 text-xs font-bold text-white transition-colors hover:bg-slate-900"
-              >
-                Tutup
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL DETAIL ALUR WORKFLOW */}
-      {isModalOpen && selectedAjuan && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 space-y-5 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2">
-                <FileCheck className="w-5 h-5 text-blue-600" />
-                Alur Draft & Track Record Persetujuan
-              </h3>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="bg-blue-50/70 p-4 rounded-xl border border-blue-200 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="font-mono text-xs font-bold text-blue-700">{selectedAjuan.nomorSurat}</span>
-                {getStatusBadge(selectedAjuan.status)}
-              </div>
-              <h4 className="font-bold text-slate-900 text-sm">{selectedAjuan.perihal}</h4>
-              <p className="text-xs text-slate-600">{selectedAjuan.deskripsi}</p>
-            </div>
-
-            <div className="space-y-4">
-              <h4 className="font-bold text-sm text-slate-800">Riwayat Tahapan Persetujuan:</h4>
-              <div className="space-y-3">
-                {selectedAjuan.workflow.map((w, idx) => (
-                  <div key={idx} className="flex items-start gap-3 p-3 rounded-xl border border-slate-200 bg-slate-50/50">
-                    {w.status === 'COMPLETED' ? (
-                      <CheckCircle2 className="w-5 h-5 text-emerald-600 mt-0.5 shrink-0" />
-                    ) : w.status === 'IN_PROGRESS' ? (
-                      <Clock className="w-5 h-5 text-blue-600 mt-0.5 shrink-0 animate-pulse" />
-                    ) : (
-                      <div className="w-5 h-5 rounded-full border-2 border-slate-300 mt-0.5 shrink-0" />
-                    )}
-                    <div className="w-full space-y-1">
-                      <div className="flex items-center justify-between text-xs font-bold text-slate-800">
-                        <span>{w.label}</span>
-                        <span className="text-slate-400 font-normal">{w.tanggal || 'Menunggu'}</span>
-                      </div>
-                      <p className="text-xs text-slate-600">Aktor: {w.actor}</p>
-                      {w.catatan && <p className="text-xs text-slate-500 bg-white p-2 rounded border border-slate-200">{w.catatan}</p>}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="pt-2 flex justify-end">
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer"
-              >
-                Tutup
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      </main>
+      
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm mt-6">
+        {renderContent()}
       </div>
-
-      {/* MODAL FORM BUAT DRAFT AJUAN BARU */}
-      {isFormModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-xl w-full p-6 space-y-4 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2">
-                <Plus className="w-5 h-5 text-blue-600" />
-                Form Pengajuan Draft Surat Tugas
-              </h3>
-              <button
-                onClick={() => setIsFormModalOpen(false)}
-                className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateDraft} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Perihal Penugasan</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Contoh: Pendampingan Monitoring Posko Kesehatan..."
-                  value={formData.perihal}
-                  onChange={(e) => setFormData({ ...formData, perihal: e.target.value })}
-                  className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Unit Kerja Pengaju</label>
-                  <select
-                    value={formData.unitKerja}
-                    onChange={(e) => setFormData({ ...formData, unitKerja: e.target.value as UnitKerjaType })}
-                    className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  >
-                    <option value="RBI">RBI</option>
-                    <option value="Fastingkom">Fastingkom</option>
-                    <option value="Kepeg">Kepeg</option>
-                    <option value="PM">PM</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Pegawai Ditugaskan</label>
-                  <select
-                    multiple
-                    value={formData.pegawaiIds}
-                    onChange={(e) => {
-                      const options = Array.from(e.target.selectedOptions, option => option.value);
-                      setFormData({ ...formData, pegawaiIds: options });
-                    }}
-                    className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none h-24"
-                  >
-                    {dummyPegawaiList.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.nama} ({p.unitKerja})
-                      </option>
-                    ))}
-                  </select>
-                  <p className="text-xs text-slate-500 mt-1">Tahan tombol Ctrl/Cmd untuk memilih lebih dari satu pegawai.</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Tanggal Mulai</label>
-                  <input
-                    type="date"
-                    required
-                    value={formData.tanggalMulai}
-                    onChange={(e) => setFormData({ ...formData, tanggalMulai: e.target.value })}
-                    className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Tanggal Selesai</label>
-                  <input
-                    type="date"
-                    required
-                    value={formData.tanggalSelesai}
-                    onChange={(e) => setFormData({ ...formData, tanggalSelesai: e.target.value })}
-                    className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Domisili Lokasi Penugasan</label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <select required value={formData.provinsiId} onChange={(e) => setFormData({ ...formData, provinsiId: e.target.value, kotaId: '' })} className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                    <option value="">Pilih Provinsi</option>
-                    {provinces.map((wilayah) => <option key={wilayah.id} value={wilayah.id}>{wilayah.name}</option>)}
-                  </select>
-                  <select required value={formData.kotaId} disabled={!formData.provinsiId || isWilayahLoading} onChange={(e) => setFormData({ ...formData, kotaId: e.target.value })} className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:bg-slate-50">
-                    <option value="">Pilih Kota/Kabupaten</option>
-                    {cities.map((wilayah) => <option key={wilayah.id} value={wilayah.id}>{wilayah.name}</option>)}
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Lokasi Penugasan Spesifik</label>
-                <input type="text" required placeholder="Contoh: Kantor, lembaga, atau sekolah tujuan" value={formData.lokasiSpesifik} onChange={(e) => setFormData({ ...formData, lokasiSpesifik: e.target.value })} className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Deskripsi Tugas</label>
-                <textarea
-                  rows={3}
-                  placeholder="Penjelasan rinci mengenai agenda dan uraian tugas..."
-                  value={formData.deskripsi}
-                  onChange={(e) => setFormData({ ...formData, deskripsi: e.target.value })}
-                  className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Upload Surat Tugas / Dokumen Pendukung</label>
-                <input
-                  type="file"
-                  accept=".pdf,.doc,.docx,.xls,.xlsx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                  onChange={(e) => setFormData({ ...formData, file: e.target.files?.[0] || null })}
-                  className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                />
-                <p className="mt-1 text-[11px] text-slate-500">Format yang didukung: PDF, Word, Excel.</p>
-              </div>
-
-              <div className="pt-3 flex items-center justify-end gap-3 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setIsFormModalOpen(false)}
-                  className="px-4 py-2 border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-bold rounded-xl transition-colors cursor-pointer"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  className="flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-md shadow-blue-500/20 transition-all cursor-pointer"
-                >
-                  <Send className="w-3.5 h-3.5" />
-                  <span>Kirim Ajuan Draft</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
