@@ -5,7 +5,8 @@ on:
     branches:
       - main
       - master
-      - frontend-sim-penugasan
+      - develop-2
+      - versi-revisi
 
 permissions:
   contents: read
