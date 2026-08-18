@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { dummyPegawaiList, dummyAjuanSuratTugas } from '@/data/dummyData';
 import type { AjuanSuratTugas, UnitKerjaType } from '@/types';
 import { sendEmailNotification } from '@/utils/emailService';
-import { FileText, Send, ArrowLeft } from 'lucide-react';
+import { FileText, Send, ArrowLeft, Search } from 'lucide-react';
 
 type Wilayah = { id: string; name: string };
 
@@ -12,6 +12,8 @@ export const BuatTugasPage = () => {
   const [provinces, setProvinces] = useState<Wilayah[]>([]);
   const [cities, setCities] = useState<Wilayah[]>([]);
   const [isWilayahLoading, setIsWilayahLoading] = useState(false);
+  const [pegawaiSearch, setPegawaiSearch] = useState('');
+  const [unitFilter, setUnitFilter] = useState('');
 
   const [formData, setFormData] = useState({
     perihal: '',
@@ -175,22 +177,56 @@ export const BuatTugasPage = () => {
 
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-1">Pegawai Ditugaskan</label>
-                <select
-                  multiple
-                  value={formData.pegawaiIds}
-                  onChange={(e) => {
-                    const options = Array.from(e.target.selectedOptions, option => option.value);
-                    setFormData({ ...formData, pegawaiIds: options });
-                  }}
-                  className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50 hover:bg-white transition-colors h-32"
-                >
-                  {dummyPegawaiList.map((p) => (
-                    <option key={p.id} value={p.id} className="py-1">
-                      {p.nama} ({p.unitKerja})
-                    </option>
+                
+                <div className="flex flex-col sm:flex-row gap-2 mb-2">
+                  <div className="flex-1 flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus-within:ring-2 focus-within:ring-blue-500 transition-shadow">
+                    <Search className="w-4 h-4 text-slate-400" />
+                    <input 
+                      type="text" 
+                      placeholder="Cari nama pegawai..." 
+                      value={pegawaiSearch}
+                      onChange={(e) => setPegawaiSearch(e.target.value)}
+                      className="bg-transparent border-none outline-none text-sm w-full text-slate-700"
+                    />
+                  </div>
+                  <select 
+                    value={unitFilter}
+                    onChange={(e) => setUnitFilter(e.target.value)}
+                    className="sm:w-36 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                  >
+                    <option value="">Semua Unit</option>
+                    <option value="RBI">RBI</option>
+                    <option value="Fastingkom">Fastingkom</option>
+                    <option value="Kepeg">Kepeg</option>
+                    <option value="PM">PM</option>
+                  </select>
+                </div>
+
+                <div className="w-full px-4 py-2 border border-slate-200 rounded-xl bg-slate-50 h-32 overflow-y-auto space-y-1.5 custom-scrollbar">
+                  {dummyPegawaiList
+                    .filter(p => p.nama.toLowerCase().includes(pegawaiSearch.toLowerCase()) && (unitFilter === '' || p.unitKerja === unitFilter))
+                    .map((p) => (
+                    <label key={p.id} className="flex items-center gap-3 cursor-pointer p-1.5 hover:bg-white rounded-lg border border-transparent hover:border-slate-200 transition-colors">
+                      <input 
+                        type="checkbox"
+                        className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                        checked={formData.pegawaiIds.includes(p.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setFormData({ ...formData, pegawaiIds: [...formData.pegawaiIds, p.id] });
+                          } else {
+                            setFormData({ ...formData, pegawaiIds: formData.pegawaiIds.filter(id => id !== p.id) });
+                          }
+                        }}
+                      />
+                      <span className="text-sm text-slate-700 font-medium">{p.nama} <span className="text-slate-500 font-normal">({p.unitKerja})</span></span>
+                    </label>
                   ))}
-                </select>
-                <p className="text-xs text-slate-500 mt-1">Tahan tombol Ctrl/Cmd untuk memilih lebih dari satu pegawai.</p>
+                  {dummyPegawaiList.filter(p => p.nama.toLowerCase().includes(pegawaiSearch.toLowerCase()) && (unitFilter === '' || p.unitKerja === unitFilter)).length === 0 && (
+                    <div className="text-center text-xs text-slate-500 py-4">Pegawai tidak ditemukan</div>
+                  )}
+                </div>
+                <p className="text-xs text-slate-500 mt-1">Pilih satu atau lebih pegawai dengan mencentang kotak.</p>
               </div>
             </div>
 

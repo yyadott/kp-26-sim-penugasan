@@ -84,7 +84,7 @@ export const DashboardPage = () => {
         <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-5">
           <button
             onClick={() => setTableFilter(prev => prev === 'APPROVED' ? 'ALL' : 'APPROVED')}
-            className={`text-left p-5 rounded-2xl border shadow-xs transition-all flex flex-col justify-between focus:outline-none ${
+            className={`text-left p-5 rounded-2xl border shadow-xs transition-all flex flex-col focus:outline-none min-h-[200px] ${
               tableFilter === 'APPROVED' 
                 ? 'bg-blue-50 border-blue-400 ring-2 ring-blue-400 ring-offset-2' 
                 : 'bg-white border-slate-200 hover:border-blue-300'
@@ -96,15 +96,15 @@ export const DashboardPage = () => {
                 <CheckCircle2 className="w-5 h-5" />
               </div>
             </div>
-            <div className="mt-4">
-              <span className="text-3xl font-black text-slate-800">{approvedLettersCount}</span>
-              <span className="text-xs text-slate-500 block mt-0.5">Surat Tugas yang telah diterbitkan</span>
+            <div className="flex-1 flex flex-col items-center justify-center w-full mt-4">
+              <span className="text-5xl font-black text-slate-800">{approvedLettersCount}</span>
+              <span className="text-xs text-slate-500 block mt-2 text-center">Surat Tugas yang telah diterbitkan</span>
             </div>
           </button>
 
           <button
             onClick={() => setTableFilter(prev => prev === 'PENDING' ? 'ALL' : 'PENDING')}
-            className={`text-left p-5 rounded-2xl border shadow-xs transition-all flex flex-col justify-between focus:outline-none ${
+            className={`text-left p-5 rounded-2xl border shadow-xs transition-all flex flex-col focus:outline-none min-h-[200px] ${
               tableFilter === 'PENDING' 
                 ? 'bg-amber-50 border-amber-400 ring-2 ring-amber-400 ring-offset-2' 
                 : 'bg-white border-slate-200 hover:border-amber-300'
@@ -116,9 +116,9 @@ export const DashboardPage = () => {
                 <Clock className="w-5 h-5" />
               </div>
             </div>
-            <div className="mt-4">
-              <span className="text-3xl font-black text-amber-800">{pendingLettersCount}</span>
-              <span className="text-xs text-slate-500 block mt-0.5">Ajuan menunggu persetujuan Anda</span>
+            <div className="flex-1 flex flex-col items-center justify-center w-full mt-4">
+              <span className="text-5xl font-black text-amber-800">{pendingLettersCount}</span>
+              <span className="text-xs text-slate-500 block mt-2 text-center">Ajuan menunggu persetujuan Anda</span>
             </div>
           </button>
         </div>
