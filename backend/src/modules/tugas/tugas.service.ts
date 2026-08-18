@@ -1,48 +1,22 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../prisma.service';
-import { Prisma } from '@prisma/client';
 
+// Stub service - tidak menggunakan database langsung.
+// Koneksi database akan diintegrasikan setelah setup Prisma selesai.
 @Injectable()
 export class TugasService {
-  constructor(private prisma: PrismaService) {}
-
-  async findAll() {
-    return this.prisma.suratTugas.findMany({
-      include: {
-        pengaju: true,
-        pegawaiDitugaskan: {
-          include: {
-            user: true,
-          },
-        },
-      },
-    });
+  findAll() {
+    return { message: 'Endpoint ini memerlukan koneksi database.' };
   }
 
-  async findOne(id: string) {
-    return this.prisma.suratTugas.findUnique({
-      where: { id },
-      include: {
-        pengaju: true,
-        pegawaiDitugaskan: {
-          include: {
-            user: true,
-          },
-        },
-      },
-    });
+  findOne(id: string) {
+    return { message: `Data surat ${id} memerlukan koneksi database.` };
   }
 
-  async create(data: Prisma.SuratTugasCreateInput) {
-    return this.prisma.suratTugas.create({
-      data,
-    });
+  create(data: any) {
+    return { message: 'Create memerlukan koneksi database.', data };
   }
 
-  async update(id: string, data: Prisma.SuratTugasUpdateInput) {
-    return this.prisma.suratTugas.update({
-      where: { id },
-      data,
-    });
+  update(id: string, data: any) {
+    return { message: `Update ${id} memerlukan koneksi database.`, data };
   }
 }
