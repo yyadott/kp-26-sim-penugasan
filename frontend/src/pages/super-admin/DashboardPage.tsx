@@ -53,7 +53,20 @@ export const DashboardPage = () => {
 
   const activeLocations = mapLocations.filter((l) => l.status === 'AKTIF');
   const recentAjuan = dummyAjuanSuratTugas.slice(0, 8);
-  const recentPresensi = dummyPresensiPegawaiLain.slice(0, 8);
+  let recentPresensi = dummyPresensiPegawaiLain;
+  let displayDateStr = "Hari Ini";
+
+  if (selectedDate) {
+    const yyyy = selectedDate.getFullYear();
+    const mm = String(selectedDate.getMonth() + 1).padStart(2, '0');
+    const dd = String(selectedDate.getDate()).padStart(2, '0');
+    const formattedDate = `${yyyy}-${mm}-${dd}`;
+    
+    recentPresensi = dummyPresensiPegawaiLain.filter(p => p.tanggal === formattedDate);
+    displayDateStr = formatDate(selectedDate.toISOString());
+  } else {
+    recentPresensi = dummyPresensiPegawaiLain.slice(0, 8);
+  }
 
 
   const formatLokasiDisplay = (lokasi: string) => {
@@ -381,7 +394,7 @@ export const DashboardPage = () => {
             <div className="flex items-center justify-between pb-3 border-b border-slate-200">
               <h3 className="font-bold text-slate-800 text-base flex items-center gap-2">
                 <UserCheck className="w-4 h-4 text-emerald-600" />
-                Ringkasan Presensi Pegawai Hari Ini
+                Ringkasan Presensi Pegawai {displayDateStr !== "Hari Ini" ? `(${displayDateStr})` : "Hari Ini"}
               </h3>
               <Link to="/absensi" className="text-sm font-semibold text-blue-600 hover:underline">
                 Lihat Detail
@@ -389,36 +402,42 @@ export const DashboardPage = () => {
             </div>
 
             <div className="overflow-x-auto pb-2">
-              <div className="flex gap-4 min-w-max">
-                {recentPresensi.map((p) => {
-                  const unitColor = UNIT_COLORS[p.unitKerja] || { bg: 'bg-slate-100', text: 'text-slate-800' };
+              {recentPresensi.length > 0 ? (
+                <div className="flex gap-4 min-w-max">
+                  {recentPresensi.map((p) => {
+                    const unitColor = UNIT_COLORS[p.unitKerja] || { bg: 'bg-slate-100', text: 'text-slate-800' };
 
-                  return (
-                    <div key={p.id} className="w-[260px] shrink-0 rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3 shadow-sm">
-                      <div className="space-y-1">
-                        <h4 className="font-bold text-slate-900 text-sm">{p.nama}</h4>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${unitColor.bg} ${unitColor.text}`}>
-                            {p.unitKerja}
-                          </span>
-                          <span className="text-xs text-slate-400 font-mono">NIP: {p.nip}</span>
+                    return (
+                      <div key={p.id} className="w-[260px] shrink-0 rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3 shadow-sm">
+                        <div className="space-y-1">
+                          <h4 className="font-bold text-slate-900 text-sm">{p.nama}</h4>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${unitColor.bg} ${unitColor.text}`}>
+                              {p.unitKerja}
+                            </span>
+                            <span className="text-xs text-slate-400 font-mono">NIP: {p.nip}</span>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2 text-sm">
+                          <div className="rounded-lg bg-white border border-slate-200 p-2">
+                            <div className="text-[11px] font-semibold uppercase text-slate-500">Masuk</div>
+                            <div className="font-mono font-bold text-emerald-700">{p.jamMasuk}</div>
+                          </div>
+                          <div className="rounded-lg bg-white border border-slate-200 p-2">
+                            <div className="text-[11px] font-semibold uppercase text-slate-500">Keluar</div>
+                            <div className="font-mono text-slate-700">{p.jamKeluar || '-'}</div>
+                          </div>
                         </div>
                       </div>
-
-                      <div className="space-y-2 text-sm">
-                        <div className="rounded-lg bg-white border border-slate-200 p-2">
-                          <div className="text-[11px] font-semibold uppercase text-slate-500">Masuk</div>
-                          <div className="font-mono font-bold text-emerald-700">{p.jamMasuk}</div>
-                        </div>
-                        <div className="rounded-lg bg-white border border-slate-200 p-2">
-                          <div className="text-[11px] font-semibold uppercase text-slate-500">Keluar</div>
-                          <div className="font-mono text-slate-700">{p.jamKeluar || '-'}</div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="flex items-center justify-center py-8 text-sm text-slate-500 font-medium bg-slate-50 rounded-xl border border-slate-200">
+                  Tidak ada data presensi untuk tanggal ini.
+                </div>
+              )}
             </div>
           </div>
 

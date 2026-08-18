@@ -1,11 +1,32 @@
 import { useState } from 'react';
-import { UploadCloud, FileText, X, CheckCircle, ArrowLeft } from 'lucide-react';
+import { UploadCloud, FileText, X, CheckCircle, ArrowLeft, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { extractDocxContent } from '@/utils/documentScanner';
 
 export const UploadSuratPage = () => {
   const navigate = useNavigate();
   const [dragActive, setDragActive] = useState(false);
   const [file, setFile] = useState<File | null>(null);
+  const [previewHtml, setPreviewHtml] = useState<string>('');
+  const [isScanning, setIsScanning] = useState(false);
+
+  const processFile = async (selectedFile: File) => {
+    setFile(selectedFile);
+    setPreviewHtml('');
+    
+    if (selectedFile.name.endsWith('.docx')) {
+      setIsScanning(true);
+      try {
+        const html = await extractDocxContent(selectedFile);
+        setPreviewHtml(html);
+      } catch (error) {
+        console.error('Gagal memproses dokumen:', error);
+        setPreviewHtml('<p class="text-red-500">Gagal memproses preview dokumen.</p>');
+      } finally {
+        setIsScanning(false);
+      }
+    }
+  };
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -22,14 +43,14 @@ export const UploadSuratPage = () => {
     e.stopPropagation();
     setDragActive(false);
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      setFile(e.dataTransfer.files[0]);
+      processFile(e.dataTransfer.files[0]);
     }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     e.preventDefault();
     if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
+      processFile(e.target.files[0]);
     }
   };
 
@@ -92,13 +113,13 @@ export const UploadSuratPage = () => {
                   type="file"
                   className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
                   onChange={handleChange}
-                  accept=".pdf,.doc,.docx"
+                  accept=".doc,.docx"
                 />
                 <div className={`rounded-full bg-white p-4 shadow-sm mb-4 transition-transform duration-200 ${dragActive ? 'scale-110' : ''}`}>
                   <UploadCloud className="h-8 w-8 text-blue-600" />
                 </div>
                 <p className="text-base font-semibold text-slate-700">Klik atau seret file ke area ini</p>
-                <p className="mt-1 text-sm text-slate-500">Format yang didukung: PDF, DOC, DOCX (Max. 5MB)</p>
+                <p className="mt-1 text-sm text-slate-500">Format yang didukung: DOC, DOCX (Max. 5MB)</p>
               </div>
             ) : (
               <div className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 p-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -114,11 +135,35 @@ export const UploadSuratPage = () => {
                 <div className="flex items-center gap-3">
                   <CheckCircle className="h-5 w-5 text-emerald-600" />
                   <button 
-                    onClick={() => setFile(null)}
+                    onClick={() => {
+                      setFile(null);
+                      setPreviewHtml('');
+                    }}
                     className="rounded-lg p-1.5 text-slate-400 hover:bg-white hover:text-slate-700 hover:shadow-sm transition"
                   >
                     <X className="h-5 w-5" />
                   </button>
+                </div>
+              </div>
+            )}
+
+            {/* Area Preview Dokumen */}
+            {isScanning && (
+              <div className="mt-4 p-6 border border-slate-200 rounded-xl bg-slate-50 animate-pulse flex flex-col items-center justify-center">
+                <div className="h-8 w-8 rounded-full border-4 border-slate-300 border-t-blue-600 animate-spin mb-3"></div>
+                <p className="text-sm font-medium text-slate-600">Sedang mengekstrak dokumen...</p>
+              </div>
+            )}
+            
+            {previewHtml && !isScanning && (
+              <div className="mt-4 border border-slate-200 rounded-xl overflow-hidden">
+                <div className="bg-slate-100 px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+                  <h3 className="font-semibold text-sm text-slate-700 flex items-center gap-2">
+                    <Eye className="h-4 w-4" />
+                    Preview Isi Dokumen
+                  </h3>
+                </div>
+                <div className="p-6 bg-white max-h-[400px] overflow-y-auto prose prose-sm max-w-none text-slate-800" dangerouslySetInnerHTML={{ __html: previewHtml }}>
                 </div>
               </div>
             )}
@@ -132,7 +177,7 @@ export const UploadSuratPage = () => {
             <ul className="space-y-4 text-sm text-slate-600 mb-8">
               <li className="flex items-start gap-3">
                 <div className={`mt-1 h-2 w-2 rounded-full flex-shrink-0 transition-colors ${file ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-slate-300'}`} />
-                <span>Dokumen surat tugas wajib dilampirkan (Format PDF atau Word).</span>
+                <span>Dokumen draft surat tugas dilampirkan (Wajib format Word).</span>
               </li>
               <li className="flex items-start gap-3">
                 <div className="mt-1 h-2 w-2 rounded-full flex-shrink-0 bg-slate-300" />

@@ -1,15 +1,43 @@
 import React, { useState } from 'react';
 import { dummyAjuanSuratTugas } from '@/data/dummyData';
 import { useAuth } from '@/hooks/useAuth';
+import { extractDocxContent } from '@/utils/documentScanner';
 import { 
-  FileText, CheckCircle2, XCircle, Clock, Eye, Download, 
-  MapPin, Calendar as CalendarIcon, Users, Upload, X
+  FileText, CheckCircle2, XCircle, Clock, Download, 
+  MapPin, Calendar as CalendarIcon, Users, Upload, X, Search
 } from 'lucide-react';
 
 export const ApprovalTugasPage = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'PENDING' | 'RIWAYAT'>('PENDING');
   const [confirmApproveId, setConfirmApproveId] = useState<string | null>(null);
+  
+  // States for Preview Modal
+  const [previewModalOpen, setPreviewModalOpen] = useState(false);
+  const [previewHtml, setPreviewHtml] = useState<string>('');
+  const [isScanning, setIsScanning] = useState(false);
+  const [previewDocName, setPreviewDocName] = useState<string>('');
+
+  const handlePreviewSimulation = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setIsScanning(true);
+      setPreviewHtml('');
+      try {
+        const html = await extractDocxContent(e.target.files[0]);
+        setPreviewHtml(html);
+      } catch (error) {
+        setPreviewHtml('<p class="text-red-500">Gagal mengekstrak dokumen.</p>');
+      } finally {
+        setIsScanning(false);
+      }
+    }
+  };
+
+  const openPreview = (tugasTitle: string) => {
+    setPreviewDocName(tugasTitle);
+    setPreviewHtml('<p class="text-slate-500 italic">Karena ini lingkungan demo, tidak ada file yang bisa diunduh dari server. Silakan unggah file lokal .docx untuk simulasi pratinjau Mammoth.js.</p>');
+    setPreviewModalOpen(true);
+  };
 
   // Ambil hanya data surat yang sesuai dengan "jalur" (Unit Kerja) user approval yang sedang login
   const myUnitData = dummyAjuanSuratTugas.filter(t => t.unitKerja === user?.unitKerja);
@@ -187,10 +215,11 @@ export const ApprovalTugasPage = () => {
                         <td className="p-4 align-top text-center">
                           <div className="flex items-center justify-center gap-2">
                             <button 
+                              onClick={() => openPreview(tugas.nomorSurat)}
                               className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-                              title="Lihat Detail Draft"
+                              title="Scan/Preview Dokumen Word"
                             >
-                              <Eye className="w-4 h-4" />
+                              <Search className="w-4 h-4" />
                             </button>
                             
                             {activeTab === 'PENDING' ? (
@@ -267,9 +296,9 @@ export const ApprovalTugasPage = () => {
                 onClick={() => {
                   const input = document.createElement('input');
                   input.type = 'file';
-                  input.accept = '.pdf,.doc,.docx';
+                  input.accept = '.pdf'; // HANYA PDF
                   input.onchange = () => {
-                    alert('File surat perubahan berhasil diunggah. Surat disetujui!');
+                    alert('File PDF yang ditandatangani berhasil diunggah. Surat disetujui!');
                     setConfirmApproveId(null);
                   };
                   input.click();
@@ -277,7 +306,7 @@ export const ApprovalTugasPage = () => {
                 className="w-full py-2.5 px-4 bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold rounded-xl transition-colors border border-blue-200 flex items-center justify-center gap-2 text-sm"
               >
                 <Upload className="w-4 h-4" />
-                Ya, Ada Perubahan (Upload Surat Fix)
+                Unggah PDF TTD & Setujui
               </button>
               
               <button
@@ -288,7 +317,60 @@ export const ApprovalTugasPage = () => {
                 className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl transition-colors flex items-center justify-center gap-2 text-sm"
               >
                 <CheckCircle2 className="w-4 h-4" />
-                Tidak Ada, Langsung Setujui
+                Setujui Tanpa PDF (Hanya Demo)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Preview Modal */}
+      {previewModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+            <div className="p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+              <div>
+                <h3 className="font-bold text-lg text-slate-800">Preview Dokumen Word</h3>
+                <p className="text-sm text-slate-500">{previewDocName}</p>
+              </div>
+              <button
+                onClick={() => setPreviewModalOpen(false)}
+                className="p-2 rounded-lg hover:bg-slate-200 text-slate-500 hover:text-slate-700 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6 flex-1 overflow-y-auto bg-slate-100/50">
+              {/* Simulator Input untuk Testing Mammoth */}
+              <div className="mb-6 p-4 bg-white border border-blue-100 rounded-xl shadow-sm">
+                <label className="block text-sm font-semibold text-blue-800 mb-2">Simulasi File (Upload .docx lokal):</label>
+                <input 
+                  type="file" 
+                  accept=".docx" 
+                  onChange={handlePreviewSimulation} 
+                  className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition-all"
+                />
+              </div>
+
+              {isScanning ? (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <div className="h-8 w-8 rounded-full border-4 border-slate-300 border-t-blue-600 animate-spin mb-4"></div>
+                  <p className="text-slate-600 font-medium">Mengekstrak teks dokumen...</p>
+                </div>
+              ) : (
+                <div className="bg-white border border-slate-200 shadow-sm rounded-lg p-8 min-h-[400px] prose prose-sm max-w-none prose-slate"
+                  dangerouslySetInnerHTML={{ __html: previewHtml }}
+                >
+                </div>
+              )}
+            </div>
+            
+            <div className="p-4 border-t border-slate-200 bg-white flex justify-end">
+              <button
+                onClick={() => setPreviewModalOpen(false)}
+                className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition-colors text-sm"
+              >
+                Tutup Preview
               </button>
             </div>
           </div>
