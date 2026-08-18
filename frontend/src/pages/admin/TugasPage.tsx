@@ -12,14 +12,20 @@ const formatDate = (dateStr: string) => format(new Date(dateStr), 'dd MMMM yyyy'
 const StatusBadge = ({ status }: { status: string }) => {
   const styles: Record<string, string> = {
     DRAFT: 'bg-slate-100 text-slate-700 ring-slate-600/10',
-    VERIFIKASI_SUBBAGIAN: 'bg-amber-50 text-amber-700 ring-amber-600/10',
+    VERIFIKASI_SUBBAGIAN: 'bg-blue-50 text-blue-700 ring-blue-600/10',
     PERSETUJUAN_PIMPINAN: 'bg-blue-50 text-blue-700 ring-blue-600/10',
     SURAT_TERBIT: 'bg-emerald-50 text-emerald-700 ring-emerald-600/10',
     DITOLAK: 'bg-red-50 text-red-700 ring-red-600/10',
   };
+
+  let displayStatus = status.replace(/_/g, ' ');
+  if (status === 'VERIFIKASI_SUBBAGIAN' || status === 'PERSETUJUAN_PIMPINAN') {
+    displayStatus = 'APPROVAL';
+  }
+
   return (
     <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${styles[status] || styles.DRAFT}`}>
-      {status.replace(/_/g, ' ')}
+      {displayStatus}
     </span>
   );
 };
@@ -361,8 +367,13 @@ const PenugasanBerlangsungTab = () => {
   );
 };
 
-// 6. Draft Penugasan
-const DraftPenugasanTab = () => <GenericTaskTable tasks={dummyAjuanSuratTugas.filter(t => t.status === 'DRAFT')} emptyMsg="Tidak ada draft penugasan." />;
+// 6. Draft Penugasan (Juga menampilkan yang sedang proses Approval)
+const DraftPenugasanTab = () => (
+  <GenericTaskTable 
+    tasks={dummyAjuanSuratTugas.filter(t => ['DRAFT', 'VERIFIKASI_SUBBAGIAN', 'PERSETUJUAN_PIMPINAN'].includes(t.status))} 
+    emptyMsg="Tidak ada draft atau surat penugasan yang sedang dalam proses approval." 
+  />
+);
 
 // 6. Blokir Penugasan (Ditolak)
 const BlokirPenugasanTab = () => <GenericTaskTable tasks={dummyAjuanSuratTugas.filter(t => t.status === 'DITOLAK')} emptyMsg="Tidak ada penugasan yang diblokir atau ditolak." />;

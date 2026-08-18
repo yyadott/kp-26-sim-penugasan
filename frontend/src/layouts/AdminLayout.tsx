@@ -301,13 +301,10 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
       icon: ClipboardList,
       items: [
         { to: `${prefix}/tugas?tab=rekap`, label: 'Rekap Penugasan' },
-        { to: `${prefix}/tugas?tab=pegawai`, label: 'Pegawai Penugasan' },
         { to: `${prefix}/tugas?tab=laporan`, label: 'Laporan Penugasan' },
-        { to: `${prefix}/tugas?tab=periode`, label: 'Periode Penugasan' },
         { to: `${prefix}/tugas?tab=pivot`, label: 'Pivot Penugasan' },
         { to: `${prefix}/tugas?tab=berlangsung`, label: 'Penugasan Berlangsung' },
         { to: `${prefix}/tugas?tab=draft`, label: 'Draft Penugasan' },
-        { to: `${prefix}/tugas?tab=blokir`, label: 'Blokir Penugasan' },
       ]
     },
     { to: `${prefix}/pemetaan`, label: 'Pemetaan', icon: MapPin },

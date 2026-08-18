@@ -5,24 +5,20 @@ import {
   FileText, CheckCircle2, XCircle, Clock, Eye, Download, 
   MapPin, Calendar as CalendarIcon, Users, Upload, X
 } from 'lucide-react';
+import Swal from 'sweetalert2';
 
 export const ApprovalTugasPage = () => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'PENDING' | 'RIWAYAT'>('PENDING');
-  const [confirmApproveId, setConfirmApproveId] = useState<string | null>(null);
+  const [localData, setLocalData] = useState(dummyAjuanSuratTugas);
 
   // Ambil hanya data surat yang sesuai dengan "jalur" (Unit Kerja) user approval yang sedang login
-  const myUnitData = dummyAjuanSuratTugas.filter(t => t.unitKerja === user?.unitKerja);
+  const myUnitData = localData.filter(t => t.unitKerja === user?.unitKerja);
 
   const pendingApprovals = myUnitData.filter(
     t => t.status === 'VERIFIKASI_SUBBAGIAN' || t.status === 'PERSETUJUAN_PIMPINAN'
   );
 
-  const historyApprovals = myUnitData.filter(
-    t => t.status === 'SURAT_TERBIT' || t.status === 'DITOLAK'
-  );
-
-  const displayData = activeTab === 'PENDING' ? pendingApprovals : historyApprovals;
+  const displayData = pendingApprovals;
 
   // Group data by Month and Year
   const groupedData = displayData.reduce((acc, curr) => {
@@ -46,11 +42,66 @@ export const ApprovalTugasPage = () => {
   });
 
   const handleApprove = (id: string) => {
-    alert(`Surat Tugas ${id} disetujui!`);
+    setLocalData(prev => prev.map(item => item.id === id ? { ...item, status: 'SURAT_TERBIT' } : item));
+  };
+
+  const handleConfirmApprove = (id: string) => {
+    Swal.fire({
+      title: 'Konfirmasi Persetujuan',
+      text: 'Apakah terdapat perubahan pada dokumen surat tugas ini sebelum disetujui?',
+      icon: 'question',
+      showCancelButton: true,
+      showDenyButton: true,
+      confirmButtonText: 'Ya, Ada Perubahan (Upload)',
+      confirmButtonColor: '#3b82f6',
+      denyButtonText: 'Tidak, Langsung Setujui',
+      denyButtonColor: '#10b981',
+      cancelButtonText: 'Batal',
+      cancelButtonColor: '#94a3b8',
+    }).then((result) => {
+      if (result.isConfirmed) {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.pdf,.doc,.docx';
+        input.onchange = () => {
+          handleApprove(id);
+          Swal.fire('Berhasil!', 'File surat perubahan berhasil diunggah. Surat disetujui!', 'success');
+        };
+        input.click();
+      } else if (result.isDenied) {
+        handleApprove(id);
+        Swal.fire('Disetujui!', `Surat Tugas ${id} berhasil disetujui.`, 'success');
+      }
+    });
   };
 
   const handleReject = (id: string) => {
-    alert(`Surat Tugas ${id} ditolak!`);
+    Swal.fire({
+      title: 'Tolak Surat Tugas',
+      text: `Anda yakin ingin menolak Surat Tugas ${id}?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#94a3b8',
+      confirmButtonText: 'Ya, Tolak'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        setLocalData(prev => prev.map(item => item.id === id ? { ...item, status: 'DITOLAK' } : item));
+        Swal.fire('Ditolak!', `Surat Tugas ${id} telah ditolak.`, 'error');
+      }
+    });
+  };
+
+  const handleDownloadWord = (id: string, nomorSurat: string) => {
+    Swal.fire({
+      title: 'Mengunduh Surat Tugas',
+      text: `Surat ${nomorSurat} sedang diunduh dalam format Word (.docx)...`,
+      icon: 'info',
+      timer: 2000,
+      showConfirmButton: false,
+      timerProgressBar: true,
+    });
+    // Di aplikasi nyata, ini akan memicu download file dari backend
   };
 
   return (
@@ -62,33 +113,6 @@ export const ApprovalTugasPage = () => {
           <p className="text-sm text-slate-500 mt-1">
             Tinjau dan proses pengajuan surat tugas dari unit kerja Anda.
           </p>
-        </div>
-        <div className="flex bg-slate-100 p-1 rounded-lg w-full md:w-fit">
-          <button
-            onClick={() => setActiveTab('PENDING')}
-            className={`flex-1 md:flex-none px-4 py-2 text-sm font-medium rounded-md transition-all ${
-              activeTab === 'PENDING' 
-                ? 'bg-white text-blue-700 shadow-sm' 
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            Menunggu Persetujuan
-            {pendingApprovals.length > 0 && (
-              <span className="ml-2 inline-flex items-center justify-center bg-rose-100 text-rose-600 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                {pendingApprovals.length}
-              </span>
-            )}
-          </button>
-          <button
-            onClick={() => setActiveTab('RIWAYAT')}
-            className={`flex-1 md:flex-none px-4 py-2 text-sm font-medium rounded-md transition-all ${
-              activeTab === 'RIWAYAT' 
-                ? 'bg-white text-blue-700 shadow-sm' 
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            Riwayat
-          </button>
         </div>
       </div>
 
@@ -185,42 +209,35 @@ export const ApprovalTugasPage = () => {
                           )}
                         </td>
                         <td className="p-4 align-top text-center">
-                          <div className="flex items-center justify-center gap-2">
+                          <div className="flex items-center justify-center gap-1.5">
+                            <button 
+                              onClick={() => handleDownloadWord(tugas.id, tugas.nomorSurat)}
+                              className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                              title="Download format Word"
+                            >
+                              <Download className="w-4 h-4" />
+                            </button>
                             <button 
                               className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
                               title="Lihat Detail Draft"
                             >
                               <Eye className="w-4 h-4" />
                             </button>
-                            
-                            {activeTab === 'PENDING' ? (
-                              <>
-                                <div className="w-px h-4 bg-slate-200 mx-1"></div>
-                                <button 
-                                  onClick={() => setConfirmApproveId(tugas.id)}
-                                  className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-md transition-colors font-medium"
-                                  title="Setujui"
-                                >
-                                  <CheckCircle2 className="w-4 h-4" />
-                                </button>
-                                <button 
-                                  onClick={() => handleReject(tugas.id)}
-                                  className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-md transition-colors font-medium"
-                                  title="Tolak"
-                                >
-                                  <XCircle className="w-4 h-4" />
-                                </button>
-                              </>
-                            ) : (
-                              tugas.fileDraftUrl && (
-                                <button 
-                                  className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-                                  title="Unduh Surat Terbit"
-                                >
-                                  <Download className="w-4 h-4" />
-                                </button>
-                              )
-                            )}
+                            <div className="w-px h-4 bg-slate-200 mx-1"></div>
+                            <button 
+                              onClick={() => handleConfirmApprove(tugas.id)}
+                              className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-md transition-colors font-medium"
+                              title="Setujui"
+                            >
+                              <CheckCircle2 className="w-4 h-4" />
+                            </button>
+                            <button 
+                              onClick={() => handleReject(tugas.id)}
+                              className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-md transition-colors font-medium"
+                              title="Tolak"
+                            >
+                              <XCircle className="w-4 h-4" />
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -230,9 +247,7 @@ export const ApprovalTugasPage = () => {
               ) : (
                 <tr>
                   <td colSpan={5} className="p-8 text-center text-slate-500 text-sm">
-                    {activeTab === 'PENDING' 
-                      ? 'Belum ada surat tugas yang menunggu persetujuan Anda.' 
-                      : 'Belum ada riwayat persetujuan.'}
+                    Belum ada surat tugas yang menunggu persetujuan Anda.
                   </td>
                 </tr>
               )}
@@ -241,59 +256,6 @@ export const ApprovalTugasPage = () => {
         </div>
       </div>
 
-      {/* Confirmation Modal */}
-      {confirmApproveId && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-5 shadow-2xl border border-slate-200">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2">
-                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                Konfirmasi Persetujuan
-              </h3>
-              <button
-                onClick={() => setConfirmApproveId(null)}
-                className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <p className="text-sm text-slate-600">
-              Apakah terdapat perubahan pada dokumen surat tugas ini sebelum disetujui?
-            </p>
-
-            <div className="flex flex-col gap-3 pt-2">
-              <button
-                onClick={() => {
-                  const input = document.createElement('input');
-                  input.type = 'file';
-                  input.accept = '.pdf,.doc,.docx';
-                  input.onchange = () => {
-                    alert('File surat perubahan berhasil diunggah. Surat disetujui!');
-                    setConfirmApproveId(null);
-                  };
-                  input.click();
-                }}
-                className="w-full py-2.5 px-4 bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold rounded-xl transition-colors border border-blue-200 flex items-center justify-center gap-2 text-sm"
-              >
-                <Upload className="w-4 h-4" />
-                Ya, Ada Perubahan (Upload Surat Fix)
-              </button>
-              
-              <button
-                onClick={() => {
-                  handleApprove(confirmApproveId);
-                  setConfirmApproveId(null);
-                }}
-                className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl transition-colors flex items-center justify-center gap-2 text-sm"
-              >
-                <CheckCircle2 className="w-4 h-4" />
-                Tidak Ada, Langsung Setujui
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
