@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { dummyAjuanSuratTugas } from '@/data/dummyData';
 import { useAuth } from '@/hooks/useAuth';
 import { extractDocxContent } from '@/utils/documentScanner';
-import { 
-  FileText, CheckCircle2, XCircle, Clock, Download, 
+import {
+  FileText, CheckCircle2, XCircle, Clock, Download,
   MapPin, Calendar as CalendarIcon, Users, Upload, X, Search
 } from 'lucide-react';
 import Swal from 'sweetalert2';
@@ -13,7 +13,7 @@ export const ApprovalTugasPage = () => {
   const [localData, setLocalData] = useState(dummyAjuanSuratTugas);
 
   const [confirmApproveId, setConfirmApproveId] = useState<string | null>(null);
-  
+
   // States for Preview Modal
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [previewHtml, setPreviewHtml] = useState<string>('');
@@ -211,7 +211,7 @@ export const ApprovalTugasPage = () => {
                             <div className="flex items-start gap-1.5">
                               <CalendarIcon className="w-4 h-4 text-slate-400 shrink-0" />
                               <span>
-                                {tugas.tanggalMulai} <br/>s/d {tugas.tanggalSelesai}
+                                {tugas.tanggalMulai} <br />s/d {tugas.tanggalSelesai}
                               </span>
                             </div>
                             <div className="flex items-start gap-1.5">
@@ -240,14 +240,14 @@ export const ApprovalTugasPage = () => {
                         </td>
                         <td className="p-4 align-top text-center">
                           <div className="flex items-center justify-center gap-1.5">
-                            <button 
+                            <button
                               onClick={() => handleDownloadWord(tugas.id, tugas.nomorSurat)}
                               className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
                               title="Download format Word"
                             >
                               <Download className="w-4 h-4" />
                             </button>
-                            <button 
+                            <button
                               onClick={() => openPreview(tugas.nomorSurat)}
                               className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
                               title="Scan/Preview Dokumen Word"
@@ -255,14 +255,14 @@ export const ApprovalTugasPage = () => {
                               <Search className="w-4 h-4" />
                             </button>
                             <div className="w-px h-4 bg-slate-200 mx-1"></div>
-                            <button 
+                            <button
                               onClick={() => handleConfirmApprove(tugas.id)}
                               className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-md transition-colors font-medium"
                               title="Setujui"
                             >
                               <CheckCircle2 className="w-4 h-4" />
                             </button>
-                            <button 
+                            <button
                               onClick={() => handleReject(tugas.id)}
                               className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-md transition-colors font-medium"
                               title="Tolak"
@@ -303,7 +303,7 @@ export const ApprovalTugasPage = () => {
                 <X className="w-5 h-5" />
               </button>
             </div>
-            
+
             <p className="text-sm text-slate-600">
               Apakah terdapat perubahan pada dokumen surat tugas ini sebelum disetujui?
             </p>
@@ -325,7 +325,7 @@ export const ApprovalTugasPage = () => {
                 <Upload className="w-4 h-4" />
                 Unggah PDF TTD & Setujui
               </button>
-              
+
               <button
                 onClick={() => {
                   handleApprove(confirmApproveId);
@@ -356,15 +356,15 @@ export const ApprovalTugasPage = () => {
                 <X className="w-5 h-5" />
               </button>
             </div>
-            
+
             <div className="p-6 flex-1 overflow-y-auto bg-slate-100/50">
               {/* Simulator Input untuk Testing Mammoth */}
               <div className="mb-6 p-4 bg-white border border-blue-100 rounded-xl shadow-sm">
                 <label className="block text-sm font-semibold text-blue-800 mb-2">Simulasi File (Upload .docx lokal):</label>
-                <input 
-                  type="file" 
-                  accept=".docx" 
-                  onChange={handlePreviewSimulation} 
+                <input
+                  type="file"
+                  accept=".docx"
+                  onChange={handlePreviewSimulation}
                   className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition-all"
                 />
               </div>
@@ -381,7 +381,7 @@ export const ApprovalTugasPage = () => {
                 </div>
               )}
             </div>
-            
+
             <div className="p-4 border-t border-slate-200 bg-white flex justify-end">
               <button
                 onClick={() => setPreviewModalOpen(false)}

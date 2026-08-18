@@ -8,6 +8,7 @@ type Akun = {
   username: string;
   level: string;
   password: string;
+  unitKerja?: string;
 };
 
 export const AkunPage = () => {
@@ -16,7 +17,7 @@ export const AkunPage = () => {
     const saved = localStorage.getItem('sim_penugasan_akuns');
     if (saved) return JSON.parse(saved);
     return [
-      { id: 1, nama: 'Admin Unit A', nip: '198001012005011001', username: 'adminA', level: 'Admin', password: '***' },
+      { id: 1, nama: 'Admin Unit PM', nip: '198001012005011001', username: 'adminPM', level: 'Admin', password: '***', unitKerja: 'PM' },
       { id: 2, nama: 'User Umum', nip: '199001012015011002', username: 'user1', level: 'User', password: '***' },
     ];
   });
@@ -34,7 +35,7 @@ export const AkunPage = () => {
   const [selectedAkunId, setSelectedAkunId] = useState<number | null>(null);
 
   // Form States
-  const [newAkun, setNewAkun] = useState({ nama: '', nip: '', username: '', level: 'User', password: '' });
+  const [newAkun, setNewAkun] = useState({ nama: '', nip: '', username: '', level: 'User', password: '', unitKerja: '' });
   const [newPassword, setNewPassword] = useState('');
   const [newRole, setNewRole] = useState('User');
 
@@ -51,11 +52,12 @@ export const AkunPage = () => {
         nip: newAkun.nip,
         username: newAkun.username,
         level: newAkun.level,
-        password: newAkun.password || '***'
+        password: newAkun.password || '***',
+        unitKerja: newAkun.level === 'Admin' ? newAkun.unitKerja : undefined
       }
     ]);
     setIsAddModalOpen(false);
-    setNewAkun({ nama: '', nip: '', username: '', level: 'User', password: '' });
+    setNewAkun({ nama: '', nip: '', username: '', level: 'User', password: '', unitKerja: '' });
   };
 
   const handleResetSubmit = (e: React.FormEvent) => {
@@ -138,9 +140,16 @@ export const AkunPage = () => {
                   <td className="px-5 py-3.5 text-slate-600">{akun.username}</td>
                   <td className="px-5 py-3.5 text-slate-400 font-mono text-[13px]">{akun.password}</td>
                   <td className="px-5 py-3.5">
-                    <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider ${akun.level === 'Admin' ? 'bg-indigo-50 text-indigo-700 border border-indigo-100' : 'bg-slate-100 text-slate-700 border border-slate-200'}`}>
-                      {akun.level}
-                    </span>
+                    <div className="flex flex-col gap-1 items-start">
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider ${akun.level === 'Admin' ? 'bg-indigo-50 text-indigo-700 border border-indigo-100' : 'bg-slate-100 text-slate-700 border border-slate-200'}`}>
+                        {akun.level}
+                      </span>
+                      {akun.level === 'Admin' && akun.unitKerja && (
+                        <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                          {akun.unitKerja}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-5 py-3.5">
                     <div className="flex items-center justify-center gap-2">
@@ -205,6 +214,17 @@ export const AkunPage = () => {
                   <option value="Approval">Approval</option>
                 </select>
               </div>
+              {newAkun.level === 'Admin' && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Unit Kerja</label>
+                  <select required value={newAkun.unitKerja} onChange={e => setNewAkun({...newAkun, unitKerja: e.target.value})} className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white">
+                    <option value="">Pilih Unit Kerja...</option>
+                    <option value="PM">PM</option>
+                    <option value="Fastingkom">Fastingkom</option>
+                    <option value="Kepeg">Kepeg</option>
+                  </select>
+                </div>
+              )}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Password Awal (Opsional)</label>
                 <input type="password" value={newAkun.password} onChange={e => setNewAkun({...newAkun, password: e.target.value})} className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none" />
