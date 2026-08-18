@@ -92,16 +92,46 @@ export const ApprovalTugasPage = () => {
     });
   };
 
-  const handleDownloadWord = (id: string, nomorSurat: string) => {
+  const handleDownloadWord = async (id: string, nomorSurat: string) => {
     Swal.fire({
       title: 'Mengunduh Surat Tugas',
       text: `Surat ${nomorSurat} sedang diunduh dalam format Word (.docx)...`,
       icon: 'info',
-      timer: 2000,
       showConfirmButton: false,
-      timerProgressBar: true,
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      },
     });
-    // Di aplikasi nyata, ini akan memicu download file dari backend
+
+    try {
+      const response = await fetch(`http://localhost:3000/api/tugas/${id}/download-word`);
+      if (!response.ok) throw new Error('Gagal mengunduh');
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Surat_Tugas_${nomorSurat.replace(/\//g, '-')}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      a.remove();
+
+      Swal.fire({
+        title: 'Berhasil!',
+        text: `Surat ${nomorSurat} berhasil diunduh.`,
+        icon: 'success',
+        timer: 2000,
+        showConfirmButton: false,
+      });
+    } catch (error) {
+      Swal.fire({
+        title: 'Gagal!',
+        text: 'Terjadi kesalahan saat mengunduh surat. Pastikan backend sudah berjalan.',
+        icon: 'error',
+      });
+    }
   };
 
   return (
