@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { dummyAjuanSuratTugas } from '@/data/dummyData';
+import type { AjuanSuratTugas } from '@/types';
 import { useAuth } from '@/hooks/useAuth';
 import { extractDocxContent } from '@/utils/documentScanner';
 import {
@@ -10,7 +11,14 @@ import Swal from 'sweetalert2';
 
 export const ApprovalTugasPage = () => {
   const { user } = useAuth();
-  const [localData, setLocalData] = useState(dummyAjuanSuratTugas);
+  const [localData, setLocalData] = useState<AjuanSuratTugas[]>(() => {
+    const saved = localStorage.getItem('sim_penugasan_tugas');
+    return saved ? JSON.parse(saved) : dummyAjuanSuratTugas;
+  });
+
+  React.useEffect(() => {
+    localStorage.setItem('sim_penugasan_tugas', JSON.stringify(localData));
+  }, [localData]);
 
   const [confirmApproveId, setConfirmApproveId] = useState<string | null>(null);
 
@@ -35,9 +43,17 @@ export const ApprovalTugasPage = () => {
     }
   };
 
-  const openPreview = (tugasTitle: string) => {
-    setPreviewDocName(tugasTitle);
-    setPreviewHtml('<p class="text-slate-500 italic">Karena ini lingkungan demo, tidak ada file yang bisa diunduh dari server. Silakan unggah file lokal .docx untuk simulasi pratinjau Mammoth.js.</p>');
+  const openPreview = (tugasId: string, tugasTitle: string) => {
+    const savedHtml = localStorage.getItem(`doc_html_${tugasId}`);
+    const savedName = localStorage.getItem(`doc_name_${tugasId}`);
+    
+    if (savedHtml) {
+      setPreviewDocName(`(Dari Admin) ${savedName || tugasTitle}`);
+      setPreviewHtml(savedHtml);
+    } else {
+      setPreviewDocName(tugasTitle);
+      setPreviewHtml('<div class="p-6 text-center"><p class="text-slate-500 italic mb-2">Dokumen untuk tugas ini belum diunggah oleh Admin.</p><p class="text-xs text-slate-400">Silakan gunakan fitur simulasi di atas untuk mencoba preview dengan file lokal.</p></div>');
+    }
     setPreviewModalOpen(true);
   };
 
@@ -248,7 +264,7 @@ export const ApprovalTugasPage = () => {
                               <Download className="w-4 h-4" />
                             </button>
                             <button
-                              onClick={() => openPreview(tugas.nomorSurat)}
+                              onClick={() => openPreview(tugas.id, tugas.nomorSurat)}
                               className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
                               title="Scan/Preview Dokumen Word"
                             >
@@ -315,8 +331,15 @@ export const ApprovalTugasPage = () => {
                   input.type = 'file';
                   input.accept = '.pdf'; // HANYA PDF
                   input.onchange = () => {
-                    alert('File PDF yang ditandatangani berhasil diunggah. Surat disetujui!');
+                    handleApprove(confirmApproveId);
                     setConfirmApproveId(null);
+                    Swal.fire({
+                      title: 'Berhasil!',
+                      text: 'File PDF yang ditandatangani berhasil diunggah. Surat telah disetujui!',
+                      icon: 'success',
+                      confirmButtonText: 'Selesai',
+                      confirmButtonColor: '#10b981'
+                    });
                   };
                   input.click();
                 }}

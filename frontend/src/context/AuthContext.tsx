@@ -33,7 +33,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const stored = localStorage.getItem(AUTH_STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (parsed.id === 'peg-01') parsed.role = 'SUPER_ADMIN';
         if (parsed.id === 'peg-07') parsed.nama = 'Arnest, S.Kom.';
         if (!parsed.fotoAvatar || parsed.fotoAvatar.includes('unsplash') || parsed.id === 'peg-01') {
           parsed.fotoAvatar = `${import.meta.env.BASE_URL}pp-navbar-2.jpg`;
