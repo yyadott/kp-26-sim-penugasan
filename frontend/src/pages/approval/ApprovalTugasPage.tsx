@@ -138,7 +138,7 @@ export const ApprovalTugasPage = () => {
     });
   };
 
-  const handleDownloadWord = (_id: string, nomorSurat: string) => {
+  const handleDownloadWord = async (id: string, nomorSurat: string) => {
     Swal.fire({
       title: 'Mengunduh Surat Tugas',
       text: `Surat ${nomorSurat} sedang diunduh dalam format Word (.docx)...`,
