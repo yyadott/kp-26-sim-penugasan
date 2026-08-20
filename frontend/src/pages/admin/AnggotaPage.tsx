@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, MoreHorizontal, ChevronDown, X, Mail, MapPin, Building, Briefcase, Calendar as CalendarIcon, FileText, CheckCircle2, Clock, XCircle, ArrowLeft } from 'lucide-react';
+import { Search, MoreHorizontal, ChevronDown, Mail, MapPin, Building, Briefcase, Calendar as CalendarIcon, FileText, CheckCircle2, Clock, XCircle, ArrowLeft } from 'lucide-react';
 import { dummyPegawaiList, dummyAjuanSuratTugas, UNIT_COLORS } from '@/data/dummyData';
 import type { Pegawai } from '@/types';
 
