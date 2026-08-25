@@ -61,7 +61,7 @@ export const ApprovalTugasPage = () => {
   const myUnitData = localData.filter(t => t.unitKerja === user?.unitKerja);
 
   const pendingApprovals = myUnitData.filter(
-    t => t.status === 'VERIFIKASI_SUBBAGIAN' || t.status === 'PERSETUJUAN_PIMPINAN'
+    t => t.status === 'DRAFT' || t.status === 'VERIFIKASI_SUBBAGIAN' || t.status === 'PERSETUJUAN_PIMPINAN'
   );
 
   const displayData = pendingApprovals;
@@ -237,7 +237,7 @@ export const ApprovalTugasPage = () => {
                           </div>
                         </td>
                         <td className="p-4 align-top">
-                          {tugas.status === 'VERIFIKASI_SUBBAGIAN' || tugas.status === 'PERSETUJUAN_PIMPINAN' ? (
+                          {tugas.status === 'DRAFT' || tugas.status === 'VERIFIKASI_SUBBAGIAN' || tugas.status === 'PERSETUJUAN_PIMPINAN' ? (
                             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-50 text-amber-700 text-xs font-medium border border-amber-200/60">
                               <Clock className="w-3.5 h-3.5" />
                               Perlu Review

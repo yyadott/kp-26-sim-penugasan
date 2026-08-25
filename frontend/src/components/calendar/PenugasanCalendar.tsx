@@ -2,7 +2,8 @@ import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { UNIT_COLORS } from '@/data/dummyData';
 import type { LokasiPenugasanPegawai } from '@/types';
-import { ChevronLeft, ChevronRight, MapPin, FileText, Info, X, Users, Tag } from 'lucide-react';
+import { ChevronLeft, ChevronRight, FileText, X, Filter, Tag, Info, MapPin, Users } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const NAMA_BULAN = [
   'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
@@ -13,21 +14,17 @@ const NAMA_HARI = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
 
 // Simulated "jenis dinas" for each surat tugas based on location
 const getJenisDinas = (lokasi: string): string => {
-  if (lokasi.includes('Cimahi') || lokasi.includes('Bandung')) return 'Luar';
-  if (lokasi.includes('Bogor')) return 'Dalam';
-  if (lokasi.includes('Depok')) return 'Daring';
-  if (lokasi.includes('Jakarta') || lokasi.includes('Sukabumi')) return 'Izin';
+  if (lokasi.includes('BBPPMPV BMTI')) return 'Dalam';
   return 'Luar';
 };
 
 const JENIS_DINAS_COLORS: Record<string, { bg: string; text: string; border: string; dot: string }> = {
   Luar: { bg: 'bg-blue-100', text: 'text-blue-800', border: 'border-blue-300', dot: '#3b82f6' },
   Dalam: { bg: 'bg-emerald-100', text: 'text-emerald-800', border: 'border-emerald-300', dot: '#10b981' },
-  Daring: { bg: 'bg-violet-100', text: 'text-violet-800', border: 'border-violet-300', dot: '#8b5cf6' },
-  Izin: { bg: 'bg-amber-100', text: 'text-amber-800', border: 'border-amber-300', dot: '#f59e0b' },
 };
 
 interface CalendarEntry {
+  id: string;
   nomorSurat: string;
   perihal: string;
   lokasi: string;
@@ -70,78 +67,139 @@ const isDateInRange = (dateStr: string, startStr: string, endStr: string): boole
 
 // Detail Modal
 const DetailModal = ({ data, onClose }: { data: ModalData; onClose: () => void }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [filterLokasi, setFilterLokasi] = useState('ALL');
+  const [filterJenis, setFilterJenis] = useState('ALL');
+
+  const getBasePath = () => {
+    return location.pathname.startsWith('/super-admin') ? '/super-admin' : '/admin';
+  };
+
   if (!data) return null;
   const { entries, day, bulan, tahun } = data;
+
+  const allLokasi = Array.from(new Set(entries.map(e => e.lokasi)));
+  const allJenis = Array.from(new Set(entries.map(e => e.jenisDinas)));
+  
+  // Hitung jumlah pegawai unik dari seluruh entries
+  const allPegawai = new Set<string>();
+  entries.forEach(e => {
+    e.pegawaiNames.forEach(p => allPegawai.add(p));
+  });
+
+  const filteredEntries = entries.filter(e => {
+    const matchLokasi = filterLokasi === 'ALL' || e.lokasi === filterLokasi;
+    const matchJenis = filterJenis === 'ALL' || e.jenisDinas === filterJenis;
+    
+    return matchLokasi && matchJenis;
+  });
 
   return createPortal(
     <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
       <div
-        className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col animate-in zoom-in-95 fade-in duration-200"
+        className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col animate-in zoom-in-95 fade-in duration-200"
         onClick={e => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between p-5 border-b border-slate-200 shrink-0">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-5 border-b border-slate-200 shrink-0 gap-4">
           <div>
-            <h3 className="font-bold text-slate-800 text-base">Sebaran Penugasan</h3>
-            <p className="text-sm text-slate-500 mt-0.5">{day} {NAMA_BULAN[bulan]} {tahun}</p>
+            <h3 className="font-bold text-slate-800 text-lg">Sebaran Penugasan</h3>
+            <p className="text-sm font-medium text-slate-500 mt-0.5">{day} {NAMA_BULAN[bulan]} {tahun}</p>
+            <div className="flex gap-3 mt-2 text-xs font-semibold">
+               <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded-md border border-blue-200">{entries.length} Surat Tugas</span>
+               <span className="bg-emerald-50 text-emerald-700 px-2 py-1 rounded-md border border-emerald-200">{allPegawai.size} Pegawai Ditugaskan</span>
+            </div>
           </div>
-          <button onClick={onClose} className="p-2 rounded-xl hover:bg-slate-100 transition-colors text-slate-400 hover:text-slate-600">
+          <button onClick={onClose} className="p-2 rounded-xl hover:bg-slate-100 transition-colors text-slate-400 hover:text-slate-600 self-start sm:self-auto">
             <X className="w-5 h-5" />
           </button>
         </div>
-
-        <div className="p-5 overflow-y-auto space-y-3">
-          {entries.map((e, i) => {
-            const color = JENIS_DINAS_COLORS[e.jenisDinas];
-            const unitColor = UNIT_COLORS[e.unitKerja];
-            return (
-              <div key={i} className="rounded-xl border border-slate-200 p-4 hover:shadow-sm transition-shadow space-y-3">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-mono text-xs font-bold text-blue-700">{e.nomorSurat}</span>
-                  <div className="flex items-center gap-1.5">
-                    <span
-                      className="px-2 py-0.5 rounded text-[10px] font-bold"
-                      style={{ backgroundColor: `${unitColor?.hex || '#6366f1'}20`, color: unitColor?.hex || '#6366f1' }}
-                    >
-                      {e.unitKerja}
-                    </span>
-                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold border ${color ? `${color.bg} ${color.text} ${color.border}` : 'bg-slate-100 text-slate-700 border-slate-200'}`}>
-                      <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color?.dot || '#94a3b8' }} />
-                      {e.jenisDinas}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-2">
-                  <FileText className="w-3.5 h-3.5 text-slate-400 mt-0.5 shrink-0" />
-                  <p className="text-sm text-slate-700 leading-relaxed">{e.perihal}</p>
-                </div>
-
-                <div className="flex items-start gap-2">
-                  <MapPin className="w-3.5 h-3.5 text-slate-400 mt-0.5 shrink-0" />
-                  <p className="text-sm text-slate-600">{e.lokasi}</p>
-                </div>
-
-                <div className="flex items-start gap-2">
-                  <Users className="w-3.5 h-3.5 text-slate-400 mt-0.5 shrink-0" />
-                  <div className="flex flex-wrap gap-1">
-                    {e.pegawaiNames.map((name, j) => (
-                      <span key={j} className="px-2 py-0.5 rounded-full bg-slate-100 text-[11px] font-medium text-slate-600">{name}</span>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="text-[11px] text-slate-400 flex items-center gap-1">
-                  <Tag className="w-3 h-3" />
-                  {e.tanggalMulai} s.d. {e.tanggalSelesai}
-                </div>
+        
+        {/* Filter Bar */}
+        <div className="p-4 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row gap-3 shrink-0">
+          <div className="flex gap-2 w-full">
+            <div className="relative w-full sm:w-auto min-w-[130px]">
+              <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
+                <Filter className="h-3.5 w-3.5 text-slate-400" />
               </div>
-            );
-          })}
+              <select 
+                value={filterLokasi}
+                onChange={e => setFilterLokasi(e.target.value)}
+                className="w-full pl-8 pr-8 py-2 text-sm bg-white border border-slate-200 rounded-lg appearance-none focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              >
+                <option value="ALL">Semua Lokasi</option>
+                {allLokasi.map(l => <option key={l} value={l}>{l}</option>)}
+              </select>
+            </div>
+            <div className="relative w-full sm:w-auto min-w-[140px]">
+              <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
+                <Tag className="h-3.5 w-3.5 text-slate-400" />
+              </div>
+              <select 
+                value={filterJenis}
+                onChange={e => setFilterJenis(e.target.value)}
+                className="w-full pl-8 pr-8 py-2 text-sm bg-white border border-slate-200 rounded-lg appearance-none focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              >
+                <option value="ALL">Semua Jenis</option>
+                {allJenis.map(j => <option key={j} value={j}>{j}</option>)}
+              </select>
+            </div>
+          </div>
         </div>
 
-        <div className="p-4 border-t border-slate-200 shrink-0 text-center text-xs text-slate-400">
-          {entries.length} penugasan pada tanggal ini
+        <div className="p-5 overflow-y-auto space-y-3 bg-slate-50/30">
+          {filteredEntries.length === 0 ? (
+            <div className="text-center py-8 text-slate-500 text-sm">Tidak ada penugasan yang sesuai dengan filter pencarian.</div>
+          ) : (
+            filteredEntries.map((e, i) => {
+              const color = JENIS_DINAS_COLORS[e.jenisDinas];
+              const unitColor = UNIT_COLORS[e.unitKerja];
+              return (
+                <div key={i} onClick={() => { onClose(); navigate(`${getBasePath()}/tugas?tab=berlangsung&taskId=${e.id}`); }} className="rounded-xl border border-slate-200 p-4 bg-white hover:shadow-md transition-shadow space-y-3 cursor-pointer">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-mono text-xs font-bold text-blue-700">{e.nomorSurat}</span>
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        className="px-2 py-0.5 rounded text-[10px] font-bold"
+                        style={{ backgroundColor: `${unitColor?.hex || '#6366f1'}20`, color: unitColor?.hex || '#6366f1' }}
+                      >
+                        {e.unitKerja}
+                      </span>
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold border ${color ? `${color.bg} ${color.text} ${color.border}` : 'bg-slate-100 text-slate-700 border-slate-200'}`}>
+                        <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color?.dot || '#94a3b8' }} />
+                        {e.jenisDinas}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-2">
+                    <FileText className="w-3.5 h-3.5 text-slate-400 mt-0.5 shrink-0" />
+                    <p className="text-sm text-slate-700 leading-relaxed">{e.perihal}</p>
+                  </div>
+
+                  <div className="flex items-start gap-2">
+                    <MapPin className="w-3.5 h-3.5 text-slate-400 mt-0.5 shrink-0" />
+                    <p className="text-sm text-slate-600">{e.lokasi}</p>
+                  </div>
+
+                  <div className="flex items-start gap-2">
+                    <Users className="w-3.5 h-3.5 text-slate-400 mt-0.5 shrink-0" />
+                    <div className="flex flex-wrap gap-1">
+                      {e.pegawaiNames.map((name, j) => (
+                        <span key={j} className="px-2 py-0.5 rounded-full bg-slate-100 text-[11px] font-medium text-slate-600">{name}</span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="text-[11px] text-slate-400 flex items-center gap-1">
+                    <Tag className="w-3 h-3" />
+                    {e.tanggalMulai} s.d. {e.tanggalSelesai}
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
     </div>,
@@ -213,6 +271,7 @@ export const PenugasanCalendar = ({ locations, height = 'h-[500px]' }: Penugasan
         // Ensure unique names in case of duplicate marker types for the same person
         const uniquePegawaiNames = Array.from(new Set(group.map(g => g.pegawai.nama)));
         return {
+          id: firstLoc.suratTugasId,
           nomorSurat: firstLoc.nomorSurat,
           perihal: firstLoc.perihal,
           lokasi: firstLoc.lokasi,
@@ -327,11 +386,6 @@ export const PenugasanCalendar = ({ locations, height = 'h-[500px]' }: Penugasan
             const hasEntries = dayData.entries.length > 0;
 
 
-            // Group entries by jenisDinas for multi-color dots
-            const jenisCounts: Record<string, number> = {};
-            dayData.entries.forEach(e => { jenisCounts[e.jenisDinas] = (jenisCounts[e.jenisDinas] || 0) + 1; });
-            const jenisKeys = Object.keys(jenisCounts);
-
             return (
               <div
                 key={idx}
@@ -366,30 +420,26 @@ export const PenugasanCalendar = ({ locations, height = 'h-[500px]' }: Penugasan
 
                 {/* Entry indicators */}
                 {hasEntries && dayData.isCurrentMonth && (
-                  <div className="mt-1 space-y-0.5">
-                    {jenisKeys.length <= 2 ? (
-                      // Show individual badges
-                      jenisKeys.map(jenis => {
+                  <div className="mt-1 flex flex-col gap-1">
+                    {(() => {
+                      const jenisCounts: Record<string, number> = {};
+                      dayData.entries.forEach(e => { jenisCounts[e.jenisDinas] = (jenisCounts[e.jenisDinas] || 0) + 1; });
+                      return Object.entries(jenisCounts).map(([jenis, count]) => {
                         const c = JENIS_DINAS_COLORS[jenis];
                         return (
                           <div
                             key={jenis}
-                            className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold border ${c ? `${c.bg} ${c.text} ${c.border}` : 'bg-slate-100 text-slate-600 border-slate-200'}`}
+                            className={`flex justify-between items-center px-1.5 py-0.5 rounded text-[10px] font-bold border ${c ? `${c.bg} ${c.text} ${c.border}` : 'bg-slate-100 text-slate-600 border-slate-200'}`}
                           >
-                            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: c?.dot }} />
-                            <span className="truncate">{jenisCounts[jenis]} {jenis}</span>
+                            <div className="flex items-center gap-1">
+                               <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: c?.dot }} />
+                               <span>{jenis}</span>
+                            </div>
+                            <span>+{count}</span>
                           </div>
                         );
-                      })
-                    ) : (
-                      // Compact view for many types
-                      <div className="flex items-center gap-1">
-                        {jenisKeys.map(jenis => (
-                          <span key={jenis} className="w-2.5 h-2.5 rounded-full border border-white shadow-sm" style={{ backgroundColor: JENIS_DINAS_COLORS[jenis]?.dot || '#94a3b8' }} />
-                        ))}
-                        <span className="text-[9px] font-bold text-slate-600 ml-0.5">{dayData.entries.length}</span>
-                      </div>
-                    )}
+                      });
+                    })()}
                   </div>
                 )}
               </div>
@@ -424,14 +474,19 @@ export const PenugasanCalendar = ({ locations, height = 'h-[500px]' }: Penugasan
         >
           <div className="bg-slate-900 text-white rounded-xl shadow-2xl p-3 text-[11px]">
             <div className="font-bold text-xs mb-2 text-blue-300">{tooltipData.day} {NAMA_BULAN[bulan]} {tahun}</div>
-            <div className="space-y-1.5 max-h-40 overflow-y-auto">
-              {tooltipData.entries.map((e, i) => (
+            <div className="space-y-1.5">
+              {tooltipData.entries.slice(0, 3).map((e, i) => (
                 <div key={i} className="border-l-2 pl-2 py-0.5" style={{ borderColor: JENIS_DINAS_COLORS[e.jenisDinas]?.dot || '#94a3b8' }}>
                   <div className="font-semibold text-white/90">{e.nomorSurat}</div>
                   <div className="text-white/60 truncate">{e.perihal}</div>
                   <div className="text-white/50">{e.lokasi} · <span className="font-medium" style={{ color: JENIS_DINAS_COLORS[e.jenisDinas]?.dot }}>{e.jenisDinas}</span></div>
                 </div>
               ))}
+              {tooltipData.entries.length > 3 && (
+                <div className="text-white/50 text-[10px] italic pt-1 text-center">
+                  + {tooltipData.entries.length - 3} penugasan lainnya
+                </div>
+              )}
             </div>
             <div className="mt-2 pt-2 border-t border-white/10 text-[10px] text-white/40 text-center">Klik untuk detail lengkap</div>
           </div>
