@@ -138,7 +138,7 @@ export const ApprovalTugasPage = () => {
     });
   };
 
-  const handleDownloadWord = (_id: string, nomorSurat: string) => {
+  const handleDownloadWord = async (_id: string, nomorSurat: string) => {
     Swal.fire({
       title: 'Mengunduh Surat Tugas',
       text: `Surat ${nomorSurat} sedang diunduh dalam format Word (.docx)...`,
@@ -151,7 +151,7 @@ export const ApprovalTugasPage = () => {
     });
 
     try {
-      const response = await fetch(`http://localhost:3000/api/tugas/${id}/download-word`);
+      const response = await fetch(`http://localhost:3000/api/tugas/${_id}/download-word`);
       if (!response.ok) throw new Error('Gagal mengunduh');
 
       const blob = await response.blob();
