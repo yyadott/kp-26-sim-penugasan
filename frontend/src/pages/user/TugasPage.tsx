@@ -1,80 +1,43 @@
 import { useEffect, useState } from 'react';
 import { dummyAjuanSuratTugas, dummyPegawaiList, UNIT_COLORS } from '@/data/dummyData';
 import type { AjuanSuratTugas, UnitKerjaType } from '@/types';
+import api from '@/api/axios';
 import {
   FileText,
   Plus,
   CheckCircle2,
   Clock,
   MapPin,
-  Filter,
-  Eye,
   X,
   FileCheck,
   Send,
-  MoreHorizontal,
   Users,
   Hourglass,
-  ChevronDown,
+  Download,
 } from 'lucide-react';
 
 import { sendEmailNotification } from '@/utils/emailService';
 
-type CheckboxDropdownProps = {
-  label: string;
-  options: { value: string; label: string }[];
-  selected: string[];
-  isOpen: boolean;
-  onToggle: () => void;
-  onChange: (value: string) => void;
-  onReset: () => void;
-};
 
-const CheckboxDropdown = ({ label, options, selected, isOpen, onToggle, onChange, onReset }: CheckboxDropdownProps) => (
-  <div className="relative">
-    <p className="mb-2 text-sm font-medium text-slate-800">{label}</p>
-    <button type="button" onClick={onToggle} className="flex w-full items-center justify-between gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-600 transition-colors hover:border-blue-400 hover:bg-blue-50" aria-expanded={isOpen}>
-      <span className="max-w-[190px] truncate">{selected.length === 0 ? `Pilih ${label}` : `${selected.length} dipilih`}</span>
-      <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-    </button>
-    {isOpen && (
-      <div className={`absolute right-0 z-40 max-h-72 w-60 overflow-y-auto rounded-xl border border-slate-200 bg-white p-2 shadow-xl ${label === 'Status' ? 'bottom-full mb-2' : 'top-full mt-2'}`} onMouseLeave={onToggle}>
-        <div className="flex items-center justify-between border-b border-slate-100 px-2 pb-2">
-          <span className="text-xs font-bold text-slate-700">{label}</span>
-          {selected.length > 0 && <button type="button" onClick={onReset} className="text-[11px] font-semibold text-blue-600 hover:underline">Reset</button>}
-        </div>
-        <div className="space-y-1 pt-2">
-          {options.map((option) => (
-            <label key={option.value} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-xs text-slate-700 hover:bg-slate-50">
-              <input type="checkbox" checked={selected.includes(option.value)} onChange={() => onChange(option.value)} className="h-4 w-4 rounded border-slate-300 accent-blue-600 focus:ring-blue-500" />
-              <span className="truncate">{option.label}</span>
-            </label>
-          ))}
-        </div>
-      </div>
-    )}
-  </div>
-);
 
 export const TugasPage = () => {
   type Wilayah = { id: string; name: string };
-  const [ajuanList, setAjuanList] = useState<AjuanSuratTugas[]>(dummyAjuanSuratTugas);
-  const [activeTab, setActiveTab] = useState<'DAFTAR' | 'WORKFLOW'>('DAFTAR');
-  const [selectedUnits, setSelectedUnits] = useState<UnitKerjaType[]>([]);
-  const [isUnitFilterOpen, setIsUnitFilterOpen] = useState(false);
-  const [openFilter, setOpenFilter] = useState<string | null>(null);
-  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
-  const [selectedApplicants, setSelectedApplicants] = useState<string[]>([]);
-  const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
-  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
-  const [selectedSpecificLocations, setSelectedSpecificLocations] = useState<string[]>([]);
+  const [ajuanList, setAjuanList] = useState<AjuanSuratTugas[]>([]);
+  const [activeTab] = useState<'DAFTAR' | 'WORKFLOW'>('DAFTAR');
+  const [selectedUnits] = useState<UnitKerjaType[]>([]);
+  const [selectedStatuses] = useState<string[]>([]);
+  const [selectedApplicants] = useState<string[]>([]);
+  const [selectedAssignees] = useState<string[]>([]);
+  const [selectedLocations] = useState<string[]>([]);
+  const [selectedSpecificLocations] = useState<string[]>([]);
+  const [filterBulan, setFilterBulan] = useState<string>('');
+  const [filterTahun, setFilterTahun] = useState<string>('');
+  const [previewAjuan, setPreviewAjuan] = useState<AjuanSuratTugas | null>(null);
 
   // Modal Detail Workflow / Timeline
   const [selectedAjuan, setSelectedAjuan] = useState<AjuanSuratTugas | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedPegawaiAjuan, setSelectedPegawaiAjuan] = useState<AjuanSuratTugas | null>(null);
-  const [openStatusId, setOpenStatusId] = useState<string | null>(null);
-  const [openActionId, setOpenActionId] = useState<string | null>(null);
   const [provinces, setProvinces] = useState<Wilayah[]>([]);
   const [cities, setCities] = useState<Wilayah[]>([]);
   const [isWilayahLoading, setIsWilayahLoading] = useState(false);
@@ -102,6 +65,22 @@ export const TugasPage = () => {
       .then((response) => response.ok ? response.json() : Promise.reject())
       .then((data: Wilayah[]) => setProvinces(data))
       .catch(() => setProvinces([]));
+
+    // Fetch data from backend
+    const fetchTugas = async () => {
+      try {
+        const res = await api.get('/tugas');
+        if (res.data && Array.isArray(res.data) && res.data.length > 0) {
+           setAjuanList(res.data);
+        } else {
+           setAjuanList(dummyAjuanSuratTugas); // fallback to dummy if empty/not implemented
+        }
+      } catch (err) {
+        console.error('Gagal mengambil data dari backend, menggunakan dummy data', err);
+        setAjuanList(dummyAjuanSuratTugas);
+      }
+    };
+    fetchTugas();
   }, []);
 
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -144,42 +123,18 @@ export const TugasPage = () => {
     const matchesAssignee = selectedAssignees.length === 0 || item.pegawaiDitugaskan.some((pegawai) => selectedAssignees.includes(pegawai.nama));
     const matchesLocation = selectedLocations.length === 0 || selectedLocations.includes(item.lokasiPenugasan);
     const matchesSpecificLocation = selectedSpecificLocations.length === 0 || selectedSpecificLocations.includes(item.lokasiSpesifik || '');
-    return matchesUnit && matchesStatus && matchesApplicant && matchesAssignee && matchesLocation && matchesSpecificLocation;
+    
+    const itemDate = new Date(item.tanggalMulai);
+    const itemMonth = (itemDate.getMonth() + 1).toString().padStart(2, '0');
+    const itemYear = itemDate.getFullYear().toString();
+
+    const matchesBulan = filterBulan === '' || filterBulan === itemMonth;
+    const matchesTahun = filterTahun === '' || filterTahun === itemYear;
+
+    return matchesUnit && matchesStatus && matchesApplicant && matchesAssignee && matchesLocation && matchesSpecificLocation && matchesBulan && matchesTahun;
   });
 
-  const unitOptions: UnitKerjaType[] = ['RBI', 'Fastingkom', 'Kepeg', 'PM'];
-  const statusOptions = [
-    { value: 'SURAT_TERBIT', label: 'Diapprove' },
-    { value: 'VERIFIKASI_SUBBAGIAN', label: 'Diproses' },
-    { value: 'PERSETUJUAN_PIMPINAN', label: 'Diproses (Pimpinan)' },
-    { value: 'DRAFT', label: 'Draft' },
-    { value: 'DITOLAK', label: 'Dibatalkan' },
-  ];
-  const applicantOptions = Array.from(new Map(ajuanList.map((item) => [item.pengaju.nama, item.pengaju.nama]))).map(([value, label]) => ({ value, label }));
-  const assigneeOptions = Array.from(new Map(ajuanList.flatMap((item) => item.pegawaiDitugaskan).map((pegawai) => [pegawai.nama, pegawai.nama]))).map(([value, label]) => ({ value, label }));
-  const locationOptions = Array.from(new Set(ajuanList.map((item) => item.lokasiPenugasan))).map((value) => ({ value, label: value }));
-  const specificLocationOptions = Array.from(new Set(ajuanList.map((item) => item.lokasiSpesifik).filter(Boolean) as string[])).map((value) => ({ value, label: value }));
 
-  const toggleUnitFilter = (unit: UnitKerjaType) => {
-    setSelectedUnits((currentUnits) => currentUnits.includes(unit)
-      ? currentUnits.filter((currentUnit) => currentUnit !== unit)
-      : [...currentUnits, unit]);
-  };
-
-  const toggleFilterValue = (setter: React.Dispatch<React.SetStateAction<string[]>>, value: string) => {
-    setter((current) => current.includes(value) ? current.filter((item) => item !== value) : [...current, value]);
-  };
-
-  const resetFilters = () => {
-    setSelectedUnits([]);
-    setSelectedStatuses([]);
-    setSelectedApplicants([]);
-    setSelectedAssignees([]);
-    setSelectedLocations([]);
-    setSelectedSpecificLocations([]);
-    setIsUnitFilterOpen(false);
-    setOpenFilter(null);
-  };
 
   const formatLokasiKhusus = (lokasi: string) => {
     const cleaned = lokasi.trim();
@@ -203,13 +158,7 @@ export const TugasPage = () => {
     return tanggalMulai === tanggalSelesai ? mulai : `${mulai} s/d ${formatTanggal(tanggalSelesai)}`;
   };
 
-  const updateStatusAjuan = (id: string, status: AjuanSuratTugas['status']) => {
-    setAjuanList((currentList) => currentList.map((item) => (
-      item.id === id ? { ...item, status } : item
-    )));
-    setSelectedAjuan((current) => current?.id === id ? { ...current, status } : current);
-    setOpenStatusId(null);
-  };
+
 
   const handleCreateDraft = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -220,8 +169,9 @@ export const TugasPage = () => {
     const kota = cities.find((item) => item.id === formData.kotaId)?.name;
     const newId = `st-00${ajuanList.length + 1}`;
     const newNomor = `DRAFT-ST/${formData.unitKerja.toUpperCase().replace(/\s+/g, '')}/2026/00${ajuanList.length + 1}`;
+    const lokasiPenugasan = [kota, provinsi].filter(Boolean).join(', ') || formData.lokasiPenugasan;
 
-    const newAjuan: AjuanSuratTugas = {
+    const newAjuanFallback: AjuanSuratTugas = {
       id: newId,
       nomorSurat: newNomor,
       perihal: formData.perihal,
@@ -230,33 +180,36 @@ export const TugasPage = () => {
       unitKerja: formData.unitKerja,
       tanggalMulai: formData.tanggalMulai,
       tanggalSelesai: formData.tanggalSelesai,
-      lokasiPenugasan: [kota, provinsi].filter(Boolean).join(', ') || formData.lokasiPenugasan,
+      lokasiPenugasan: lokasiPenugasan,
       lokasiSpesifik: formData.lokasiSpesifik,
       koordinat: [formData.koordinatLat, formData.koordinatLng],
       deskripsi: formData.deskripsi,
       status: 'DRAFT',
-      workflow: [
-        {
-          stage: 'DRAFT',
-          label: 'Pengajuan Draft ST',
-          actor: dummyPegawaiList[0].nama,
-          tanggal: new Date().toISOString().replace('T', ' ').substring(0, 16),
-          status: 'COMPLETED',
-          catatan: 'Draft baru telah diajukan ke sistem.',
-        },
-        {
-          stage: 'VERIFIKASI_SUBBAGIAN',
-          label: 'Verifikasi Subbagian Umum',
-          actor: `Kasubag ${formData.unitKerja}`,
-          status: 'IN_PROGRESS',
-          catatan: 'Menunggu review dokumen persyaratan.',
-        },
-        { stage: 'PERSETUJUAN_PIMPINAN', label: 'Persetujuan Pimpinan', actor: 'Kepala Dinas', status: 'PENDING' },
-        { stage: 'SURAT_TERBIT', label: 'Penerbitan Surat Tugas Resmi', actor: 'Tata Usaha', status: 'PENDING' },
-      ],
+      workflow: [],
     };
 
-    setAjuanList([newAjuan, ...ajuanList]);
+    try {
+      const res = await api.post('/tugas', {
+        nomorSurat: newNomor,
+        perihal: formData.perihal,
+        pengaju_id: dummyPegawaiList[0].id,
+        unitKerja: formData.unitKerja,
+        tanggalMulai: formData.tanggalMulai,
+        tanggalSelesai: formData.tanggalSelesai,
+        lokasiPenugasan: lokasiPenugasan,
+        lokasiSpesifik: formData.lokasiSpesifik,
+        koordinatLat: formData.koordinatLat,
+        koordinatLng: formData.koordinatLng,
+        deskripsi: formData.deskripsi,
+        status: 'DRAFT',
+        pegawaiDitugaskan: formData.pegawaiIds
+      });
+      setAjuanList([res.data, ...ajuanList]);
+    } catch (err) {
+      console.error('Gagal menyimpan ke database', err);
+      // Fallback update UI
+      setAjuanList([newAjuanFallback, ...ajuanList]);
+    }
     
     // Kirim notifikasi email
     try {
@@ -264,12 +217,12 @@ export const TugasPage = () => {
         await sendEmailNotification({
           to_email: pegawai.email || 'user@example.com',
           to_name: pegawai.nama,
-          nomor_surat: newAjuan.nomorSurat,
-          perihal: newAjuan.perihal,
-          tanggal_mulai: newAjuan.tanggalMulai,
-          tanggal_selesai: newAjuan.tanggalSelesai,
-          lokasi: newAjuan.lokasiPenugasan,
-          pesan_tambahan: newAjuan.deskripsi
+          nomor_surat: newNomor,
+          perihal: formData.perihal,
+          tanggal_mulai: formData.tanggalMulai,
+          tanggal_selesai: formData.tanggalSelesai,
+          lokasi: lokasiPenugasan,
+          pesan_tambahan: formData.deskripsi
         });
       }
     } catch (err) {
@@ -320,163 +273,50 @@ export const TugasPage = () => {
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
-      {/* Header Section */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
-        <div>
-          <div className="flex items-center gap-2">
-            <FileText className="w-7 h-7 text-blue-600" />
-            <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Manajemen Penugasan Pegawai</h2>
-          </div>
-          <p className="text-slate-500 text-sm mt-1">
-            Kelola proses ajuan surat tugas, alur persetujuan draft penugasan, dan pelacakan status penugasan instansi.
-          </p>
-        </div>
-        <button
-          onClick={() => setIsFormModalOpen(true)}
-          className="flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-md shadow-blue-500/20 transition-all cursor-pointer"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Buat Draft Ajuan ST</span>
-        </button>
-      </div>
-
-      {/* Navigation, Filter Sidebar, and Table */}
-      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[300px_minmax(0,1fr)]">
-      <aside className="w-full rounded-2xl border border-slate-200 bg-white p-5 shadow-xs lg:sticky lg:top-6">
-        <h3 className="mb-5 text-3xl font-normal tracking-tight text-slate-800">Pencarian</h3>
-        <div className="flex flex-col items-start gap-4">
-        {/* Sub-menu Tabs */}
-        <div className="flex items-center bg-slate-200/70 p-1.5 rounded-xl text-sm font-medium w-fit">
-          <button
-            onClick={() => setActiveTab('DAFTAR')}
-            className={`px-4 py-2 rounded-lg transition-all cursor-pointer ${activeTab === 'DAFTAR' ? 'bg-white text-blue-700 font-bold shadow-xs' : 'text-slate-600 hover:text-slate-900'
-              }`}
-          >
-            Daftar Proses Ajuan ST ({ajuanList.length})
-          </button>
-        </div>
-        {/* Filter Controls */}
-        <div className="flex w-full flex-col items-stretch justify-start gap-4">
-          <div className="relative">
-            <p className="mb-2 text-sm font-medium text-slate-800">Unit Kerja</p>
-            <button
-              type="button"
-              onClick={() => setIsUnitFilterOpen((isOpen) => !isOpen)}
-              className="flex w-full items-center justify-start gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-600 transition-colors hover:border-blue-400 hover:bg-blue-50"
-              aria-expanded={isUnitFilterOpen}
-            >
-              <Filter className="h-4 w-4 text-slate-400" />
-              <span>
-                {selectedUnits.length === 0
-                  ? 'Semua Unit Kerja'
-                  : selectedUnits.length === 1
-                    ? selectedUnits[0]
-                    : `${selectedUnits.length} unit dipilih`}
-              </span>
-            </button>
-
-            {isUnitFilterOpen && (
-              <div
-                className="absolute right-0 top-full z-30 mt-2 w-56 rounded-xl border border-slate-200 bg-white p-2 shadow-xl"
-                onMouseLeave={() => setIsUnitFilterOpen(false)}
-              >
-                <div className="flex items-center justify-between border-b border-slate-100 px-2 pb-2">
-                  <span className="text-xs font-bold text-slate-700">Filter Unit Kerja</span>
-                  {selectedUnits.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setSelectedUnits([])}
-                      className="text-[11px] font-semibold text-blue-600 hover:underline"
-                    >
-                      Reset
-                    </button>
-                  )}
-                </div>
-                <div className="space-y-1 pt-2">
-                  {unitOptions.map((unit) => (
-                    <label key={unit} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-xs text-slate-700 hover:bg-slate-50">
-                      <input
-                        type="checkbox"
-                        checked={selectedUnits.includes(unit)}
-                        onChange={() => toggleUnitFilter(unit)}
-                        className="h-4 w-4 rounded border-slate-300 text-blue-600 accent-blue-600 focus:ring-blue-500"
-                      />
-                      <span>{unit}</span>
-                    </label>
-                  ))}
-                </div>
-                <p className="border-t border-slate-100 px-2 pt-2 text-[11px] text-slate-400">
-                  Kosongkan pilihan untuk menampilkan semua unit.
-                </p>
-              </div>
-            )}
-          </div>
-
-          <CheckboxDropdown
-            label="Pengaju"
-            options={applicantOptions}
-            selected={selectedApplicants}
-            isOpen={openFilter === 'applicant'}
-            onToggle={() => setOpenFilter(openFilter === 'applicant' ? null : 'applicant')}
-            onChange={(value) => toggleFilterValue(setSelectedApplicants, value)}
-            onReset={() => setSelectedApplicants([])}
-          />
-          <CheckboxDropdown
-            label="Pegawai Ditugaskan"
-            options={assigneeOptions}
-            selected={selectedAssignees}
-            isOpen={openFilter === 'assignee'}
-            onToggle={() => setOpenFilter(openFilter === 'assignee' ? null : 'assignee')}
-            onChange={(value) => toggleFilterValue(setSelectedAssignees, value)}
-            onReset={() => setSelectedAssignees([])}
-          />
-          <CheckboxDropdown
-            label="Domisili"
-            options={locationOptions}
-            selected={selectedLocations}
-            isOpen={openFilter === 'location'}
-            onToggle={() => setOpenFilter(openFilter === 'location' ? null : 'location')}
-            onChange={(value) => toggleFilterValue(setSelectedLocations, value)}
-            onReset={() => setSelectedLocations([])}
-          />
-          <CheckboxDropdown
-            label="Lokasi"
-            options={specificLocationOptions}
-            selected={selectedSpecificLocations}
-            isOpen={openFilter === 'specific'}
-            onToggle={() => setOpenFilter(openFilter === 'specific' ? null : 'specific')}
-            onChange={(value) => toggleFilterValue(setSelectedSpecificLocations, value)}
-            onReset={() => setSelectedSpecificLocations([])}
-          />
-          <CheckboxDropdown
-            label="Status"
-            options={statusOptions}
-            selected={selectedStatuses}
-            isOpen={openFilter === 'status'}
-            onToggle={() => setOpenFilter(openFilter === 'status' ? null : 'status')}
-            onChange={(value) => toggleFilterValue(setSelectedStatuses, value)}
-            onReset={() => setSelectedStatuses([])}
-          />
-
-          <button
-            type="button"
-            onClick={resetFilters}
-            className="mt-2 w-full rounded-lg bg-rose-500 px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-rose-600"
-          >
-            Reset Filter
-          </button>
-
-        </div>
-        </div>
-      </aside>
-
-      <main className="min-w-0">
+      {/* Navigation and Table */}
+      <div className="flex flex-col gap-6">
+      <main className="min-w-0 w-full">
 
       {/* TAB 1: DAFTAR PROSES AJUAN SURAT TUGAS */}
       {activeTab === 'DAFTAR' && (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-slate-600">
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <h3 className="font-bold text-lg text-slate-800">Daftar Surat Tugas Anda</h3>
+            <div className="flex items-center gap-3">
+              <select
+                value={filterBulan}
+                onChange={(e) => setFilterBulan(e.target.value)}
+                className="px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white text-slate-700 shadow-sm"
+              >
+                <option value="">Semua Bulan</option>
+                <option value="01">Januari</option>
+                <option value="02">Februari</option>
+                <option value="03">Maret</option>
+                <option value="04">April</option>
+                <option value="05">Mei</option>
+                <option value="06">Juni</option>
+                <option value="07">Juli</option>
+                <option value="08">Agustus</option>
+                <option value="09">September</option>
+                <option value="10">Oktober</option>
+                <option value="11">November</option>
+                <option value="12">Desember</option>
+              </select>
+              <select
+                value={filterTahun}
+                onChange={(e) => setFilterTahun(e.target.value)}
+                className="px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white text-slate-700 shadow-sm"
+              >
+                <option value="">Semua Tahun</option>
+                <option value="2024">2024</option>
+                <option value="2025">2025</option>
+                <option value="2026">2026</option>
+              </select>
+            </div>
+          </div>
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm text-slate-600">
               <thead className="bg-slate-50 text-slate-700 text-xs font-bold uppercase tracking-wider border-b border-slate-200">
                 <tr>
                   <th className="px-6 py-4">Nomor & Perihal Surat</th>
@@ -484,8 +324,7 @@ export const TugasPage = () => {
                   <th className="px-6 py-4">Pegawai Ditugaskan</th>
                   <th className="px-6 py-4">Tanggal & Domisili</th>
                   <th className="px-6 py-4">Lokasi</th>
-                  <th className="px-6 py-4">Status</th>
-                  <th className="px-6 py-4 text-right">Aksi</th>
+                  <th className="px-6 py-4 text-right">Unduh Surat</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -495,10 +334,20 @@ export const TugasPage = () => {
                   return (
                     <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
                       <td className="px-6 py-4 min-w-[430px]">
-                        <span className="font-mono text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 block w-fit mb-1">
+                        <span 
+                          onClick={() => setPreviewAjuan(item)}
+                          className="cursor-pointer hover:bg-blue-100 font-mono text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 block w-fit mb-1 transition-colors"
+                          title="Klik untuk melihat dokumen surat"
+                        >
                           {item.nomorSurat}
                         </span>
-                        <p className="font-semibold text-slate-800 whitespace-nowrap">{item.perihal}</p>
+                        <p 
+                          onClick={() => setPreviewAjuan(item)}
+                          className="cursor-pointer hover:text-blue-600 font-semibold text-slate-800 whitespace-nowrap transition-colors"
+                          title="Klik untuk melihat dokumen surat"
+                        >
+                          {item.perihal}
+                        </p>
                       </td>
                       <td className="px-6 py-4">
                         <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold ${unitColor.bg} ${unitColor.text} mb-1`}>
@@ -536,68 +385,15 @@ export const TugasPage = () => {
                       <td className="px-6 py-4 min-w-[190px] align-top">
                         <p className="text-xs font-semibold text-slate-800 whitespace-nowrap">{item.lokasiSpesifik || '-'}</p>
                       </td>
-                      <td
-                        className="relative px-6 py-4"
-                        onMouseLeave={() => setOpenStatusId((current) => current === item.id ? null : current)}
-                      >
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setOpenStatusId(openStatusId === item.id ? null : item.id);
-                            setOpenActionId(null);
-                          }}
-                          className="cursor-pointer rounded-full focus:outline-none focus:ring-2 focus:ring-blue-300"
-                          aria-label={`Ubah status ajuan ${item.nomorSurat}`}
-                          aria-expanded={openStatusId === item.id}
+                      <td className="px-6 py-4 text-right">
+                        <a
+                          href={`http://localhost:3001/api/download-surat/${item.id}`}
+                          download
+                          className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white transition-all hover:bg-blue-700 hover:shadow-md hover:shadow-blue-500/20"
                         >
-                          {getStatusBadge(item.status)}
-                        </button>
-                        {openStatusId === item.id && (
-                          <div className="absolute left-6 top-14 z-20 w-40 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg">
-                            <button type="button" onClick={() => updateStatusAjuan(item.id, 'SURAT_TERBIT')} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-semibold text-emerald-700 hover:bg-emerald-50">
-                              <CheckCircle2 className="w-4 h-4" /> Diapprove
-                            </button>
-                            <button type="button" onClick={() => updateStatusAjuan(item.id, 'VERIFIKASI_SUBBAGIAN')} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-semibold text-slate-600 hover:bg-slate-100">
-                              <Hourglass className="w-4 h-4" /> Diproses
-                            </button>
-                            <button type="button" onClick={() => updateStatusAjuan(item.id, 'DITOLAK')} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-semibold text-rose-700 hover:bg-rose-50">
-                              <X className="w-4 h-4" /> Dibatalkan
-                            </button>
-                          </div>
-                        )}
-                      </td>
-                      <td
-                        className="relative px-6 py-4 text-right"
-                        onMouseLeave={() => setOpenActionId((current) => current === item.id ? null : current)}
-                      >
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setOpenActionId(openActionId === item.id ? null : item.id);
-                            setOpenStatusId(null);
-                          }}
-                          className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-slate-100 p-2 text-slate-600 hover:bg-blue-50 hover:text-blue-700 transition-colors cursor-pointer"
-                          aria-label={`Aksi ajuan ${item.nomorSurat}`}
-                          aria-expanded={openActionId === item.id}
-                        >
-                          <MoreHorizontal className="w-4 h-4" />
-                        </button>
-                        {openActionId === item.id && (
-                          <div className="absolute right-6 top-14 z-20 w-36 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg text-left">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSelectedAjuan(item);
-                                setIsModalOpen(true);
-                                setOpenActionId(null);
-                              }}
-                              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-700"
-                            >
-                              <Eye className="w-3.5 h-3.5" />
-                              Lihat Alur Draft
-                            </button>
-                          </div>
-                        )}
+                          <Download className="w-3.5 h-3.5" />
+                          Unduh
+                        </a>
                       </td>
                     </tr>
                   );
@@ -605,6 +401,7 @@ export const TugasPage = () => {
               </tbody>
             </table>
           </div>
+        </div>
         </div>
       )}
 
@@ -760,6 +557,120 @@ export const TugasPage = () => {
                 className="rounded-xl bg-slate-800 px-5 py-2 text-xs font-bold text-white transition-colors hover:bg-slate-900"
               >
                 Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL PREVIEW SURAT TUGAS A4 */}
+      {previewAjuan && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-4xl space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="flex items-center gap-2 text-lg font-bold text-slate-800">
+                <FileText className="h-5 w-5 text-blue-600" />
+                Preview Dokumen Surat Tugas
+              </h3>
+              <button
+                type="button"
+                onClick={() => setPreviewAjuan(null)}
+                className="rounded-lg p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto bg-slate-200 p-8 flex justify-center rounded-xl border border-slate-300">
+               {/* A4 Paper Mockup */}
+               <div className="bg-white w-full max-w-[210mm] min-h-[297mm] p-[20mm] shadow-lg text-black font-serif text-sm relative shrink-0">
+                  {/* Kop Surat */}
+                  <div className="border-b-[3px] border-black pb-4 mb-8 text-center flex flex-col items-center">
+                     <h1 className="font-bold text-xl uppercase tracking-wide">Pemerintah Provinsi Jawa Barat</h1>
+                     <h2 className="font-bold text-lg uppercase">Dinas Komunikasi dan Informatika</h2>
+                     <p className="text-xs mt-1">Jl. Tamansari No.55, Lb. Siliwangi, Kecamatan Coblong, Kota Bandung, Jawa Barat 40132</p>
+                  </div>
+                  
+                  {/* Judul Surat */}
+                  <div className="text-center mb-10">
+                     <h3 className="font-bold text-lg underline underline-offset-4">SURAT TUGAS</h3>
+                     <p className="mt-1">Nomor: {previewAjuan.nomorSurat}</p>
+                  </div>
+                  
+                  {/* Isi */}
+                  <div className="space-y-4 text-justify leading-relaxed">
+                     <p>Berdasarkan kebutuhan dinas dalam rangka pelaksanaan tugas pada Unit Kerja <strong>{previewAjuan.unitKerja}</strong>, maka Kepala Dinas Komunikasi dan Informatika Provinsi Jawa Barat memberikan tugas kepada:</p>
+                     
+                     <table className="w-full text-left border-collapse mt-4 mb-4">
+                        <tbody>
+                          {previewAjuan.pegawaiDitugaskan.map((p, i) => (
+                             <tr key={p.id} className="align-top">
+                               <td className="w-8 py-1">{i + 1}.</td>
+                               <td className="w-24 font-semibold py-1">Nama</td>
+                               <td className="w-4 py-1">:</td>
+                               <td className="py-1 font-bold">{p.nama}</td>
+                             </tr>
+                          ))}
+                        </tbody>
+                     </table>
+                     
+                     <p className="mt-4">Untuk melaksanakan tugas kedinasan sebagai berikut:</p>
+                     
+                     <table className="w-full text-left border-collapse mt-4 mb-4 ml-8 w-[calc(100%-2rem)]">
+                        <tbody>
+                           <tr className="align-top">
+                             <td className="w-40 py-1.5 font-medium">Perihal</td>
+                             <td className="w-4 py-1.5">:</td>
+                             <td className="py-1.5 font-bold">{previewAjuan.perihal}</td>
+                           </tr>
+                           <tr className="align-top">
+                             <td className="w-40 py-1.5 font-medium">Tanggal Pelaksanaan</td>
+                             <td className="w-4 py-1.5">:</td>
+                             <td className="py-1.5">{formatRentangTanggal(previewAjuan.tanggalMulai, previewAjuan.tanggalSelesai)}</td>
+                           </tr>
+                           <tr className="align-top">
+                             <td className="w-40 py-1.5 font-medium">Lokasi Penugasan</td>
+                             <td className="w-4 py-1.5">:</td>
+                             <td className="py-1.5">{previewAjuan.lokasiSpesifik}, {previewAjuan.lokasiPenugasan}</td>
+                           </tr>
+                           <tr className="align-top">
+                             <td className="w-40 py-1.5 font-medium">Agenda / Deskripsi</td>
+                             <td className="w-4 py-1.5">:</td>
+                             <td className="py-1.5 italic">{previewAjuan.deskripsi}</td>
+                           </tr>
+                        </tbody>
+                     </table>
+                     
+                     <p className="mt-6 pt-4">Demikian Surat Tugas ini dibuat untuk dilaksanakan dengan penuh rasa tanggung jawab. Kepada instansi atau pihak terkait mohon bantuan dan kerja samanya.</p>
+                  </div>
+                  
+                  {/* TTD */}
+                  <div className="flex justify-end mt-16 pr-8">
+                     <div className="text-center">
+                        <p>Ditetapkan di Bandung</p>
+                        <p className="mb-24">Pada Tanggal, {formatTanggal(previewAjuan.tanggalMulai)}</p>
+                        <p className="font-bold underline">KEPALA DINAS</p>
+                        <p>NIP. 19700101 199803 1 001</p>
+                     </div>
+                  </div>
+               </div>
+            </div>
+            
+            <div className="flex justify-end pt-3">
+              <a
+                href={`http://localhost:3001/api/tugas/${previewAjuan.id}/download-word`}
+                download
+                className="mr-3 flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-5 py-2 text-xs font-bold text-blue-700 transition-colors hover:bg-blue-100"
+              >
+                <Download className="w-4 h-4" />
+                Unduh Format Asli (Docx)
+              </a>
+              <button
+                type="button"
+                onClick={() => setPreviewAjuan(null)}
+                className="rounded-xl bg-slate-800 px-5 py-2 text-xs font-bold text-white transition-colors hover:bg-slate-900"
+              >
+                Tutup Preview
               </button>
             </div>
           </div>
