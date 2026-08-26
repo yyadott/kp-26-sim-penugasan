@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { dummyPegawaiList, dummyAjuanSuratTugas } from '@/data/dummyData';
+import { dummyPegawaiList } from '@/data/dummyData';
 import type { AjuanSuratTugas, UnitKerjaType } from '@/types';
+import { useSuratTugas } from '@/hooks/useSuratTugas';
 import { sendEmailNotification } from '@/utils/emailService';
 import { generateSuratTugas } from '@/utils/generateSuratTugas';
 import { FileText, Send, ArrowLeft, Search, Download, AlertTriangle, X } from 'lucide-react';
@@ -10,6 +11,7 @@ type Wilayah = { id: string; name: string };
 
 export const BuatTugasPage = () => {
   const navigate = useNavigate();
+  const { addTugas } = useSuratTugas();
   const [provinces, setProvinces] = useState<Wilayah[]>([]);
   const [cities, setCities] = useState<Wilayah[]>([]);
   const [isWilayahLoading, setIsWilayahLoading] = useState(false);
@@ -137,7 +139,7 @@ export const BuatTugasPage = () => {
       ],
     };
 
-    dummyAjuanSuratTugas.unshift(newAjuan);
+    addTugas(newAjuan);
     
     // Simpan ke localStorage agar terbaca di halaman Approval
     const saved = localStorage.getItem('sim_penugasan_tugas');
