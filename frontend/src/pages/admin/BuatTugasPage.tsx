@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { dummyPegawaiList } from '@/data/dummyData';
+import { dummyPegawaiList, dummyAjuanSuratTugas } from '@/data/dummyData';
 import type { AjuanSuratTugas, UnitKerjaType } from '@/types';
 import { useSuratTugas } from '@/hooks/useSuratTugas';
 import { sendEmailNotification } from '@/utils/emailService';
@@ -49,9 +49,9 @@ export const BuatTugasPage = () => {
     if (!tanggalMulai || !tanggalSelesai) return [];
     const formStart = new Date(tanggalMulai);
     const formEnd = new Date(tanggalSelesai);
-    return dummyAjuanSuratTugas.filter(t => {
+    return dummyAjuanSuratTugas.filter((t: any) => {
       if (t.status === 'DITOLAK') return false;
-      const isPegawaiAssigned = t.pegawaiDitugaskan.some(p => p.id === pegawaiId);
+      const isPegawaiAssigned = t.pegawaiDitugaskan.some((p: any) => p.id === pegawaiId);
       if (!isPegawaiAssigned) return false;
       const tStart = new Date(t.tanggalMulai);
       const tEnd = new Date(t.tanggalSelesai);

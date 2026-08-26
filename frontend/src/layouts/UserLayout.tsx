@@ -15,8 +15,7 @@ export const UserLayout = ({ children }: UserLayoutProps) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  useEffect(() => { setAbsensiTerbuka(location.pathname.startsWith('/user/absensi')); }, [location.pathname]);
-  const [absensiTerbuka, setAbsensiTerbuka] = useState(location.pathname.startsWith('/user/absensi'));
+  useEffect(() => { /* setAbsensiTerbuka(location.pathname.startsWith('/user/absensi')); */ }, [location.pathname]);
   useEffect(() => { setTugasTerbuka(location.pathname.startsWith('/user/tugas')); }, [location.pathname]);
   const [tugasTerbuka, setTugasTerbuka] = useState(location.pathname.startsWith('/user/tugas'));
   const tugasAktif = location.pathname.startsWith('/user/tugas');
