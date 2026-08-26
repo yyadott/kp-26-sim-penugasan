@@ -1,7 +1,13 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { PrismaClient } from '@prisma/client';
 
-// Stub PrismaService - aktifkan setelah setup database selesai
 @Injectable()
-export class PrismaService {
-  // Kosong - akan diisi setelah prisma generate berhasil
+export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
+  async onModuleInit() {
+    await this.$connect();
+  }
+
+  async onModuleDestroy() {
+    await this.$disconnect();
+  }
 }

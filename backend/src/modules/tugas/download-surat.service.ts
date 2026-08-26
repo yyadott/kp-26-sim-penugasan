@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { PrismaService } from '../../prisma.service';
 import {
   Document,
   Paragraph,
@@ -13,90 +14,22 @@ import {
   convertMillimetersToTwip,
 } from 'docx';
 
-// Data dummy surat tugas
-const dummySuratTugas = [
-  {
-    id: 'st-001',
-    nomorSurat: 'ST/084/RBI/VII/2026',
-    perihal: 'Peninjauan dan instalasi perangkat gateway sensor presensi & CCTV terintegrasi.',
-    pengaju: { nama: 'Taryadi', nip: '2350081041', jabatan: 'Super Admin' },
-    pegawaiDitugaskan: [
-      { nama: 'Taryadi', nip: '2350081041', jabatan: 'Super Admin', unitKerja: 'RBI' },
-      { nama: 'Budi Santoso, S.T., M.Si.', nip: '198711042012021005', jabatan: 'Koordinator Pengawasan Lalu Lintas', unitKerja: 'Kepeg' },
-      { nama: 'Siti Rahmawati, S.H.', nip: '199204152015032001', jabatan: 'Kasi Penertiban & Operasional', unitKerja: 'PM' },
-    ],
-    unitKerja: 'RBI',
-    tanggalMulai: '2026-07-28',
-    tanggalSelesai: '2026-07-30',
-    lokasiPenugasan: 'Kota Cimahi',
-    deskripsi: 'Peninjauan dan instalasi perangkat gateway sensor presensi & CCTV terintegrasi pada pos pantau wilayah utara.',
-  },
-  {
-    id: 'st-002',
-    nomorSurat: 'ST/092/ULP/VIII/2026',
-    perihal: 'Koordinasi pelayanan publik dan pendampingan pengaduan masyarakat.',
-    pengaju: { nama: 'Yudi', nip: '198503122010011002', jabatan: 'Front Office' },
-    pegawaiDitugaskan: [
-      { nama: 'Yudi', nip: '198503122010011002', jabatan: 'Front Office', unitKerja: 'Fastingkom' },
-      { nama: 'Siti Rahmawati, S.H.', nip: '199204152015032001', jabatan: 'Kasi Penertiban & Operasional', unitKerja: 'PM' },
-    ],
-    unitKerja: 'Fastingkom',
-    tanggalMulai: '2026-08-01',
-    tanggalSelesai: '2026-08-03',
-    lokasiPenugasan: 'Bandung Barat',
-    deskripsi: 'Pendampingan operasional front office dan monitoring pelayanan publik.',
-  },
-  {
-    id: 'st-003',
-    nomorSurat: 'ST/105/DISHUB/IX/2026',
-    perihal: 'Pengawasan lalu lintas dan evaluasi titik rawan kecelakaan.',
-    pengaju: { nama: 'Taryadi', nip: '2350081041', jabatan: 'Super Admin' },
-    pegawaiDitugaskan: [
-      { nama: 'Taryadi', nip: '2350081041', jabatan: 'Super Admin', unitKerja: 'RBI' },
-      { nama: 'Budi Santoso, S.T., M.Si.', nip: '198711042012021005', jabatan: 'Koordinator Pengawasan Lalu Lintas', unitKerja: 'Kepeg' },
-    ],
-    unitKerja: 'Kepeg',
-    tanggalMulai: '2026-08-04',
-    tanggalSelesai: '2026-08-05',
-    lokasiPenugasan: 'Kota Bandung',
-    deskripsi: 'Monitoring pelaksanaan rekayasa lalu lintas dan dokumentasi wilayah rawan.',
-  },
-  {
-    id: 'st-210',
-    nomorSurat: 'ST/210/RBI/IX/2026',
-    perihal: 'Koordinasi teknis pengembangan platform layanan digital satu pintu.',
-    pengaju: { nama: 'Taryadi', nip: '2350081041', jabatan: 'Super Admin' },
-    pegawaiDitugaskan: [
-      { nama: 'Taryadi', nip: '2350081041', jabatan: 'Super Admin', unitKerja: 'RBI' },
-      { nama: 'Dewi Lestari, S.E., M.M.', nip: '199001012014022003', jabatan: 'Analis Perencanaan Protokol', unitKerja: 'RBI' },
-    ],
-    unitKerja: 'RBI',
-    tanggalMulai: '2026-09-05',
-    tanggalSelesai: '2026-09-06',
-    lokasiPenugasan: 'Kota Bandung',
-    deskripsi: 'Koordinasi teknis pengembangan platform layanan digital satu pintu.',
-  },
-  {
-    id: 'st-215',
-    nomorSurat: 'ST/215/RBI/IX/2026',
-    perihal: 'Evaluasi kinerja triwulan dan audit sistem manajemen keamanan informasi.',
-    pengaju: { nama: 'Dewi Lestari, S.E., M.M.', nip: '199001012014022003', jabatan: 'Analis Perencanaan Protokol' },
-    pegawaiDitugaskan: [
-      { nama: 'Dewi Lestari, S.E., M.M.', nip: '199001012014022003', jabatan: 'Analis Perencanaan Protokol', unitKerja: 'RBI' },
-      { nama: 'Taryadi', nip: '2350081041', jabatan: 'Super Admin', unitKerja: 'RBI' },
-    ],
-    unitKerja: 'RBI',
-    tanggalMulai: '2026-09-10',
-    tanggalSelesai: '2026-09-12',
-    lokasiPenugasan: 'Kota Bogor',
-    deskripsi: 'Evaluasi kinerja triwulan dan audit sistem manajemen keamanan informasi.',
-  },
-];
-
 @Injectable()
 export class DownloadSuratService {
-  findSuratById(id: string) {
-    return dummySuratTugas.find((s) => s.id === id);
+  constructor(private prisma: PrismaService) {}
+
+  async findSuratById(id: string) {
+    return this.prisma.suratTugas.findUnique({
+      where: { id },
+      include: {
+        pengaju: true,
+        pegawaiDitugaskan: {
+          include: {
+            user: true,
+          },
+        },
+      },
+    });
   }
 
   formatTanggal(dateStr: string): string {
@@ -109,7 +42,7 @@ export class DownloadSuratService {
   }
 
   async generateWord(id: string): Promise<Buffer> {
-    const surat = this.findSuratById(id);
+    const surat = await this.findSuratById(id);
     if (!surat) {
       throw new NotFoundException(`Surat Tugas dengan ID ${id} tidak ditemukan.`);
     }
@@ -162,15 +95,15 @@ export class DownloadSuratService {
               borders: thinBorder,
             }),
             new TableCell({
-              children: [new Paragraph({ children: [new TextRun({ text: p.nama, size: 20, font: 'Times New Roman' })] })],
+              children: [new Paragraph({ children: [new TextRun({ text: p.user.nama, size: 20, font: 'Times New Roman' })] })],
               borders: thinBorder,
             }),
             new TableCell({
-              children: [new Paragraph({ children: [new TextRun({ text: p.nip, size: 20, font: 'Times New Roman' })] })],
+              children: [new Paragraph({ children: [new TextRun({ text: p.user.email, size: 20, font: 'Times New Roman' })] })],
               borders: thinBorder,
             }),
             new TableCell({
-              children: [new Paragraph({ children: [new TextRun({ text: p.jabatan, size: 20, font: 'Times New Roman' })] })],
+              children: [new Paragraph({ children: [new TextRun({ text: 'Staf', size: 20, font: 'Times New Roman' })] })],
               borders: thinBorder,
             }),
           ],
@@ -238,8 +171,8 @@ export class DownloadSuratService {
               width: { size: 100, type: WidthType.PERCENTAGE },
               rows: [
                 new TableRow({ children: [new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Nama', size: 22, font: 'Times New Roman' })] })], width: { size: 2000, type: WidthType.DXA }, borders: noBorder }), new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `: ${surat.pengaju.nama}`, size: 22, font: 'Times New Roman' })] })], borders: noBorder })] }),
-                new TableRow({ children: [new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'NIP', size: 22, font: 'Times New Roman' })] })], borders: noBorder }), new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `: ${surat.pengaju.nip}`, size: 22, font: 'Times New Roman' })] })], borders: noBorder })] }),
-                new TableRow({ children: [new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Jabatan', size: 22, font: 'Times New Roman' })] })], borders: noBorder }), new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `: ${surat.pengaju.jabatan}`, size: 22, font: 'Times New Roman' })] })], borders: noBorder })] }),
+                new TableRow({ children: [new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Email', size: 22, font: 'Times New Roman' })] })], borders: noBorder }), new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `: ${surat.pengaju.email}`, size: 22, font: 'Times New Roman' })] })], borders: noBorder })] }),
+                new TableRow({ children: [new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Jabatan', size: 22, font: 'Times New Roman' })] })], borders: noBorder }), new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `: Pimpinan`, size: 22, font: 'Times New Roman' })] })], borders: noBorder })] }),
               ],
             }),
             new Paragraph({

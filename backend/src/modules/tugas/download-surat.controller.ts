@@ -8,7 +8,7 @@ export class DownloadSuratController {
 
   @Get(':id/download-word')
   async downloadWord(@Param('id') id: string, @Res() res: Response) {
-    const surat = this.downloadSuratService.findSuratById(id);
+    const surat = await this.downloadSuratService.findSuratById(id);
     if (!surat) {
       return res.status(404).json({ message: 'Surat tidak ditemukan' });
     }
