@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { dummyPegawaiList, dummyAjuanSuratTugas } from '@/data/dummyData';
+import { dummyPegawaiList } from '@/data/dummyData';
 import type { AjuanSuratTugas, UnitKerjaType } from '@/types';
+import { useSuratTugas } from '@/hooks/useSuratTugas';
 import { sendEmailNotification } from '@/utils/emailService';
 import { FileText, Send, ArrowLeft, Search } from 'lucide-react';
 
@@ -9,6 +10,7 @@ type Wilayah = { id: string; name: string };
 
 export const BuatTugasPage = () => {
   const navigate = useNavigate();
+  const { addTugas } = useSuratTugas();
   const [provinces, setProvinces] = useState<Wilayah[]>([]);
   const [cities, setCities] = useState<Wilayah[]>([]);
   const [isWilayahLoading, setIsWilayahLoading] = useState(false);
@@ -106,7 +108,7 @@ export const BuatTugasPage = () => {
       ],
     };
 
-    dummyAjuanSuratTugas.unshift(newAjuan);
+    addTugas(newAjuan);
     
     // Kirim notifikasi email ke semua pegawai yang ditugaskan
     try {

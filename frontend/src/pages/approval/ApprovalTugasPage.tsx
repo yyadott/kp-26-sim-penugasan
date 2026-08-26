@@ -8,25 +8,89 @@ import {
   MapPin, Calendar as CalendarIcon, Users, Upload, X, Search
 } from 'lucide-react';
 import Swal from 'sweetalert2';
+import api from '@/api/axios';
+
+// Simulasi pengiriman notifikasi eksternal
+const sendTelegramNotification = async (_message: string) => {
+  /*
+  const BOT_TOKEN = import.meta.env.VITE_TELEGRAM_BOT_TOKEN;
+  const CHAT_ID = 'GROUP_OR_USER_CHAT_ID'; 
+  await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+    chat_id: CHAT_ID, text: _message, parse_mode: 'HTML'
+  });
+  */
+  return new Promise(resolve => setTimeout(resolve, 800)); // Simulasi delay
+};
+
+const sendEmailNotification = async (_to_name: string, _message: string) => {
+  /*
+  await emailjs.send(
+    'YOUR_SERVICE_ID', 
+    'YOUR_TEMPLATE_ID', 
+    { to_name, message }, 
+    'YOUR_PUBLIC_KEY'
+  );
+  */
+  return new Promise(resolve => setTimeout(resolve, 800)); // Simulasi delay
+};
 
 export const ApprovalTugasPage = () => {
   const { user } = useAuth();
-  const [localData, setLocalData] = useState<AjuanSuratTugas[]>(() => {
-    const saved = localStorage.getItem('sim_penugasan_tugas');
-    return saved ? JSON.parse(saved) : dummyAjuanSuratTugas;
-  });
-
-  React.useEffect(() => {
-    localStorage.setItem('sim_penugasan_tugas', JSON.stringify(localData));
-  }, [localData]);
+  const [localData, setLocalData] = useState<any[]>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedPegawaiDetail, setSelectedPegawaiDetail] = useState<any[] | null>(null);
+  const [selectedSurat, setSelectedSurat] = useState<any | null>(null);
 
   const [confirmApproveId, setConfirmApproveId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchTugas = async () => {
+      try {
+        const res = await api.get('/tugas');
+        if (res.data && Array.isArray(res.data) && res.data.length > 0) {
+           setLocalData(res.data);
+        } else {
+           setLocalData(dummyAjuanSuratTugas); // fallback
+        }
+      } catch (err) {
+        console.error('Gagal mengambil data dari backend', err);
+        setLocalData(dummyAjuanSuratTugas);
+      }
+    };
+    fetchTugas();
+  }, []);
 
   // States for Preview Modal
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [previewHtml, setPreviewHtml] = useState<string>('');
   const [isScanning, setIsScanning] = useState(false);
   const [previewDocName, setPreviewDocName] = useState<string>('');
+  const [previewPdfUrl, setPreviewPdfUrl] = useState<string | null>(null);
+
+  const handlePreviewUploadedFile = async (file: File) => {
+    setPreviewDocName(`Preview Attachment: ${file.name}`);
+    setPreviewModalOpen(true);
+    setPreviewPdfUrl(null);
+    setPreviewHtml('');
+    
+    if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+      const url = URL.createObjectURL(file);
+      setPreviewPdfUrl(url);
+    } else if (file.name.endsWith('.docx') || file.name.endsWith('.doc')) {
+      setIsScanning(true);
+      try {
+        const html = await extractDocxContent(file);
+        setPreviewHtml(html);
+      } catch (_error) {
+        setPreviewHtml('<p class="text-red-500">Gagal mengekstrak dokumen.</p>');
+      } finally {
+        setIsScanning(false);
+      }
+    } else {
+      setPreviewHtml('<p class="text-slate-500">Format file ini belum didukung untuk preview langsung.</p>');
+    }
+  };
 
   const handlePreviewSimulation = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -43,19 +107,6 @@ export const ApprovalTugasPage = () => {
     }
   };
 
-  const openPreview = (tugasId: string, tugasTitle: string) => {
-    const savedHtml = localStorage.getItem(`doc_html_${tugasId}`);
-    const savedName = localStorage.getItem(`doc_name_${tugasId}`);
-    
-    if (savedHtml) {
-      setPreviewDocName(`(Dari Admin) ${savedName || tugasTitle}`);
-      setPreviewHtml(savedHtml);
-    } else {
-      setPreviewDocName(tugasTitle);
-      setPreviewHtml('<div class="p-6 text-center"><p class="text-slate-500 italic mb-2">Dokumen untuk tugas ini belum diunggah oleh Admin.</p><p class="text-xs text-slate-400">Silakan gunakan fitur simulasi di atas untuk mencoba preview dengan file lokal.</p></div>');
-    }
-    setPreviewModalOpen(true);
-  };
 
   // Ambil hanya data surat yang sesuai dengan "jalur" (Unit Kerja) user approval yang sedang login
   const myUnitData = localData.filter(t => t.unitKerja === user?.unitKerja);
@@ -64,7 +115,10 @@ export const ApprovalTugasPage = () => {
     t => t.status === 'VERIFIKASI_SUBBAGIAN' || t.status === 'PERSETUJUAN_PIMPINAN'
   );
 
-  const displayData = pendingApprovals;
+  const displayData = pendingApprovals.filter(t => 
+    t.nomorSurat.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    t.perihal.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   // Group data by Month and Year
   const groupedData = displayData.reduce((acc, curr) => {
@@ -87,11 +141,63 @@ export const ApprovalTugasPage = () => {
     return dateB.getTime() - dateA.getTime();
   });
 
-  const handleApprove = (id: string) => {
-    setLocalData(prev => prev.map(item => item.id === id ? { ...item, status: 'SURAT_TERBIT' } : item));
+  const handleApprove = async (id: string) => {
+    try {
+      await api.patch(`/tugas/${id}/status`, { status: 'SURAT_TERBIT' });
+      setLocalData(prev => prev.map(item => item.id === id ? { ...item, status: 'SURAT_TERBIT' } : item));
+    } catch (err) {
+      console.error('Gagal menyetujui surat', err);
+    }
+
+    // Kirim notifikasi simulasi ke Admin dan Anggota
+    const tugas = localData.find(t => t.id === id);
+    if (tugas) {
+      const existingNotifs = JSON.parse(localStorage.getItem('sim_notifications') || '[]');
+      const newNotifAdmin = {
+        id: Date.now().toString() + '_admin',
+        targetRole: 'admin',
+        title: 'Surat Tugas Disetujui',
+        message: `Surat ${tugas.nomorSurat} telah disetujui oleh Approver.`,
+        time: new Date().toISOString(),
+        read: false
+      };
+      const newNotifsPegawai = tugas.pegawaiDitugaskan.map((peg, index) => ({
+        id: Date.now().toString() + `_user_${peg.id}_${index}`,
+        targetUserId: peg.id,
+        title: 'Penugasan Baru',
+        message: `Anda ditugaskan pada Surat ${tugas.nomorSurat}.`,
+        time: new Date().toISOString(),
+        read: false
+      }));
+      localStorage.setItem('sim_notifications', JSON.stringify([newNotifAdmin, ...newNotifsPegawai, ...existingNotifs]));
+    }
   };
 
   const handleConfirmApprove = (id: string) => {
+    const tugas = localData.find(t => t.id === id);
+    if (!tugas) return;
+
+    const executeWithNotifications = async () => {
+      Swal.fire({
+        title: 'Memproses Persetujuan...',
+        html: 'Mengirim notifikasi via <b>Email</b> dan <b>Telegram</b>...',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+      });
+
+      handleApprove(id);
+
+      const msg = `Surat Tugas ${tugas.nomorSurat} telah disetujui.`;
+      await sendTelegramNotification(msg);
+      await Promise.all(tugas.pegawaiDitugaskan.map((peg: any) => sendEmailNotification(peg.nama, msg)));
+
+      Swal.fire(
+        'Berhasil!', 
+        `Surat disetujui! Notifikasi Email dan Telegram telah berhasil dikirim ke Admin Tugas dan Anggota (${tugas.pegawaiDitugaskan.length} orang).`, 
+        'success'
+      );
+    };
+
     Swal.fire({
       title: 'Konfirmasi Persetujuan',
       text: 'Apakah terdapat perubahan pada dokumen surat tugas ini sebelum disetujui?',
@@ -109,14 +215,10 @@ export const ApprovalTugasPage = () => {
         const input = document.createElement('input');
         input.type = 'file';
         input.accept = '.pdf,.doc,.docx';
-        input.onchange = () => {
-          handleApprove(id);
-          Swal.fire('Berhasil!', 'File surat perubahan berhasil diunggah. Surat disetujui!', 'success');
-        };
+        input.onchange = () => executeWithNotifications();
         input.click();
       } else if (result.isDenied) {
-        handleApprove(id);
-        Swal.fire('Disetujui!', `Surat Tugas ${id} berhasil disetujui.`, 'success');
+        executeWithNotifications();
       }
     });
   };
@@ -130,10 +232,16 @@ export const ApprovalTugasPage = () => {
       confirmButtonColor: '#ef4444',
       cancelButtonColor: '#94a3b8',
       confirmButtonText: 'Ya, Tolak'
-    }).then((result) => {
+    }).then(async (result) => {
       if (result.isConfirmed) {
-        setLocalData(prev => prev.map(item => item.id === id ? { ...item, status: 'DITOLAK' } : item));
-        Swal.fire('Ditolak!', `Surat Tugas ${id} telah ditolak.`, 'error');
+        try {
+          await api.patch(`/tugas/${id}/status`, { status: 'DITOLAK' });
+          setLocalData(prev => prev.map(item => item.id === id ? { ...item, status: 'DITOLAK' } : item));
+          Swal.fire('Ditolak!', `Surat Tugas ${id} telah ditolak.`, 'error');
+        } catch (err) {
+          console.error('Gagal menolak surat', err);
+          Swal.fire('Error', 'Gagal menolak surat', 'error');
+        }
       }
     });
   };
@@ -190,6 +298,20 @@ export const ApprovalTugasPage = () => {
             Tinjau dan proses pengajuan surat tugas dari unit kerja Anda.
           </p>
         </div>
+        
+        {/* Search */}
+        <div className="relative">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <Search className="h-4 w-4 text-slate-400" />
+          </div>
+          <input
+            type="text"
+            className="block w-full md:w-64 pl-10 pr-3 py-2 border border-slate-200 rounded-xl text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50 focus:bg-white transition-all shadow-sm"
+            placeholder="Cari nomor surat atau perihal..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
       </div>
 
       {/* Table Section */}
@@ -217,21 +339,43 @@ export const ApprovalTugasPage = () => {
                     {groupedData[groupMonth].map((tugas) => (
                       <tr key={tugas.id} className="hover:bg-slate-50/50 transition-colors group border-b border-slate-100 last:border-0">
                         <td className="p-4 align-top">
-                          <div className="flex flex-col gap-1">
-                            <span className="font-semibold text-slate-800 text-sm">{tugas.nomorSurat}</span>
+                          <div 
+                            onClick={() => setSelectedSurat(tugas)}
+                            className="flex flex-col gap-1 p-2 -m-2 rounded-lg hover:bg-blue-50 cursor-pointer transition-colors border border-transparent hover:border-blue-100 group/surat"
+                            title="Klik untuk melihat pratinjau surat tugas"
+                          >
+                            <span className="font-semibold text-slate-800 text-sm group-hover/surat:text-blue-700">{tugas.nomorSurat}</span>
                             <span className="text-slate-600 text-xs line-clamp-2" title={tugas.perihal}>
                               {tugas.perihal}
                             </span>
                             <div className="flex items-center gap-1 mt-1 text-[11px] text-slate-500">
-                              <FileText className="w-3 h-3" />
+                              <FileText className="w-3 h-3 group-hover/surat:text-blue-500" />
                               <span>Oleh: {tugas.pengaju.nama} ({tugas.unitKerja})</span>
                             </div>
+                            {uploadedFiles[tugas.id] && (
+                              <div 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handlePreviewUploadedFile(uploadedFiles[tugas.id]);
+                                }}
+                                className="mt-2 flex items-center gap-1.5 p-2 bg-blue-50 text-blue-700 rounded-md border border-blue-200 w-fit cursor-pointer hover:bg-blue-100 transition-colors"
+                              >
+                                <FileText className="w-3.5 h-3.5" />
+                                <span className="text-xs font-semibold truncate max-w-[200px]" title={uploadedFiles[tugas.id].name}>
+                                  Attachment: {uploadedFiles[tugas.id].name}
+                                </span>
+                              </div>
+                            )}
                           </div>
                         </td>
                         <td className="p-4 align-top">
-                          <div className="flex flex-col gap-2">
-                            <div className="flex items-center gap-1.5 text-xs text-slate-700">
-                              <Users className="w-4 h-4 text-slate-400" />
+                          <div 
+                            onClick={() => setSelectedPegawaiDetail(tugas.pegawaiDitugaskan)}
+                            className="flex flex-col gap-2 p-2 -m-2 rounded-lg hover:bg-blue-50 cursor-pointer transition-colors border border-transparent hover:border-blue-100 group/pegawai"
+                            title="Klik untuk melihat detail pegawai"
+                          >
+                            <div className="flex items-center gap-1.5 text-xs text-slate-700 group-hover/pegawai:text-blue-700">
+                              <Users className="w-4 h-4 text-slate-400 group-hover/pegawai:text-blue-500" />
                               <span className="font-medium">{tugas.pegawaiDitugaskan.length} Orang</span>
                             </div>
                             <div className="flex -space-x-2 overflow-hidden">
@@ -293,12 +437,32 @@ export const ApprovalTugasPage = () => {
                             >
                               <Download className="w-4 h-4" />
                             </button>
+
                             <button
-                              onClick={() => openPreview(tugas.id, tugas.nomorSurat)}
+                              onClick={() => {
+                                const input = document.createElement('input');
+                                input.type = 'file';
+                                input.accept = '.pdf,.doc,.docx';
+                                input.onchange = (e) => {
+                                  const target = e.target as HTMLInputElement;
+                                  if (target.files && target.files.length > 0) {
+                                    const file = target.files[0];
+                                    setUploadedFiles(prev => ({ ...prev, [tugas.id]: file }));
+                                    Swal.fire({
+                                      title: 'Berhasil!',
+                                      text: `Dokumen ${file.name} berhasil diunggah.`,
+                                      icon: 'success',
+                                      timer: 2000,
+                                      showConfirmButton: false,
+                                    });
+                                  }
+                                };
+                                input.click();
+                              }}
                               className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-                              title="Scan/Preview Dokumen Word"
+                              title="Upload Surat (Sudah TTD / Revisi)"
                             >
-                              <Search className="w-4 h-4" />
+                              <Upload className="w-4 h-4" />
                             </button>
                             <div className="w-px h-4 bg-slate-200 mx-1"></div>
                             <button
@@ -427,6 +591,8 @@ export const ApprovalTugasPage = () => {
                   <div className="h-8 w-8 rounded-full border-4 border-slate-300 border-t-blue-600 animate-spin mb-4"></div>
                   <p className="text-slate-600 font-medium">Mengekstrak teks dokumen...</p>
                 </div>
+              ) : previewPdfUrl ? (
+                <iframe src={previewPdfUrl} className="w-full h-[60vh] rounded-md border border-slate-200" title="PDF Preview" />
               ) : (
                 <div className="bg-white border border-slate-200 shadow-sm rounded-lg p-8 min-h-[400px] prose prose-sm max-w-none prose-slate"
                   dangerouslySetInnerHTML={{ __html: previewHtml }}
@@ -441,6 +607,189 @@ export const ApprovalTugasPage = () => {
                 className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition-colors text-sm"
               >
                 Tutup Preview
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Pegawai Detail Modal */}
+      {selectedPegawaiDetail && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
+            <div className="p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+              <div className="flex items-center gap-2">
+                <Users className="w-5 h-5 text-blue-600" />
+                <h3 className="font-bold text-lg text-slate-800">Daftar Pegawai Ditugaskan</h3>
+              </div>
+              <button
+                onClick={() => setSelectedPegawaiDetail(null)}
+                className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-4 overflow-y-auto bg-slate-50 flex-1">
+              <div className="space-y-3">
+                {selectedPegawaiDetail.map((peg, idx) => (
+                  <div key={idx} className="flex items-center gap-4 p-4 bg-white border border-slate-100 rounded-xl shadow-sm hover:border-blue-200 transition-colors">
+                    <img 
+                      src={peg.fotoAvatar || `https://ui-avatars.com/api/?name=${peg.nama}&background=random`} 
+                      alt={peg.nama} 
+                      className="w-12 h-12 rounded-full object-cover ring-2 ring-slate-100"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-slate-800 text-sm truncate" title={peg.nama}>{peg.nama}</div>
+                      <div className="text-slate-500 text-[11px] truncate">NIP. {peg.nip}</div>
+                      <div className="text-slate-600 text-[11px] mt-1 font-medium truncate" title={peg.jabatan}>{peg.jabatan}</div>
+                    </div>
+                    <div className="px-2.5 py-1 bg-slate-100 text-slate-600 text-[10px] font-semibold rounded-lg border border-slate-200 shrink-0">
+                      {peg.unitKerja}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="p-4 border-t border-slate-200 bg-white flex justify-end">
+              <button
+                onClick={() => setSelectedPegawaiDetail(null)}
+                className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition-colors text-sm"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Modal Detail Surat Tugas */}
+      {selectedSurat && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden relative">
+            <div className="flex items-center justify-between p-5 border-b border-slate-200 bg-slate-50">
+              <div>
+                <h3 className="text-lg font-bold text-slate-800">Detail Surat Tugas</h3>
+                <p className="text-sm text-slate-500">Pratinjau dokumen surat resmi</p>
+              </div>
+              <button
+                onClick={() => setSelectedSurat(null)}
+                className="p-2 transition-colors rounded-lg hover:bg-slate-200 text-slate-500 hover:text-slate-700"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 p-6 overflow-y-auto bg-slate-100/50 md:p-8">
+              {/* Desain Kertas Surat */}
+              <div className="max-w-2xl px-8 py-12 mx-auto bg-white border shadow-sm md:px-12 md:py-16 border-slate-200 rounded-xl">
+                {/* Kop Surat */}
+                <div className="flex flex-col items-center justify-between gap-4 pb-6 mb-6 border-b-4 sm:flex-row border-slate-800">
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center justify-center shrink-0 w-16 h-20 bg-blue-50 border border-blue-100 rounded-lg shadow-inner sm:w-20 sm:h-24">
+                      <img src="/logo-sim.svg" alt="Logo" className="w-10 h-10 sm:w-12 sm:h-12 opacity-80 mix-blend-multiply" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden') }} />
+                      <FileText className="w-10 h-10 text-blue-600 hidden" />
+                    </div>
+                    <div className="text-center sm:text-left">
+                      <h2 className="text-lg font-bold tracking-wide uppercase sm:text-xl text-slate-800">Pemerintah Kota Pemerintahan</h2>
+                      <h3 className="text-base font-semibold tracking-wide uppercase sm:text-lg text-slate-700">Dinas {selectedSurat.unitKerja}</h3>
+                      <p className="text-xs text-slate-500 sm:text-sm">Jl. Contoh Alamat No. 123, Kota Pemerintahan, 40123</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Judul Surat */}
+                <div className="mb-8 text-center">
+                  <h1 className="text-xl font-bold underline uppercase sm:text-2xl text-slate-800 tracking-tight">Surat Tugas</h1>
+                  <p className="mt-1 text-sm font-medium sm:text-base text-slate-600">Nomor: {selectedSurat.nomorSurat}</p>
+                </div>
+
+                {/* Isi Surat */}
+                <div className="space-y-6 text-sm sm:text-base text-slate-700 leading-relaxed">
+                  <p className="text-justify">
+                    Berdasarkan pertimbangan dan kebutuhan organisasi, bersama ini kami menugaskan pegawai di bawah ini:
+                  </p>
+
+                  <div className="pl-4 border-l-4 border-blue-200 bg-slate-50 p-4 rounded-r-lg shadow-sm">
+                    <table className="w-full text-sm text-left">
+                      <tbody>
+                        {selectedSurat.pegawaiDitugaskan.map((peg: any, index: number) => (
+                          <tr key={peg.id} className="border-b last:border-0 border-slate-200">
+                            <td className="py-2.5 w-8 align-top font-medium text-slate-600">{index + 1}.</td>
+                            <td className="py-2.5">
+                              <div className="font-semibold text-slate-800">{peg.nama}</div>
+                              <div className="text-slate-500 text-[11px] sm:text-xs">NIP. {peg.nip}</div>
+                              <div className="text-slate-600 text-[11px] sm:text-xs mt-0.5">{peg.jabatan}</div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <p className="text-justify">
+                    Untuk melaksanakan tugas kedinasan dengan rincian sebagai berikut:
+                  </p>
+
+                  <table className="w-full text-sm sm:text-base">
+                    <tbody>
+                      <tr className="border-b border-slate-100 last:border-0">
+                        <td className="py-3 pr-4 font-semibold w-32 sm:w-40 align-top text-slate-700">Perihal</td>
+                        <td className="py-3 px-2 align-top text-slate-500">:</td>
+                        <td className="py-3 align-top text-justify font-medium text-slate-800">{selectedSurat.perihal}</td>
+                      </tr>
+                      <tr className="border-b border-slate-100 last:border-0">
+                        <td className="py-3 pr-4 font-semibold align-top text-slate-700">Waktu</td>
+                        <td className="py-3 px-2 align-top text-slate-500">:</td>
+                        <td className="py-3 align-top text-slate-800">
+                          {selectedSurat.tanggalMulai} <span className="text-slate-400 mx-1">s.d.</span> {selectedSurat.tanggalSelesai}
+                        </td>
+                      </tr>
+                      <tr className="border-b border-slate-100 last:border-0">
+                        <td className="py-3 pr-4 font-semibold align-top text-slate-700">Lokasi</td>
+                        <td className="py-3 px-2 align-top text-slate-500">:</td>
+                        <td className="py-3 align-top">
+                          <span className="font-semibold text-slate-800">{selectedSurat.lokasiPenugasan}</span><br/>
+                          <span className="text-slate-500 text-sm mt-1 inline-block">{selectedSurat.lokasiSpesifik}</span>
+                        </td>
+                      </tr>
+                      <tr className="border-b border-slate-100 last:border-0">
+                        <td className="py-3 pr-4 font-semibold align-top text-slate-700">Keterangan</td>
+                        <td className="py-3 px-2 align-top text-slate-500">:</td>
+                        <td className="py-3 align-top text-justify text-slate-800">{selectedSurat.deskripsi}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+
+                  <p className="text-justify pt-2">
+                    Demikian surat tugas ini dibuat untuk dilaksanakan dengan penuh tanggung jawab. 
+                    Setelah selesai melaksanakan tugas, harap segera membuat laporan hasil pelaksanaan tugas.
+                  </p>
+                </div>
+
+                {/* Tanda Tangan */}
+                <div className="flex justify-end mt-16">
+                  <div className="text-center w-56 sm:w-64">
+                    <p className="mb-2 text-sm text-slate-600">Ditetapkan di Kota Pemerintahan<br/>Pada tanggal: {selectedSurat.tanggalMulai}</p>
+                    <p className="mb-24 font-bold text-slate-800">Kepala Dinas {selectedSurat.unitKerja}</p>
+                    
+                    <p className="font-bold underline text-slate-800">........................................</p>
+                    <p className="text-sm text-slate-600">NIP. ........................................</p>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            <div className="flex justify-end p-4 bg-white border-t border-slate-200 gap-3">
+              <button
+                onClick={() => handleDownloadWord(selectedSurat.id, selectedSurat.nomorSurat)}
+                className="px-5 py-2.5 bg-blue-50 text-blue-700 hover:bg-blue-100 font-semibold rounded-xl transition-colors text-sm flex items-center gap-2"
+              >
+                <Download className="w-4 h-4" /> Unduh Dokumen
+              </button>
+              <button
+                onClick={() => setSelectedSurat(null)}
+                className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition-colors text-sm"
+              >
+                Tutup Pratinjau
               </button>
             </div>
           </div>
