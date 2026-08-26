@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { dummyAjuanSuratTugas } from '@/data/dummyData';
+
 import { useAuth } from '@/hooks/useAuth';
 import { extractDocxContent } from '@/utils/documentScanner';
 import {
