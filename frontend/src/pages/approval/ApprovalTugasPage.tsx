@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { dummyAjuanSuratTugas } from '@/data/dummyData';
-import type { AjuanSuratTugas } from '@/types';
+
 import { useAuth } from '@/hooks/useAuth';
 import { extractDocxContent } from '@/utils/documentScanner';
 import {
@@ -161,7 +161,7 @@ export const ApprovalTugasPage = () => {
         time: new Date().toISOString(),
         read: false
       };
-      const newNotifsPegawai = tugas.pegawaiDitugaskan.map((peg, index) => ({
+      const newNotifsPegawai = tugas.pegawaiDitugaskan.map((peg: any, index: number) => ({
         id: Date.now().toString() + `_user_${peg.id}_${index}`,
         targetUserId: peg.id,
         title: 'Penugasan Baru',
@@ -336,7 +336,7 @@ export const ApprovalTugasPage = () => {
                         {groupMonth}
                       </td>
                     </tr>
-                    {groupedData[groupMonth].map((tugas) => (
+                    {groupedData[groupMonth].map((tugas: any) => (
                       <tr key={tugas.id} className="hover:bg-slate-50/50 transition-colors group border-b border-slate-100 last:border-0">
                         <td className="p-4 align-top">
                           <div 
@@ -379,7 +379,7 @@ export const ApprovalTugasPage = () => {
                               <span className="font-medium">{tugas.pegawaiDitugaskan.length} Orang</span>
                             </div>
                             <div className="flex -space-x-2 overflow-hidden">
-                              {tugas.pegawaiDitugaskan.slice(0, 3).map((peg, idx) => (
+                              {tugas.pegawaiDitugaskan.slice(0, 3).map((peg: any, idx: number) => (
                                 <img
                                   key={idx}
                                   className="inline-block h-6 w-6 rounded-full ring-2 ring-white bg-slate-200 object-cover"
