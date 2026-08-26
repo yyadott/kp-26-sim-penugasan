@@ -9,7 +9,7 @@ async function bootstrap() {
   });
   app.setGlobalPrefix('api');
 
-  const port = Number(process.env.PORT || process.env.npm_config_port || 3000);
+  const port = Number(process.env.PORT || process.env.npm_config_port || 3001);
   await app.listen(port);
 }
 bootstrap();

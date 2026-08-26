@@ -9,7 +9,7 @@ import type {
 // Data Pegawai
 export const dummyPegawaiList: Pegawai[] = [
   {
-    id: 'peg-01',
+    id: '1',
     nama: 'Taryadi',
     nip: '2350081041',
     unitKerja: 'RBI',
@@ -19,7 +19,7 @@ export const dummyPegawaiList: Pegawai[] = [
     role: 'SUPER_ADMIN',
   },
   {
-    id: 'peg-02',
+    id: '2',
     nama: 'Yudi',
     nip: '198503122010011002',
     unitKerja: 'Fastingkom',
@@ -29,7 +29,7 @@ export const dummyPegawaiList: Pegawai[] = [
     role: 'PEGAWAI',
   },
   {
-    id: 'peg-03',
+    id: '3',
     nama: 'Budi Santoso, S.T., M.Si.',
     nip: '198711042012021005',
     unitKerja: 'Kepeg',
@@ -39,7 +39,7 @@ export const dummyPegawaiList: Pegawai[] = [
     role: 'PEGAWAI',
   },
   {
-    id: 'peg-04',
+    id: '4',
     nama: 'Siti Rahmawati, S.H.',
     nip: '199204152015032001',
     unitKerja: 'PM',
@@ -49,7 +49,7 @@ export const dummyPegawaiList: Pegawai[] = [
     role: 'PEGAWAI',
   },
   {
-    id: 'peg-05',
+    id: '5',
     nama: 'Ir. Hendra Wijaya',
     nip: '198208202008011008',
     unitKerja: 'Fastingkom',
@@ -59,7 +59,7 @@ export const dummyPegawaiList: Pegawai[] = [
     role: 'PEGAWAI',
   },
   {
-    id: 'peg-06',
+    id: '6',
     nama: 'Dewi Lestari, S.E., M.M.',
     nip: '199001012014022003',
     unitKerja: 'RBI',
@@ -69,7 +69,7 @@ export const dummyPegawaiList: Pegawai[] = [
     role: 'PEGAWAI',
   },
   {
-    id: 'peg-07',
+    id: '7',
     nama: 'Arnest, S.Kom.',
     nip: '200101010001',
     unitKerja: 'Fastingkom',
@@ -80,7 +80,7 @@ export const dummyPegawaiList: Pegawai[] = [
     role: 'PEGAWAI',
   },
   {
-    id: 'peg-08',
+    id: '8',
     nama: 'Admin Tugas',
     nip: '2350081042',
     unitKerja: 'RBI',

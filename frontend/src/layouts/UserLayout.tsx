@@ -1,7 +1,7 @@
 import { useState, useEffect, type ReactNode } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { LayoutDashboard, FileText, Send, ChartNoAxesCombined, CalendarCheck, CalendarDays, CalendarPlus, ChevronDown, Bell, UserCircle2, LogOut, ShieldCheck } from 'lucide-react';
+import { LayoutDashboard, FileText, Send, ChartNoAxesCombined, ChevronDown, Bell, UserCircle2, LogOut, ShieldCheck } from 'lucide-react';
 
 interface UserLayoutProps {
   children: ReactNode;
@@ -19,7 +19,6 @@ export const UserLayout = ({ children }: UserLayoutProps) => {
   const [absensiTerbuka, setAbsensiTerbuka] = useState(location.pathname.startsWith('/user/absensi'));
   useEffect(() => { setTugasTerbuka(location.pathname.startsWith('/user/tugas')); }, [location.pathname]);
   const [tugasTerbuka, setTugasTerbuka] = useState(location.pathname.startsWith('/user/tugas'));
-  const absensiAktif = location.pathname.startsWith('/user/absensi');
   const tugasAktif = location.pathname.startsWith('/user/tugas');
 
   const handleLogout = () => {
@@ -77,10 +76,14 @@ export const UserLayout = ({ children }: UserLayoutProps) => {
                   <NavLink to="/user/tugas/laporan" className={({ isActive }) => `flex items-center gap-2 rounded-md px-2.5 py-1.5 text-xs transition ${isActive ? 'bg-blue-50 font-semibold text-blue-700' : 'text-slate-600 hover:bg-slate-100'}`}>
                     <ChartNoAxesCombined className="h-3 w-3" /> Laporan
                   </NavLink>
+                  <NavLink to="/user/tugas/progres" className={({ isActive }) => `flex items-center gap-2 rounded-lg px-3 py-2 text-xs transition ${isActive ? 'bg-blue-50 font-semibold text-blue-700' : 'text-slate-600 hover:bg-slate-100'}`}>
+                    <FileText className="h-3.5 w-3.5" /> Riwayat Tugas
+                  </NavLink>
                 </div>
               )}
             </div>
 
+            {/* 
             <div>
               <button
                 type="button"
@@ -103,6 +106,7 @@ export const UserLayout = ({ children }: UserLayoutProps) => {
                 </div>
               )}
             </div>
+            */}
 
             {links.slice(1).map(({ to, label, icon: Icon }) => (
               <NavLink
