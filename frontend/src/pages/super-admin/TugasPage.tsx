@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { dummyAjuanSuratTugas, UNIT_COLORS } from '@/data/dummyData';
 import type { AjuanSuratTugas, UnitKerjaType } from '@/types';
 import { DraftAjuanModal } from '@/components/penugasan/DraftAjuanModal';
+import SuratTugasTemplate from '@/components/SuratTugasTemplate';
 import {
   FileText,
   CheckCircle2,
@@ -72,8 +74,27 @@ export const TugasPage = () => {
   const [openStatusId, setOpenStatusId] = useState<string | null>(null);
   const [openActionId, setOpenActionId] = useState<string | null>(null);
   const [isDraftModalOpen, setIsDraftModalOpen] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlTaskId = searchParams.get('taskId');
 
-  
+  useEffect(() => {
+    if (urlTaskId) {
+      const task = ajuanList.find(t => t.id === urlTaskId);
+      if (task) {
+        setSelectedAjuan(task);
+        setIsModalOpen(true);
+      }
+    }
+  }, [urlTaskId, ajuanList]);
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setSelectedAjuan(null);
+    const newParams = new URLSearchParams(searchParams);
+    newParams.delete('taskId');
+    newParams.delete('tab');
+    setSearchParams(newParams);
+  };
 
   // Filter list
   const filteredAjuan = ajuanList.filter((item) => {
@@ -347,7 +368,14 @@ export const TugasPage = () => {
                   const unitColor = UNIT_COLORS[item.unitKerja] || { bg: 'bg-slate-100', text: 'text-slate-800' };
 
                   return (
-                    <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
+                    <tr
+                      key={item.id}
+                      className="hover:bg-slate-50/80 transition-colors cursor-pointer"
+                      onClick={() => {
+                        setSelectedAjuan(item);
+                        setIsModalOpen(true);
+                      }}
+                    >
                       <td className="px-6 py-4 min-w-[430px]">
                         <span className="font-mono text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 block w-fit mb-1">
                           {item.nomorSurat}
@@ -369,7 +397,10 @@ export const TugasPage = () => {
                         ) : (
                           <button
                             type="button"
-                            onClick={() => setSelectedPegawaiAjuan(item)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedPegawaiAjuan(item);
+                            }}
                             className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-xs font-bold text-blue-700 transition-colors hover:bg-blue-100"
                             aria-label={`Lihat ${item.pegawaiDitugaskan.length} pegawai yang ditugaskan`}
                           >
@@ -396,7 +427,8 @@ export const TugasPage = () => {
                       >
                         <button
                           type="button"
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             setOpenStatusId(openStatusId === item.id ? null : item.id);
                             setOpenActionId(null);
                           }}
@@ -408,13 +440,13 @@ export const TugasPage = () => {
                         </button>
                         {openStatusId === item.id && (
                           <div className="absolute left-6 top-14 z-20 w-40 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg">
-                            <button type="button" onClick={() => updateStatusAjuan(item.id, 'SURAT_TERBIT')} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-semibold text-emerald-700 hover:bg-emerald-50">
+                            <button type="button" onClick={(e) => { e.stopPropagation(); updateStatusAjuan(item.id, 'SURAT_TERBIT'); }} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-semibold text-emerald-700 hover:bg-emerald-50">
                               <CheckCircle2 className="w-4 h-4" /> Diapprove
                             </button>
-                            <button type="button" onClick={() => updateStatusAjuan(item.id, 'VERIFIKASI_SUBBAGIAN')} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-semibold text-slate-600 hover:bg-slate-100">
+                            <button type="button" onClick={(e) => { e.stopPropagation(); updateStatusAjuan(item.id, 'VERIFIKASI_SUBBAGIAN'); }} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-semibold text-slate-600 hover:bg-slate-100">
                               <Hourglass className="w-4 h-4" /> Diproses
                             </button>
-                            <button type="button" onClick={() => updateStatusAjuan(item.id, 'DITOLAK')} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-semibold text-rose-700 hover:bg-rose-50">
+                            <button type="button" onClick={(e) => { e.stopPropagation(); updateStatusAjuan(item.id, 'DITOLAK'); }} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-semibold text-rose-700 hover:bg-rose-50">
                               <X className="w-4 h-4" /> Dibatalkan
                             </button>
                           </div>
@@ -426,7 +458,8 @@ export const TugasPage = () => {
                       >
                         <button
                           type="button"
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             setOpenActionId(openActionId === item.id ? null : item.id);
                             setOpenStatusId(null);
                           }}
@@ -440,7 +473,8 @@ export const TugasPage = () => {
                           <div className="absolute right-6 top-14 z-20 w-36 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg text-left">
                             <button
                               type="button"
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 setSelectedAjuan(item);
                                 setIsModalOpen(true);
                                 setOpenActionId(null);
@@ -620,60 +654,30 @@ export const TugasPage = () => {
         </div>
       )}
 
-      {/* MODAL DETAIL ALUR WORKFLOW */}
+      {/* MODAL DETAIL TUGAS & PREVIEW WORD */}
       {isModalOpen && selectedAjuan && (
         <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 space-y-5 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-4xl w-full p-6 space-y-5 shadow-2xl border border-slate-200 max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2">
                 <FileCheck className="w-5 h-5 text-blue-600" />
-                Alur Draft & Track Record Persetujuan
+                Detail Tugas & Preview Dokumen
               </h3>
               <button
-                onClick={() => setIsModalOpen(false)}
+                onClick={closeModal}
                 className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="bg-blue-50/70 p-4 rounded-xl border border-blue-200 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="font-mono text-xs font-bold text-blue-700">{selectedAjuan.nomorSurat}</span>
-                {getStatusBadge(selectedAjuan.status)}
-              </div>
-              <h4 className="font-bold text-slate-900 text-sm">{selectedAjuan.perihal}</h4>
-              <p className="text-xs text-slate-600">{selectedAjuan.deskripsi}</p>
-            </div>
-
-            <div className="space-y-4">
-              <h4 className="font-bold text-sm text-slate-800">Riwayat Tahapan Persetujuan:</h4>
-              <div className="space-y-3">
-                {selectedAjuan.workflow.map((w, idx) => (
-                  <div key={idx} className="flex items-start gap-3 p-3 rounded-xl border border-slate-200 bg-slate-50/50">
-                    {w.status === 'COMPLETED' ? (
-                      <CheckCircle2 className="w-5 h-5 text-emerald-600 mt-0.5 shrink-0" />
-                    ) : w.status === 'IN_PROGRESS' ? (
-                      <Clock className="w-5 h-5 text-blue-600 mt-0.5 shrink-0 animate-pulse" />
-                    ) : (
-                      <div className="w-5 h-5 rounded-full border-2 border-slate-300 mt-0.5 shrink-0" />
-                    )}
-                    <div className="w-full space-y-1">
-                      <div className="flex items-center justify-between text-xs font-bold text-slate-800">
-                        <span>{w.label}</span>
-                        <span className="text-slate-400 font-normal">{w.tanggal || 'Menunggu'}</span>
-                      </div>
-                      <p className="text-xs text-slate-600">Aktor: {w.actor}</p>
-                      {w.catatan && <p className="text-xs text-slate-500 bg-white p-2 rounded border border-slate-200">{w.catatan}</p>}
-                    </div>
-                  </div>
-                ))}
-              </div>
+            <div className="flex-1 -mx-6 -mb-6 mt-0 border-t border-slate-100 overflow-y-auto">
+              <SuratTugasTemplate ajuan={selectedAjuan} />
             </div>
 
             <div className="pt-2 flex justify-end">
               <button
-                onClick={() => setIsModalOpen(false)}
+                onClick={closeModal}
                 className="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer"
               >
                 Tutup
