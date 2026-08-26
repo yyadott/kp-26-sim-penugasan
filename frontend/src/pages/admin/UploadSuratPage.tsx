@@ -119,6 +119,20 @@ export const UploadSuratPage = () => {
         </div>
       </div>
 
+      <div className="flex gap-2">
+        <button 
+          onClick={() => navigate('/admin/tugas/buat')}
+          className="px-4 py-2 rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 font-medium text-sm transition cursor-pointer"
+        >
+          Buat Tugas
+        </button>
+        <button 
+          className="px-4 py-2 rounded-lg bg-blue-600 text-white font-medium text-sm transition"
+        >
+          Upload Tugas
+        </button>
+      </div>
+
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -264,7 +278,7 @@ export const UploadSuratPage = () => {
               </li>
               <li className="flex items-start gap-3">
                 <div className="mt-1 h-2 w-2 rounded-full flex-shrink-0 bg-slate-300" />
-                <span>Setelah berhasil diunggah, status tugas akan otomatis berubah menjadi "Surat Terbit".</span>
+                <span>Setelah berhasil diunggah, status tugas akan otomatis berubah menjadi "VERIFIKASI_SUBBAGIAN".</span>
               </li>
             </ul>
 

@@ -50,6 +50,7 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
         { to: `${prefix}/tugas?tab=berlangsung`, label: 'Penugasan Berlangsung' },
         { to: `${prefix}/tugas?tab=draft`, label: 'Draft Penugasan' },
         { to: `${prefix}/tugas/upload-surat`, label: 'Scan Dokumen' },
+        { to: `${prefix}/tugas/buat`, label: 'Buat Tugas' }
       ]
     },
     { to: `${prefix}/pemetaan`, label: 'Pemetaan', icon: MapPin },
