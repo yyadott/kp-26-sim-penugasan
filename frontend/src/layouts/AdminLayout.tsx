@@ -5,20 +5,17 @@ import {
   LayoutDashboard,
   CalendarCheck,
   MapPin,
-  ClipboardList,
   ShieldCheck,
-  FileText,
+  ClipboardList,
   ChartNoAxesCombined,
-  Users
+  Users,
+  FileText
 } from 'lucide-react';
-import { AdminHeader } from './components/AdminHeader';
+import { SidebarMenuItem } from './components/SidebarMenuItem';
 import { SuperAdminSidebar } from './components/SuperAdminSidebar';
 import { ApprovalSidebar } from './components/ApprovalSidebar';
-import { SidebarMenuItem } from './components/SidebarMenuItem';
+import { AdminNavbar } from './components/AdminNavbar';
 
-// ─────────────────────────────────────────────
-// AdminLayout (shared shell for Super Admin, Admin, Approval)
-// ─────────────────────────────────────────────
 interface AdminLayoutProps {
   children: ReactNode;
 }
@@ -30,7 +27,6 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   const normalizedRole = user?.role?.toUpperCase() || 'PEGAWAI';
-
   const prefix = normalizedRole === 'SUPER_ADMIN' ? '/super-admin' : normalizedRole === 'APPROVAL' ? '/approval' : '/admin';
   const panelLabel = normalizedRole === 'SUPER_ADMIN' ? 'Panel Super Admin' : normalizedRole === 'APPROVAL' ? 'Panel Approval' : 'Panel Admin';
 
@@ -103,8 +99,11 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
 
         {/* ====== MAIN CONTENT ====== */}
         <div className="flex-1 h-screen overflow-y-auto bg-slate-50/50">
-          <AdminHeader isSidebarCollapsed={isSidebarCollapsed} setIsSidebarCollapsed={setIsSidebarCollapsed} prefix={prefix} />
-
+          <AdminNavbar 
+            isSidebarCollapsed={isSidebarCollapsed} 
+            setIsSidebarCollapsed={setIsSidebarCollapsed} 
+            prefix={prefix} 
+          />
           <main className="p-4 sm:p-6">{children}</main>
         </div>
       </div>

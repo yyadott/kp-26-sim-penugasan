@@ -1,8 +1,8 @@
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
-  FileText,
   CheckSquare,
+  FileText,
   History
 } from 'lucide-react';
 
@@ -23,12 +23,12 @@ export function ApprovalSidebar({ isSidebarCollapsed, prefix }: { isSidebarColla
           end={link.to.endsWith('/dashboard')}
           title={isSidebarCollapsed ? link.label : undefined}
           className={({ isActive }) =>
-            `flex items-center gap-3 rounded-xl py-2.5 text-sm transition ${isSidebarCollapsed ? 'justify-center px-0' : 'px-3'
+            `flex items-center gap-2 rounded-lg py-2 text-[13px] transition ${isSidebarCollapsed ? 'justify-center px-0' : 'px-3'
             } ${isActive ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white'
             }`
           }
         >
-          <link.icon className="h-5 w-5 shrink-0" />
+          <link.icon className="h-[18px] w-[18px] shrink-0" />
           {!isSidebarCollapsed && <span className="overflow-hidden whitespace-nowrap">{link.label}</span>}
         </NavLink>
       ))}

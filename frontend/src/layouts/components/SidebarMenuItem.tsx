@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 
@@ -20,6 +20,7 @@ export function SidebarMenuItem({ link, currentPath, isSidebarCollapsed }: { lin
     return isPathActive && isQueryActive;
   });
   const isActive = currentPath === link.to || isChildActive;
+  useEffect(() => { setIsOpen(isChildActive); }, [isChildActive]);
 
   if (link.items) {
     return (
@@ -33,11 +34,11 @@ export function SidebarMenuItem({ link, currentPath, isSidebarCollapsed }: { lin
             }`}
         >
           <div className="flex items-center gap-3">
-            <Icon className="h-5 w-5 shrink-0" />
+            <Icon className="h-[18px] w-[18px] shrink-0" />
             {!isSidebarCollapsed && <span className="overflow-hidden whitespace-nowrap">{link.label}</span>}
           </div>
           {!isSidebarCollapsed && (
-            isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />
+            isOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />
           )}
         </button>
         {!isSidebarCollapsed && isOpen && (
@@ -59,10 +60,10 @@ export function SidebarMenuItem({ link, currentPath, isSidebarCollapsed }: { lin
                 <Link
                   key={subItem.to}
                   to={subItem.to}
-                  className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition ${childActive ? 'bg-slate-800 text-white font-medium' : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+                  className={`flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] transition ${childActive ? 'bg-slate-800 text-white font-medium' : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
                     }`}
                 >
-                  {SubIcon && <SubIcon className="h-4 w-4 shrink-0" />}
+                  {SubIcon && <SubIcon className="h-3.5 w-3.5 shrink-0" />}
                   {subItem.label}
                 </Link>
               );
@@ -79,12 +80,12 @@ export function SidebarMenuItem({ link, currentPath, isSidebarCollapsed }: { lin
       end={link.to.endsWith('/dashboard')}
       title={isSidebarCollapsed ? link.label : undefined}
       className={({ isActive: navActive }) =>
-        `flex items-center gap-3 rounded-xl py-2.5 text-sm transition ${isSidebarCollapsed ? 'justify-center px-0' : 'px-3'
+        `flex items-center gap-2 rounded-lg py-2 text-[13px] transition ${isSidebarCollapsed ? 'justify-center px-0' : 'px-3'
         } ${navActive ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white'
         }`
       }
     >
-      <Icon className="h-5 w-5 shrink-0" />
+      <Icon className="h-[18px] w-[18px] shrink-0" />
       {!isSidebarCollapsed && <span className="overflow-hidden whitespace-nowrap">{link.label}</span>}
     </NavLink>
   );
