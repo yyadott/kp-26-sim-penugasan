@@ -65,7 +65,7 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
     <div className="min-h-screen bg-slate-100">
       <div className="flex min-h-screen">
         {/* ====== SIDEBAR ====== */}
-        <aside className={`hidden flex-col bg-slate-950 py-4 text-slate-100 lg:flex transition-all duration-300 ${isSidebarCollapsed ? 'w-20 px-2' : 'w-64 px-4'}`}>
+        <aside className={`hidden flex-col bg-slate-950 py-6 text-slate-100 lg:flex transition-all duration-300 ${isSidebarCollapsed ? 'w-20 px-2' : 'w-72 px-5'}`}>
           {/* Logo & Title */}
           <Link to={`${prefix}/dashboard`} className={`flex items-center gap-3 py-2 ${isSidebarCollapsed ? 'justify-center' : 'px-2'}`}>
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white">
@@ -84,7 +84,7 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
           </Link>
 
           {/* Navigation */}
-          <nav className="mt-6 space-y-1">
+          <nav className="mt-8 space-y-1">
             {normalizedRole === 'SUPER_ADMIN' ? (
               <SuperAdminSidebar isSidebarCollapsed={isSidebarCollapsed} />
             ) : normalizedRole === 'APPROVAL' ? (
