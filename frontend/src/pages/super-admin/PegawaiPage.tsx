@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { Search, MoreHorizontal, ChevronDown } from 'lucide-react';
 import { dummyPegawaiList, UNIT_COLORS } from '@/data/dummyData';
 
-export const AnggotaPage = () => {
+export const PegawaiPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [unitFilter, setUnitFilter] = useState('Semua Unit Kerja');
   const [roleFilter, setRoleFilter] = useState('Semua Role');
   const [jabatanFilter, setJabatanFilter] = useState('Semua Jabatan');
+
+
 
   // Filter logic
   const filteredPegawai = dummyPegawaiList.filter((pegawai) => {

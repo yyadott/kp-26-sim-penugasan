@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { dummyAjuanSuratTugas } from '@/data/dummyData';
+import { useSuratTugas } from '@/hooks/useSuratTugas';
 
 import { useAuth } from '@/hooks/useAuth';
 import { extractDocxContent } from '@/utils/documentScanner';
@@ -8,35 +8,19 @@ import {
   MapPin, Calendar as CalendarIcon, Users, Upload, X, Search
 } from 'lucide-react';
 import Swal from 'sweetalert2';
-import api from '@/api/axios';
 
 // Simulasi pengiriman notifikasi eksternal
 const sendTelegramNotification = async (_message: string) => {
-  /*
-  const BOT_TOKEN = import.meta.env.VITE_TELEGRAM_BOT_TOKEN;
-  const CHAT_ID = 'GROUP_OR_USER_CHAT_ID'; 
-  await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-    chat_id: CHAT_ID, text: _message, parse_mode: 'HTML'
-  });
-  */
   return new Promise(resolve => setTimeout(resolve, 800)); // Simulasi delay
 };
 
 const sendEmailNotification = async (_to_name: string, _message: string) => {
-  /*
-  await emailjs.send(
-    'YOUR_SERVICE_ID', 
-    'YOUR_TEMPLATE_ID', 
-    { to_name, message }, 
-    'YOUR_PUBLIC_KEY'
-  );
-  */
   return new Promise(resolve => setTimeout(resolve, 800)); // Simulasi delay
 };
 
 export const ApprovalTugasPage = () => {
   const { user } = useAuth();
-  const [localData, setLocalData] = useState<any[]>([]);
+  const { tugasList, refreshTugas, updateTugasStatus } = useSuratTugas();
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPegawaiDetail, setSelectedPegawaiDetail] = useState<any[] | null>(null);
@@ -44,21 +28,9 @@ export const ApprovalTugasPage = () => {
 
   const [confirmApproveId, setConfirmApproveId] = useState<string | null>(null);
 
+  // refresh on mount
   useEffect(() => {
-    const fetchTugas = async () => {
-      try {
-        const res = await api.get('/tugas');
-        if (res.data && Array.isArray(res.data) && res.data.length > 0) {
-           setLocalData(res.data);
-        } else {
-           setLocalData(dummyAjuanSuratTugas); // fallback
-        }
-      } catch (err) {
-        console.error('Gagal mengambil data dari backend', err);
-        setLocalData(dummyAjuanSuratTugas);
-      }
-    };
-    fetchTugas();
+    refreshTugas();
   }, []);
 
   // States for Preview Modal
@@ -109,7 +81,7 @@ export const ApprovalTugasPage = () => {
 
 
   // Ambil hanya data surat yang sesuai dengan "jalur" (Unit Kerja) user approval yang sedang login
-  const myUnitData = localData.filter(t => t.unitKerja === user?.unitKerja);
+  const myUnitData = tugasList.filter((t: any) => t.unitKerja === user?.unitKerja);
 
   const pendingApprovals = myUnitData.filter(
     t => t.status === 'DRAFT' || t.status === 'VERIFIKASI_SUBBAGIAN' || t.status === 'PERSETUJUAN_PIMPINAN'
@@ -143,14 +115,13 @@ export const ApprovalTugasPage = () => {
 
   const handleApprove = async (id: string) => {
     try {
-      await api.patch(`/tugas/${id}/status`, { status: 'SURAT_TERBIT' });
-      setLocalData(prev => prev.map(item => item.id === id ? { ...item, status: 'SURAT_TERBIT' } : item));
+      await updateTugasStatus(id, 'SURAT_TERBIT');
     } catch (err) {
       console.error('Gagal menyetujui surat', err);
     }
 
-    // Kirim notifikasi simulasi ke Admin dan Anggota
-    const tugas = localData.find(t => t.id === id);
+    // Kirim notifikasi simulasi ke Admin dan Pegawai
+    const tugas = tugasList.find((t: any) => t.id === id);
     if (tugas) {
       const existingNotifs = JSON.parse(localStorage.getItem('sim_notifications') || '[]');
       const newNotifAdmin = {
@@ -174,7 +145,7 @@ export const ApprovalTugasPage = () => {
   };
 
   const handleConfirmApprove = (id: string) => {
-    const tugas = localData.find(t => t.id === id);
+    const tugas = tugasList.find((t: any) => t.id === id);
     if (!tugas) return;
 
     const executeWithNotifications = async () => {
@@ -193,7 +164,7 @@ export const ApprovalTugasPage = () => {
 
       Swal.fire(
         'Berhasil!', 
-        `Surat disetujui! Notifikasi Email dan Telegram telah berhasil dikirim ke Admin Tugas dan Anggota (${tugas.pegawaiDitugaskan.length} orang).`, 
+        `Surat disetujui! Notifikasi Email dan Telegram telah berhasil dikirim ke Admin Tugas dan Pegawai (${tugas.pegawaiDitugaskan.length} orang).`, 
         'success'
       );
     };
@@ -235,8 +206,7 @@ export const ApprovalTugasPage = () => {
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
-          await api.patch(`/tugas/${id}/status`, { status: 'DITOLAK' });
-          setLocalData(prev => prev.map(item => item.id === id ? { ...item, status: 'DITOLAK' } : item));
+          await updateTugasStatus(id, 'DITOLAK');
           Swal.fire('Ditolak!', `Surat Tugas ${id} telah ditolak.`, 'error');
         } catch (err) {
           console.error('Gagal menolak surat', err);

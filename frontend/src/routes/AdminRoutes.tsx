@@ -3,7 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 
 // Lazy-loaded pages
 const DashboardPage = lazy(() => import('@/pages/admin/DashboardPage').then(m => ({ default: m.DashboardPage })));
-const AnggotaPage = lazy(() => import('@/pages/admin/AnggotaPage').then(m => ({ default: m.AnggotaPage })));
+const PegawaiPage = lazy(() => import('@/pages/admin/PegawaiPage').then(m => ({ default: m.PegawaiPage })));
 const AbsensiPage = lazy(() => import('@/pages/admin/AbsensiPage').then(m => ({ default: m.AbsensiPage })));
 const TugasPage = lazy(() => import('@/pages/admin/TugasPage').then(m => ({ default: m.TugasPage })));
 const PemetaanPage = lazy(() => import('@/pages/admin/PemetaanPage').then(m => ({ default: m.PemetaanPage })));
@@ -31,7 +31,7 @@ export const AdminRoutes = () => {
       <Routes>
         <Route path="/" element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<DashboardPage />} />
-        <Route path="anggota" element={<AnggotaPage />} />
+        <Route path="pegawai" element={<PegawaiPage />} />
         
         {/* Pegawai / Ajuan */}
         <Route path="pegawai/detail" element={<DetailPegawaiPage />} />

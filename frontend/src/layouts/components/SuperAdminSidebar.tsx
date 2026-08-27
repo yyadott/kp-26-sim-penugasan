@@ -28,7 +28,7 @@ export function SuperAdminSidebar({ isSidebarCollapsed }: { isSidebarCollapsed: 
 
   const links = [
     { to: `${prefix}/dashboard`, label: 'Dashboard', icon: LayoutDashboard },
-    { to: `${prefix}/anggota`, label: 'Pegawai', icon: Users },
+    { to: `${prefix}/pegawai`, label: 'Pegawai', icon: Users },
     { to: `${prefix}/absensi`, label: 'Absensi', icon: CalendarCheck },
     { to: `${prefix}/tugas`, label: 'Penugasan', icon: FileText },
     { to: `${prefix}/pemetaan`, label: 'Pemetaan', icon: MapPin },

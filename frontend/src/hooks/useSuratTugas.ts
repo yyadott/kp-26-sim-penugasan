@@ -1,60 +1,63 @@
 import { useState, useEffect } from 'react';
 import type { AjuanSuratTugas } from '@/types';
-import { dummyAjuanSuratTugas } from '@/data/dummyData';
-
-const STORAGE_KEY = 'sim_tugas_data';
+import apiClient from '@/api/client';
 
 export const useSuratTugas = () => {
   const [tugasList, setTugasList] = useState<AjuanSuratTugas[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Initialize data from local storage or fallback to dummy data
-  useEffect(() => {
-    const storedData = localStorage.getItem(STORAGE_KEY);
-    if (storedData) {
-      try {
-        setTugasList(JSON.parse(storedData));
-      } catch (error) {
-        console.error('Gagal parsing data dari local storage', error);
-        setTugasList(dummyAjuanSuratTugas);
-      }
-    } else {
-      setTugasList(dummyAjuanSuratTugas);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(dummyAjuanSuratTugas));
+  const fetchTugas = async () => {
+    setIsLoading(true);
+    try {
+      const res = await apiClient.get('/tugas');
+      setTugasList(res.data);
+    } catch (error) {
+      console.error('Gagal mengambil data tugas dari server', error);
+    } finally {
+      setIsLoading(false);
     }
+  };
+
+  useEffect(() => {
+    fetchTugas();
   }, []);
 
-  const saveToStorage = (newData: AjuanSuratTugas[]) => {
-    setTugasList(newData);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
+  const addTugas = async (tugas: any) => {
+    try {
+      const res = await apiClient.post('/tugas', tugas);
+      setTugasList((prev) => [res.data, ...prev]);
+      return res.data;
+    } catch (error) {
+      console.error('Gagal menambah tugas', error);
+      throw error;
+    }
   };
 
-  const addTugas = (tugas: AjuanSuratTugas) => {
-    const newData = [tugas, ...tugasList];
-    saveToStorage(newData);
+  const updateTugasStatus = async (id: string, status: AjuanSuratTugas['status']) => {
+    try {
+      await apiClient.patch(`/tugas/${id}/status`, { status });
+      setTugasList((prev) =>
+        prev.map((t) => (t.id === id ? { ...t, status } : t))
+      );
+    } catch (error) {
+      console.error('Gagal update status tugas', error);
+      throw error;
+    }
   };
 
-  const updateTugas = (id: string, updatedTugas: Partial<AjuanSuratTugas>) => {
-    const newData = tugasList.map((tugas) =>
-      tugas.id === id ? { ...tugas, ...updatedTugas } : tugas
-    );
-    saveToStorage(newData);
-  };
-
-  const deleteTugas = (id: string) => {
-    const newData = tugasList.filter((tugas) => tugas.id !== id);
-    saveToStorage(newData);
-  };
-
-  const updateTugasStatus = (id: string, status: AjuanSuratTugas['status']) => {
-    updateTugas(id, { status });
+  const deleteTugas = async (_id: string) => {
+    // try {
+    //   await apiClient.delete(`/tugas/${id}`);
+    //   setTugasList(prev => prev.filter(t => t.id !== id));
+    // } catch(error) { ... }
   };
 
   return {
     tugasList,
+    isLoading,
     addTugas,
-    updateTugas,
-    deleteTugas,
     updateTugasStatus,
-    setTugasList: saveToStorage, // exposes raw setter that syncs to storage
+    deleteTugas,
+    refreshTugas: fetchTugas
   };
 };

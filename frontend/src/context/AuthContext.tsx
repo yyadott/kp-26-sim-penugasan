@@ -1,11 +1,12 @@
 import React, { createContext, useState, useEffect } from 'react';
 import type { Pegawai } from '@/types';
 import { dummyPegawaiList } from '@/data/dummyData';
+import apiClient from '@/api/client';
 
 export interface AuthContextType {
   user: Pegawai | null;
   isAuthenticated: boolean;
-  login: (usernameOrNip: string, password: string) => { success: boolean; message?: string };
+  login: (usernameOrNip: string, password: string) => Promise<{ success: boolean; message?: string }>;
   updateCredentials: (data: { username: string; currentPassword: string; newPassword: string }) => { success: boolean; message?: string };
   getDemoCredentials: () => { username: string; password: string };
   logout: () => void;
@@ -48,44 +49,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const isAuthenticated = !!user;
 
-  const login = (usernameOrNip: string, password: string) => {
+  const login = async (usernameOrNip: string, password: string) => {
     const cleanInput = usernameOrNip.trim().toLowerCase();
-    const credentials = getCredentials();
-    const isCustomUsername = cleanInput === credentials.username.toLowerCase();
-
-    if (isCustomUsername && password !== credentials.password) {
-      return { success: false, message: 'Password tidak sesuai.' };
+    
+    // Quick demo overrides (bypass API for instant demo accounts)
+    if (['superadmin', 'approval', 'admin', 'user'].includes(cleanInput)) {
+      const defaultUser = { ...dummyPegawaiList[0], username: cleanInput };
+      if (cleanInput === 'superadmin') defaultUser.role = 'SUPER_ADMIN';
+      else if (cleanInput === 'approval') defaultUser.role = 'APPROVAL';
+      else if (cleanInput === 'admin') defaultUser.role = 'ADMIN';
+      else if (cleanInput === 'user') defaultUser.role = 'USER';
+      
+      setUser(defaultUser);
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(defaultUser));
+      return { success: true };
     }
 
-    // Find matching user by NIP, email prefix, or name
-    const foundUser = dummyPegawaiList.find((p) => {
-      const nipMatch = p.nip.toLowerCase() === cleanInput;
-      const emailPrefixMatch = p.email?.toLowerCase().split('@')[0] === cleanInput;
-      const nameMatch = p.nama.toLowerCase().includes(cleanInput);
-      const usernameMatch = p.username?.toLowerCase() === cleanInput;
-      return nipMatch || emailPrefixMatch || nameMatch || usernameMatch;
-    });
-
-    if (foundUser) {
-      const authenticatedUser = { ...foundUser, username: foundUser.username || credentials.username };
-      setUser(authenticatedUser);
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authenticatedUser));
-      return { success: true };
-    } else {
-      // Fallback: quick test logins
-      if (['superadmin', 'approval', 'admin', 'user', ''].includes(cleanInput) || isCustomUsername) {
-        const defaultUser = { ...dummyPegawaiList[0], username: cleanInput || credentials.username };
-        if (cleanInput === 'superadmin') defaultUser.role = 'SUPER_ADMIN';
-        else if (cleanInput === 'approval') defaultUser.role = 'APPROVAL';
-        else if (cleanInput === 'admin') defaultUser.role = 'ADMIN';
-        else if (cleanInput === 'user') defaultUser.role = 'USER';
-        else defaultUser.role = 'SUPER_ADMIN'; // default to superadmin
-        
-        setUser(defaultUser);
-        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(defaultUser));
+    try {
+      // Import apiClient dynamically to avoid circular dependencies if any, or just import it at top
+      // Wait, we can import it at the top of the file.
+      const res = await apiClient.post('/auth/login', { 
+        email: cleanInput, 
+        password 
+      });
+      
+      if (res.data && res.data.user) {
+        setUser(res.data.user);
+        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(res.data.user));
+        // You might want to save the token in localStorage too
+        if (res.data.token) {
+          localStorage.setItem('sim_penugasan_token', res.data.token);
+        }
         return { success: true };
       }
-      return { success: false, message: 'Username / NIP tidak ditemukan dalam database.' };
+      return { success: false, message: 'Respons server tidak valid.' };
+    } catch (error: any) {
+      if (error.response && error.response.status === 401) {
+        return { success: false, message: error.response.data.message || 'Kredensial tidak valid.' };
+      }
+      return { success: false, message: 'Gagal menghubungi server database.' };
     }
   };
 

@@ -62,8 +62,8 @@ export const LoginPage: React.FC = () => {
 
     // 3. Proses Login
     setIsLoading(true);
-    setTimeout(() => {
-      const res = login(username, password);
+    setTimeout(async () => {
+      const res = await login(username, password);
       setIsLoading(false);
 
       if (res.success) {

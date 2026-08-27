@@ -35,7 +35,7 @@ export const UserLayout = ({ children }: UserLayoutProps) => {
             </div>
             <div>
               <p className="text-sm font-semibold">SIM Penugasan</p>
-              <p className="text-xs text-slate-500">User</p>
+              <p className="text-xs text-slate-500">Pegawai</p>
             </div>
           </Link>
 
@@ -122,7 +122,7 @@ export const UserLayout = ({ children }: UserLayoutProps) => {
           </nav>
 
           <div className="mt-auto rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <p className="text-sm font-semibold">{user?.nama || 'User'}</p>
+            <p className="text-sm font-semibold">{user?.nama || 'Pegawai'}</p>
             <p className="text-xs text-slate-500">{user?.unitKerja || 'Unit'} • {user?.role || 'PEGAWAI'}</p>
             <button
               type="button"
@@ -139,7 +139,7 @@ export const UserLayout = ({ children }: UserLayoutProps) => {
           <header className="border-b border-slate-200 bg-white px-4 py-4 shadow-sm sm:px-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-semibold text-slate-800">Area User</p>
+                <p className="text-sm font-semibold text-slate-800">Area Pegawai</p>
                 <p className="text-xs text-slate-500">Pantau tugas dan aktivitas harian</p>
               </div>
               <div className="flex items-center gap-2">

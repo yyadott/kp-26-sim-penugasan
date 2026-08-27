@@ -6,6 +6,7 @@ export type UnitKerjaType =
 
 // Types untuk Pegawai
 export interface Pegawai {
+  db_id?: number;
   id: string;
   nama: string;
   nip: string;

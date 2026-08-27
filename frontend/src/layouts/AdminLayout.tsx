@@ -37,7 +37,7 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
   // Admin Links for Admin Role ONLY
   const adminLinks = [
     { to: `${prefix}/dashboard`, label: 'Dashboard', icon: LayoutDashboard },
-    { to: `${prefix}/anggota`, label: 'Pegawai', icon: Users },
+    { to: `${prefix}/pegawai`, label: 'Pegawai', icon: Users },
     { to: `${prefix}/absensi`, label: 'Absensi', icon: CalendarCheck },
     {
       to: '#',

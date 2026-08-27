@@ -10,7 +10,7 @@ const api = axios.create({
 
 // Interceptor opsional untuk menambahkan token auth jika diperlukan nantinya
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('sim_penugasan_token');
   if (token && config.headers) {
     config.headers.Authorization = `Bearer ${token}`;
   }

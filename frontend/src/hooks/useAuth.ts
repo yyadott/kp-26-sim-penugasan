@@ -11,7 +11,7 @@ export const useAuth = (): AuthContextType => {
     return {
       user: dummyPegawaiList[0],
       isAuthenticated: true,
-      login: () => ({ success: true }),
+      login: async () => ({ success: true }),
       updateCredentials: () => ({ success: true }),
       getDemoCredentials: () => ({ username: 'yadiyudi', password: 'password123' }),
       logout: () => {},

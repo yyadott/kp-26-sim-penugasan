@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
-import { dummyAjuanSuratTugas, dummyPegawaiList, UNIT_COLORS } from '@/data/dummyData';
+import { dummyPegawaiList, UNIT_COLORS } from '@/data/dummyData';
 import type { AjuanSuratTugas, UnitKerjaType } from '@/types';
-import api from '@/api/axios';
 import {
   FileText,
   Plus,
@@ -17,12 +16,13 @@ import {
 } from 'lucide-react';
 
 import { sendEmailNotification } from '@/utils/emailService';
-
-
+import { useSuratTugas } from '@/hooks/useSuratTugas';
+import { useAuth } from '@/hooks/useAuth';
 
 export const TugasPage = () => {
+  const { user } = useAuth();
   type Wilayah = { id: string; name: string };
-  const [ajuanList, setAjuanList] = useState<AjuanSuratTugas[]>([]);
+  const { tugasList, refreshTugas, addTugas } = useSuratTugas();
   const [activeTab] = useState<'DAFTAR' | 'WORKFLOW'>('DAFTAR');
   const [selectedUnits] = useState<UnitKerjaType[]>([]);
   const [selectedStatuses] = useState<string[]>([]);
@@ -66,21 +66,8 @@ export const TugasPage = () => {
       .then((data: Wilayah[]) => setProvinces(data))
       .catch(() => setProvinces([]));
 
-    // Fetch data from backend
-    const fetchTugas = async () => {
-      try {
-        const res = await api.get('/tugas');
-        if (res.data && Array.isArray(res.data) && res.data.length > 0) {
-           setAjuanList(res.data);
-        } else {
-           setAjuanList(dummyAjuanSuratTugas); // fallback to dummy if empty/not implemented
-        }
-      } catch (err) {
-        console.error('Gagal mengambil data dari backend, menggunakan dummy data', err);
-        setAjuanList(dummyAjuanSuratTugas);
-      }
-    };
-    fetchTugas();
+    // Fetch data from backend using hook
+    refreshTugas();
   }, []);
 
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -116,7 +103,14 @@ export const TugasPage = () => {
   /* eslint-enable react-hooks/set-state-in-effect */
 
   // Filter list
-  const filteredAjuan = ajuanList.filter((item) => {
+  const filteredAjuan = tugasList.filter((item) => {
+    // Only show tasks where the logged in user is the pengaju or one of the assignees
+    const isRelatedToUser = 
+      item.pengaju?.id === user?.id || 
+      item.pegawaiDitugaskan.some(p => p.id === user?.id);
+
+    if (!isRelatedToUser) return false;
+
     const matchesUnit = selectedUnits.length === 0 || selectedUnits.includes(item.unitKerja);
     const matchesStatus = selectedStatuses.length === 0 || selectedStatuses.includes(item.status);
     const matchesApplicant = selectedApplicants.length === 0 || selectedApplicants.includes(item.pengaju.nama);
@@ -167,29 +161,11 @@ export const TugasPage = () => {
     
     const provinsi = provinces.find((item) => item.id === formData.provinsiId)?.name;
     const kota = cities.find((item) => item.id === formData.kotaId)?.name;
-    const newId = `st-00${ajuanList.length + 1}`;
-    const newNomor = `DRAFT-ST/${formData.unitKerja.toUpperCase().replace(/\s+/g, '')}/2026/00${ajuanList.length + 1}`;
+    const newNomor = `DRAFT-ST/${formData.unitKerja.toUpperCase().replace(/\s+/g, '')}/2026/00${tugasList.length + 1}`;
     const lokasiPenugasan = [kota, provinsi].filter(Boolean).join(', ') || formData.lokasiPenugasan;
 
-    const newAjuanFallback: AjuanSuratTugas = {
-      id: newId,
-      nomorSurat: newNomor,
-      perihal: formData.perihal,
-      pengaju: dummyPegawaiList[0], // Logged in user
-      pegawaiDitugaskan: assignedPegawai,
-      unitKerja: formData.unitKerja,
-      tanggalMulai: formData.tanggalMulai,
-      tanggalSelesai: formData.tanggalSelesai,
-      lokasiPenugasan: lokasiPenugasan,
-      lokasiSpesifik: formData.lokasiSpesifik,
-      koordinat: [formData.koordinatLat, formData.koordinatLng],
-      deskripsi: formData.deskripsi,
-      status: 'DRAFT',
-      workflow: [],
-    };
-
     try {
-      const res = await api.post('/tugas', {
+      await addTugas({
         nomorSurat: newNomor,
         perihal: formData.perihal,
         pengaju_id: dummyPegawaiList[0].id,
@@ -204,11 +180,8 @@ export const TugasPage = () => {
         status: 'DRAFT',
         pegawaiDitugaskan: formData.pegawaiIds
       });
-      setAjuanList([res.data, ...ajuanList]);
     } catch (err) {
       console.error('Gagal menyimpan ke database', err);
-      // Fallback update UI
-      setAjuanList([newAjuanFallback, ...ajuanList]);
     }
     
     // Kirim notifikasi email

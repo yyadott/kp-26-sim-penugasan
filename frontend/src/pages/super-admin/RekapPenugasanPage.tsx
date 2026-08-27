@@ -1,12 +1,14 @@
-import { useState, useMemo } from 'react';
-import { dummyPegawaiList, dummyAjuanSuratTugas, UNIT_COLORS } from '@/data/dummyData';
+import { useState, useMemo, useEffect } from 'react';
+import { dummyPegawaiList, UNIT_COLORS } from '@/data/dummyData';
 import { Trophy, ChevronDown, Briefcase, Building2, Table2, Filter } from 'lucide-react';
+import { useSuratTugas } from '@/hooks/useSuratTugas';
 
 type SubTab = 'jabatan' | 'unitkerja' | 'tabelrekap';
 type JenisDinas = 'Semua' | 'Luar' | 'Dalam' | 'Daring' | 'Izin';
 
 // Simulated "jenis dinas" for each surat tugas based on location
 const getJenisDinas = (lokasi: string): string => {
+  if (!lokasi) return 'Luar';
   if (lokasi.includes('Cimahi') || lokasi.includes('Bandung')) return 'Luar';
   if (lokasi.includes('Bogor')) return 'Dalam';
   if (lokasi.includes('Depok')) return 'Daring';
@@ -55,15 +57,20 @@ export const RekapPenugasanPage = () => {
   const [jabatanFilter, setJabatanFilter] = useState<string>('Semua');
   const [unitKerjaFilter, setUnitKerjaFilter] = useState<string>('Semua');
 
+  const { tugasList, refreshTugas } = useSuratTugas();
+  useEffect(() => {
+    refreshTugas();
+  }, []);
+
   // Compute penugasan data
   const penugasanData = useMemo(() => {
     // Each surat tugas -> for each pegawai assigned -> one entry
-    const entries = dummyAjuanSuratTugas
-      .filter(st => {
-        const matchTahun = st.tanggalMulai.startsWith(String(tahun));
+    const entries = tugasList
+      .filter((st: any) => {
+        const matchTahun = st.tanggalMulai?.startsWith(String(tahun));
         if (!matchTahun) return false;
         if (bulan === 'Semua') return true;
-        const monthStr = st.tanggalMulai.split('-')[1];
+        const monthStr = st.tanggalMulai?.split('-')[1];
         return Number(monthStr) === bulan;
       })
       .flatMap(st =>

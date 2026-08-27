@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
-import { dummyAjuanSuratTugas } from '@/data/dummyData';
+import { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useSuratTugas } from '@/hooks/useSuratTugas';
 import { 
   FileText, CheckCircle2, XCircle, Eye, Download, 
   MapPin, Calendar as CalendarIcon, Users, X
@@ -9,21 +9,27 @@ import Swal from 'sweetalert2';
 
 export const RiwayatApprovalPage = () => {
   const { user } = useAuth();
+  const { tugasList, refreshTugas } = useSuratTugas();
   const currentDate = new Date();
   
+  useEffect(() => {
+    refreshTugas();
+  }, []);
+
   // Set default to current month and year
   const [selectedMonth, setSelectedMonth] = useState<number>(currentDate.getMonth());
   const [selectedYear, setSelectedYear] = useState<number>(currentDate.getFullYear());
   const [selectedPegawaiDetail, setSelectedPegawaiDetail] = useState<any[] | null>(null);
   const [selectedSurat, setSelectedSurat] = useState<any | null>(null);
 
-  const myUnitData = dummyAjuanSuratTugas.filter(t => t.unitKerja === user?.unitKerja);
+  const myUnitData = tugasList.filter((t: any) => t.unitKerja === user?.unitKerja);
 
   const displayData = useMemo(() => {
-    return myUnitData.filter(t => {
+    return myUnitData.filter((t: any) => {
       // Menampilkan history (sudah disetujui / ditolak)
       if (t.status !== 'SURAT_TERBIT' && t.status !== 'DITOLAK') return false;
       
+      if (!t.tanggalMulai) return false;
       const dateObj = new Date(t.tanggalMulai);
       return dateObj.getMonth() === selectedMonth && dateObj.getFullYear() === selectedYear;
     });

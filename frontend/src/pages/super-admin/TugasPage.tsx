@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { dummyAjuanSuratTugas, UNIT_COLORS } from '@/data/dummyData';
+import { UNIT_COLORS } from '@/data/dummyData';
 import type { AjuanSuratTugas, UnitKerjaType } from '@/types';
 import { DraftAjuanModal } from '@/components/penugasan/DraftAjuanModal';
 import SuratTugasTemplate from '@/components/SuratTugasTemplate';
+import { useSuratTugas } from '@/hooks/useSuratTugas';
 import {
   FileText,
   CheckCircle2,
@@ -56,7 +57,9 @@ const CheckboxDropdown = ({ label, options, selected, isOpen, onToggle, onChange
 );
 
 export const TugasPage = () => {
-  const [ajuanList, setAjuanList] = useState<AjuanSuratTugas[]>(dummyAjuanSuratTugas);
+  const { tugasList: ajuanList, refreshTugas, updateTugasStatus, addTugas } = useSuratTugas();
+  useEffect(() => { refreshTugas(); }, []);
+
   const [activeTab, setActiveTab] = useState<'DAFTAR' | 'WORKFLOW'>('DAFTAR');
   const [selectedUnits, setSelectedUnits] = useState<UnitKerjaType[]>([]);
   const [isUnitFilterOpen, setIsUnitFilterOpen] = useState(false);
@@ -163,17 +166,19 @@ export const TugasPage = () => {
     return tanggalMulai === tanggalSelesai ? mulai : `${mulai} s/d ${formatTanggal(tanggalSelesai)}`;
   };
 
-  const updateStatusAjuan = (id: string, status: AjuanSuratTugas['status']) => {
-    setAjuanList((currentList) => currentList.map((item) => (
-      item.id === id ? { ...item, status } : item
-    )));
-    setSelectedAjuan((current) => current?.id === id ? { ...current, status } : current);
-    setOpenStatusId(null);
+  const updateStatusAjuan = async (id: string, status: AjuanSuratTugas['status']) => {
+    try {
+      await updateTugasStatus(id, status);
+      setSelectedAjuan((current) => current?.id === id ? { ...current, status } : current);
+      setOpenStatusId(null);
+    } catch (e) { console.error(e); }
   };
 
-  const addDraftAjuan = (newAjuan: AjuanSuratTugas) => {
-    setAjuanList((currentList) => [newAjuan, ...currentList]);
-    setIsDraftModalOpen(false);
+  const addDraftAjuan = async (newAjuan: any) => {
+    try {
+      await addTugas(newAjuan);
+      setIsDraftModalOpen(false);
+    } catch (e) { console.error(e); }
   };
 
   const getStatusBadge = (status: AjuanSuratTugas['status']) => {

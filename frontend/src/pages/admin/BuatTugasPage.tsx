@@ -1,22 +1,30 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { dummyPegawaiList, dummyAjuanSuratTugas } from '@/data/dummyData';
-import type { AjuanSuratTugas, UnitKerjaType } from '@/types';
+
+import type { Pegawai, AjuanSuratTugas, UnitKerjaType } from '@/types';
 import { useSuratTugas } from '@/hooks/useSuratTugas';
 import { sendEmailNotification } from '@/utils/emailService';
 import { generateSuratTugas } from '@/utils/generateSuratTugas';
 import { FileText, Send, ArrowLeft, Search, Download, AlertTriangle, X } from 'lucide-react';
+import apiClient from '@/api/client';
+
+import { useAuth } from '@/hooks/useAuth';
 
 type Wilayah = { id: string; name: string };
 
 export const BuatTugasPage = () => {
   const navigate = useNavigate();
-  const { addTugas } = useSuratTugas();
+  const { user } = useAuth();
+  const { addTugas, tugasList } = useSuratTugas();
   const [provinces, setProvinces] = useState<Wilayah[]>([]);
   const [cities, setCities] = useState<Wilayah[]>([]);
   const [isWilayahLoading, setIsWilayahLoading] = useState(false);
   const [pegawaiSearch, setPegawaiSearch] = useState('');
   const [unitFilter, setUnitFilter] = useState('');
+  
+  // Pegawai List from API
+  const [pegawaiList, setPegawaiList] = useState<Pegawai[]>([]);
+  
   const [conflictAlert, setConflictAlert] = useState<{
     pegawai: { id: string; nama: string; unitKerja: string };
     conflicts: AjuanSuratTugas[];
@@ -29,7 +37,7 @@ export const BuatTugasPage = () => {
   const [formData, setFormData] = useState({
     perihal: '',
     unitKerja: 'RBI' as UnitKerjaType,
-    pegawaiIds: [dummyPegawaiList[0].id],
+    pegawaiIds: [] as string[],
     tanggalMulai: '2026-08-01',
     tanggalSelesai: '2026-08-03',
     lokasiPenugasan: 'Kecamatan Bandung Tengah',
@@ -49,7 +57,7 @@ export const BuatTugasPage = () => {
     if (!tanggalMulai || !tanggalSelesai) return [];
     const formStart = new Date(tanggalMulai);
     const formEnd = new Date(tanggalSelesai);
-    return dummyAjuanSuratTugas.filter((t: any) => {
+    return tugasList.filter((t: any) => {
       if (t.status === 'DITOLAK') return false;
       const isPegawaiAssigned = t.pegawaiDitugaskan.some((p: any) => p.id === pegawaiId);
       if (!isPegawaiAssigned) return false;
@@ -60,6 +68,13 @@ export const BuatTugasPage = () => {
   };
 
   useEffect(() => {
+    // Fetch users (pegawai) from backend
+    apiClient.get('/users')
+      .then(res => {
+        if (res.data) setPegawaiList(res.data);
+      })
+      .catch(err => console.error("Gagal mengambil data pegawai", err));
+
     fetch('https://www.emsifa.com/api-wilayah-indonesia/api/provinces.json')
       .then((response) => response.ok ? response.json() : Promise.reject())
       .then((data: Wilayah[]) => setProvinces(data))
@@ -99,83 +114,58 @@ export const BuatTugasPage = () => {
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleActualSubmit = async () => {
-    const assignedPegawai = dummyPegawaiList.filter((p) => formData.pegawaiIds.includes(p.id));
-    if (assignedPegawai.length === 0) assignedPegawai.push(dummyPegawaiList[0]);
+    const assignedPegawai = pegawaiList.filter((p) => formData.pegawaiIds.includes(p.id));
+    if (assignedPegawai.length === 0) return;
     
     const provinsi = provinces.find((item) => item.id === formData.provinsiId)?.name;
     const kota = cities.find((item) => item.id === formData.kotaId)?.name;
-    const newId = `st-new-${Date.now()}`;
     const newNomor = `DRAFT-ST/${formData.unitKerja.toUpperCase().replace(/\s+/g, '')}/2026/00X`;
 
-    const newAjuan: AjuanSuratTugas = {
-      id: newId,
+    const newAjuan = {
       nomorSurat: newNomor,
       perihal: formData.perihal,
-      pengaju: dummyPegawaiList[0], // Logged in user
-      pegawaiDitugaskan: assignedPegawai,
+      pengaju_id: user?.db_id || 1, // Pass the numeric ID to backend
+      pegawaiDitugaskan: assignedPegawai.map(p => p.db_id || 1), // Pass array of numeric IDs
       unitKerja: formData.unitKerja,
       tanggalMulai: formData.tanggalMulai,
       tanggalSelesai: formData.tanggalSelesai,
       lokasiPenugasan: [kota, provinsi].filter(Boolean).join(', ') || formData.lokasiPenugasan,
       lokasiSpesifik: formData.lokasiSpesifik,
-      koordinat: [formData.koordinatLat, formData.koordinatLng],
+      koordinatLat: formData.koordinatLat,
+      koordinatLng: formData.koordinatLng,
       deskripsi: formData.deskripsi,
       status: 'VERIFIKASI_SUBBAGIAN',
-      workflow: [
-        {
-          stage: 'DRAFT',
-          label: 'Pengajuan Draft ST',
-          actor: dummyPegawaiList[0].nama,
-          tanggal: new Date().toISOString().replace('T', ' ').substring(0, 16),
-          status: 'COMPLETED',
-          catatan: 'Draft baru telah diajukan dari Admin.',
-        },
-        {
-          stage: 'VERIFIKASI_SUBBAGIAN',
-          label: 'Verifikasi Kasubbag',
-          actor: 'Menunggu',
-          status: 'IN_PROGRESS',
-        }
-      ],
     };
 
-    addTugas(newAjuan);
-    
-    // Simpan ke localStorage agar terbaca di halaman Approval
-    const saved = localStorage.getItem('sim_penugasan_tugas');
-    let currentData = saved ? JSON.parse(saved) : [...dummyAjuanSuratTugas];
-    if (saved) { // If it was loaded from localStorage, we need to manually unshift to the parsed array
-      currentData.unshift(newAjuan);
-    }
-    localStorage.setItem('sim_penugasan_tugas', JSON.stringify(currentData));
-    
-    // Kirim notifikasi email ke semua pegawai yang ditugaskan
     try {
+      await addTugas(newAjuan);
+      
+      // Kirim notifikasi email ke semua pegawai yang ditugaskan
       for (const pegawai of assignedPegawai) {
         await sendEmailNotification({
           to_email: pegawai.email || 'user@example.com',
           to_name: pegawai.nama,
-          nomor_surat: newAjuan.nomorSurat,
-          perihal: newAjuan.perihal,
-          tanggal_mulai: newAjuan.tanggalMulai,
-          tanggal_selesai: newAjuan.tanggalSelesai,
-          lokasi: newAjuan.lokasiPenugasan,
-          pesan_tambahan: newAjuan.deskripsi
+          nomor_surat: newNomor,
+          perihal: formData.perihal,
+          tanggal_mulai: formData.tanggalMulai,
+          tanggal_selesai: formData.tanggalSelesai,
+          lokasi: [kota, provinsi].filter(Boolean).join(', ') || formData.lokasiPenugasan,
+          pesan_tambahan: formData.deskripsi
         });
       }
+      alert('Tugas berhasil dibuat dan disimpan di database!');
+      navigate('/admin/tugas');
     } catch (err) {
-      console.error('Failed to send email notifications', err);
+      console.error('Failed to save tugas or send email notifications', err);
+      alert('Terjadi kesalahan saat menyimpan tugas.');
     }
-
-    alert('Tugas berhasil dibuat dan notifikasi email telah dikirim!');
-    navigate('/admin/tugas');
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
     // Check if any selected pegawai has conflicts
-    const conflictingSelected = dummyPegawaiList
+    const conflictingSelected = pegawaiList
       .filter((p) => formData.pegawaiIds.includes(p.id))
       .filter((p) => getConflictingTasks(p.id).length > 0);
 
@@ -319,7 +309,7 @@ export const BuatTugasPage = () => {
               </div>
 
               <div className="w-full p-2 border border-slate-300 rounded-lg bg-slate-50 h-40 overflow-y-auto space-y-1 custom-scrollbar">
-                {dummyPegawaiList
+                {pegawaiList
                   .filter(p => p.nama.toLowerCase().includes(pegawaiSearch.toLowerCase()) && (unitFilter === '' || p.unitKerja === unitFilter))
                   .map((p) => {
                   const conflicts = getConflictingTasks(p.id);
@@ -372,7 +362,7 @@ export const BuatTugasPage = () => {
                   </label>
                   );
                 })}
-                {dummyPegawaiList.filter(p => p.nama.toLowerCase().includes(pegawaiSearch.toLowerCase()) && (unitFilter === '' || p.unitKerja === unitFilter)).length === 0 && (
+                {pegawaiList.filter(p => p.nama.toLowerCase().includes(pegawaiSearch.toLowerCase()) && (unitFilter === '' || p.unitKerja === unitFilter)).length === 0 && (
                   <div className="text-center text-xs text-slate-500 py-4">Pegawai tidak ditemukan</div>
                 )}
               </div>
@@ -386,7 +376,7 @@ export const BuatTugasPage = () => {
                 <p className="text-xs text-slate-600 mb-3">Data ini wajib diisi karena akan dicetak langsung pada file Word Surat Tugas.</p>
                 <div className="space-y-3 max-h-48 overflow-y-auto custom-scrollbar pr-2">
                   {formData.pegawaiIds.map(id => {
-                    const peg = dummyPegawaiList.find(p => p.id === id);
+                    const peg = pegawaiList.find(p => p.id === id);
                     if (!peg) return null;
                     return (
                       <div key={id} className="flex flex-col sm:flex-row sm:items-center gap-2">
@@ -502,7 +492,7 @@ export const BuatTugasPage = () => {
           <button
             type="button"
             onClick={() => {
-              const assignedPegawai = dummyPegawaiList.filter((p) => formData.pegawaiIds.includes(p.id));
+              const assignedPegawai = pegawaiList.filter((p) => formData.pegawaiIds.includes(p.id));
               if (assignedPegawai.length === 0) {
                 alert('Pilih minimal 1 pegawai untuk generate surat tugas.');
                 return;

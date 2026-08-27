@@ -18,10 +18,10 @@ const AjuanPegawaiPage = lazy(() => import('@/pages/super-admin/AjuanPegawaiPage
 const RekapPenugasanPage = lazy(() => import('@/pages/super-admin/RekapPenugasanPage').then(m => ({ default: m.RekapPenugasanPage })));
 
 // Anggota management sub-pages
-const AnggotaPage = lazy(() => import('@/pages/super-admin/AnggotaPage').then(m => ({ default: m.AnggotaPage })));
-const TambahAnggotaPage = lazy(() => import('@/pages/super-admin/TambahAnggotaPage').then(m => ({ default: m.TambahAnggotaPage })));
-const EditAnggotaPage = lazy(() => import('@/pages/super-admin/EditAnggotaPage').then(m => ({ default: m.EditAnggotaPage })));
-const HapusAnggotaPage = lazy(() => import('@/pages/super-admin/HapusAnggotaPage').then(m => ({ default: m.HapusAnggotaPage })));
+const PegawaiPage = lazy(() => import('@/pages/super-admin/PegawaiPage').then(m => ({ default: m.PegawaiPage })));
+const TambahPegawaiPage = lazy(() => import('@/pages/super-admin/TambahPegawaiPage').then(m => ({ default: m.TambahPegawaiPage })));
+const EditPegawaiPage = lazy(() => import('@/pages/super-admin/EditPegawaiPage').then(m => ({ default: m.EditPegawaiPage })));
+const HapusPegawaiPage = lazy(() => import('@/pages/super-admin/HapusPegawaiPage').then(m => ({ default: m.HapusPegawaiPage })));
 
 // Absensi sub-pages
 const LihatAbsensiPage = lazy(() => import('@/pages/super-admin/LihatAbsensiPage').then(m => ({ default: m.LihatAbsensiPage })));
@@ -58,10 +58,10 @@ export const SuperAdminRoutes = () => {
         <Route path="dashboard" element={<DashboardPage />} />
 
         {/* Anggota Management */}
-        <Route path="anggota" element={<AnggotaPage />} />
-        <Route path="anggota/tambah" element={<TambahAnggotaPage />} />
-        <Route path="anggota/edit" element={<EditAnggotaPage />} />
-        <Route path="anggota/hapus" element={<HapusAnggotaPage />} />
+        <Route path="pegawai" element={<PegawaiPage />} />
+        <Route path="pegawai/tambah" element={<TambahPegawaiPage />} />
+        <Route path="pegawai/edit" element={<EditPegawaiPage />} />
+        <Route path="pegawai/hapus" element={<HapusPegawaiPage />} />
 
         {/* Absensi */}
         <Route path="absensi" element={<AbsensiPage />} />

@@ -1,11 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { formatDate } from '@/utils/formatter';
 import { useAuth } from '@/hooks/useAuth';
 import { CalendarWidget } from '@/components/ui/CalendarWidget';
 import { PenugasanMap } from '@/components/map/PenugasanMap';
 import { PenugasanCalendar } from '@/components/calendar/PenugasanCalendar';
 import {
-  dummyAjuanSuratTugas,
   dummyPresensiPegawaiLain,
   dummyPresensiPribadi,
   UNIT_COLORS,
@@ -14,6 +13,7 @@ import type { AjuanSuratTugas } from '@/types';
 import { Link } from 'react-router-dom';
 import { usePemetaanFilter } from '@/hooks/usePemetaanFilter';
 import { PemetaanFilterBar } from '@/components/penugasan/PemetaanFilterBar';
+import { useSuratTugas } from '@/hooks/useSuratTugas';
 import {
   FileText,
   CalendarCheck,
@@ -34,12 +34,17 @@ import {
 
 export const DashboardPage = () => {
   const { user } = useAuth();
+  const { tugasList, refreshTugas } = useSuratTugas();
   const todayFormatted = formatDate(new Date().toISOString());
 
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedAjuan, setSelectedAjuan] = useState<AjuanSuratTugas | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [mapViewMode, setMapViewMode] = useState<'peta' | 'kalender'>('peta');
+
+  useEffect(() => {
+    refreshTugas();
+  }, []);
 
   const {
     filterMode, handleModeChange,
@@ -52,7 +57,7 @@ export const DashboardPage = () => {
   } = usePemetaanFilter();
 
   const activeLocations = mapLocations.filter((l) => l.status === 'AKTIF');
-  const recentAjuan = dummyAjuanSuratTugas.slice(0, 8);
+  const recentAjuan = tugasList.slice(0, 8);
   let recentPresensi = dummyPresensiPegawaiLain;
   let displayDateStr = "Hari Ini";
 

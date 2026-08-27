@@ -1,20 +1,21 @@
-import { useState, useMemo } from 'react';
-import { dummyPegawaiList, dummyAjuanSuratTugas, UNIT_COLORS } from '@/data/dummyData';
+import { useState, useMemo, useEffect } from 'react';
+import { UNIT_COLORS } from '@/data/dummyData';
 import { Trophy, ChevronDown, Briefcase, Building2, Table2, Filter } from 'lucide-react';
+import { useSuratTugas } from '@/hooks/useSuratTugas';
+import apiClient from '@/api/client';
 
 type SubTab = 'jabatan' | 'unitkerja' | 'tabelrekap';
 type JenisDinas = 'Semua' | 'Luar' | 'Dalam' | 'Daring' | 'Izin';
 
 // Simulated "jenis dinas" for each surat tugas based on location
 const getJenisDinas = (lokasi: string): string => {
+  if (!lokasi) return 'Luar';
   if (lokasi.includes('Cimahi') || lokasi.includes('Bandung')) return 'Luar';
   if (lokasi.includes('Bogor')) return 'Dalam';
   if (lokasi.includes('Depok')) return 'Daring';
   return 'Luar';
 };
 
-// Get unique jabatan list from pegawai
-const JABATAN_LIST = [...new Set(dummyPegawaiList.map(p => p.jabatan))];
 const UNIT_LIST: string[] = ['RBI', 'Fastingkom', 'Kepeg', 'PM'];
 
 const SUB_TABS: { key: SubTab; label: string; icon: React.ReactNode }[] = [
@@ -54,16 +55,29 @@ export const RekapPenugasanPage = () => {
   const [jenisDinasFilter, setJenisDinasFilter] = useState<JenisDinas>('Semua');
   const [jabatanFilter, setJabatanFilter] = useState<string>('Semua');
   const [unitKerjaFilter, setUnitKerjaFilter] = useState<string>('Semua');
+  const [JABATAN_LIST, setJABATAN_LIST] = useState<string[]>([]);
+  
+  const { tugasList, refreshTugas } = useSuratTugas();
+
+  useEffect(() => {
+    apiClient.get('/users').then(res => {
+      if (res.data) {
+        const uniqueJabatans = [...new Set(res.data.map((p: any) => p.jabatan))];
+        setJABATAN_LIST(uniqueJabatans as string[]);
+      }
+    });
+    refreshTugas();
+  }, []);
 
   // Compute penugasan data
   const penugasanData = useMemo(() => {
     // Each surat tugas -> for each pegawai assigned -> one entry
-    const entries = dummyAjuanSuratTugas
+    const entries = tugasList
       .filter(st => {
-        const matchTahun = st.tanggalMulai.startsWith(String(tahun));
+        const matchTahun = st.tanggalMulai?.startsWith(String(tahun));
         if (!matchTahun) return false;
         if (bulan === 'Semua') return true;
-        const monthStr = st.tanggalMulai.split('-')[1];
+        const monthStr = st.tanggalMulai?.split('-')[1];
         return Number(monthStr) === bulan;
       })
       .flatMap(st =>

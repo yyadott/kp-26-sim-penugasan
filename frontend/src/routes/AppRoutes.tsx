@@ -81,7 +81,7 @@ export const AppRoutes = () => {
       <Route
         path="/user/*"
         element={
-          <ProtectedRoute requiredRole="user">
+          <ProtectedRoute requiredRole="pegawai">
             <UserLayout>
               <UserRoutes />
             </UserLayout>
