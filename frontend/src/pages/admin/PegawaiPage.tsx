@@ -227,8 +227,8 @@ export const PegawaiPage = () => {
                       <tr key={tugas.id} className="hover:bg-slate-50/50 transition-colors">
                         <td className="px-5 py-4 align-top">
                           <div className="font-semibold text-slate-800 text-xs">{tugas.nomorSurat}</div>
-                          <div className="text-[11px] text-slate-500 mt-1 line-clamp-2" title={tugas.perihal}>
-                            {tugas.perihal}
+                          <div className="text-[11px] text-slate-500 mt-1 line-clamp-2" title={tugas.uraianKegiatan}>
+                            {tugas.uraianKegiatan}
                           </div>
                         </td>
                         <td className="px-5 py-4 align-top">
@@ -239,7 +239,7 @@ export const PegawaiPage = () => {
                             </div>
                             <div className="flex items-start gap-1.5">
                               <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                              <span className="line-clamp-2">{tugas.lokasiPenugasan}</span>
+                              <span className="line-clamp-2">{tugas.tempat}</span>
                             </div>
                           </div>
                         </td>

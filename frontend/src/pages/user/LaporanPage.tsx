@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useSuratTugas } from '@/hooks/useSuratTugas';
-import { ChartNoAxesCombined, UploadCloud, FileText, CheckCircle2, Clock, X, FileUp, Send } from 'lucide-react';
+import { ChartNoAxesCombined, UploadCloud, FileText, CheckCircle2, FileUp, Send } from 'lucide-react';
 
 export const LaporanPage = () => {
   const location = useLocation();
@@ -28,7 +28,7 @@ export const LaporanPage = () => {
   // For the user, only show their own reports
   const myReports = reports.filter(r => r.pegawaiId === user?.id);
 
-  const activeTasks = tugasList.filter(t => t.status === 'SURAT_TERBIT' || t.status === 'SELESAI');
+  const activeTasks = tugasList.filter(t => t.status === 'SURAT_TERBIT');
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -53,7 +53,7 @@ export const LaporanPage = () => {
         id: Date.now().toString(),
         taskId: selectedTaskId,
         nomorSurat: task?.nomorSurat || '-',
-        perihal: task?.perihal || '-',
+        uraianKegiatan: task?.uraianKegiatan || '-',
         tanggalUpload: new Date().toISOString().split('T')[0],
         fileName: selectedFile.name,
         status: 'TERKIRIM',
@@ -110,7 +110,7 @@ export const LaporanPage = () => {
                 >
                   <option value="">-- Pilih Penugasan --</option>
                   {activeTasks.map(t => (
-                    <option key={t.id} value={t.id}>{t.nomorSurat} - {t.perihal}</option>
+                    <option key={t.id} value={t.id}>{t.nomorSurat} - {t.uraianKegiatan}</option>
                   ))}
                 </select>
                 {activeTasks.length === 0 && (
@@ -212,7 +212,7 @@ export const LaporanPage = () => {
                       <tr key={report.id} className="hover:bg-slate-50 transition-colors">
                         <td className="px-5 py-4">
                           <p className="font-mono text-[11px] font-bold text-blue-700">{report.nomorSurat}</p>
-                          <p className="font-semibold text-slate-800 mt-0.5 line-clamp-1">{report.perihal}</p>
+                          <p className="font-semibold text-slate-800 mt-0.5 line-clamp-1">{report.uraianKegiatan}</p>
                         </td>
                         <td className="px-5 py-4">
                           <div className="flex items-center gap-2">

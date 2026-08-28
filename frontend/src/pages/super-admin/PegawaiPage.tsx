@@ -54,7 +54,7 @@ export const PegawaiPage = () => {
                 className="w-full appearance-none px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer"
               >
                 <option>Semua Unit Kerja</option>
-                <option>RBI</option>
+                
                 <option>Fastingkom</option>
                 <option>Kepeg</option>
                 <option>PM</option>

@@ -89,7 +89,7 @@ export const ApprovalTugasPage = () => {
 
   const displayData = pendingApprovals.filter(t => 
     t.nomorSurat.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    t.perihal.toLowerCase().includes(searchQuery.toLowerCase())
+    (t.uraianKegiatan || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   // Group data by Month and Year
@@ -315,8 +315,8 @@ export const ApprovalTugasPage = () => {
                             title="Klik untuk melihat pratinjau surat tugas"
                           >
                             <span className="font-semibold text-slate-800 text-sm group-hover/surat:text-blue-700">{tugas.nomorSurat}</span>
-                            <span className="text-slate-600 text-xs line-clamp-2" title={tugas.perihal}>
-                              {tugas.perihal}
+                            <span className="text-slate-600 text-xs line-clamp-2" title={tugas.uraianKegiatan}>
+                              {tugas.uraianKegiatan}
                             </span>
                             <div className="flex items-center gap-1 mt-1 text-[11px] text-slate-500">
                               <FileText className="w-3 h-3 group-hover/surat:text-blue-500" />
@@ -376,7 +376,7 @@ export const ApprovalTugasPage = () => {
                             </div>
                             <div className="flex items-start gap-1.5">
                               <MapPin className="w-4 h-4 text-slate-400 shrink-0" />
-                              <span className="line-clamp-2">{tugas.lokasiPenugasan}</span>
+                              <span className="line-clamp-2">{tugas.tempat}</span>
                             </div>
                           </div>
                         </td>
@@ -701,9 +701,9 @@ export const ApprovalTugasPage = () => {
                   <table className="w-full text-sm sm:text-base">
                     <tbody>
                       <tr className="border-b border-slate-100 last:border-0">
-                        <td className="py-3 pr-4 font-semibold w-32 sm:w-40 align-top text-slate-700">Perihal</td>
+                        <td className="py-3 pr-4 font-semibold w-32 sm:w-40 align-top text-slate-700">Uraian Kegiatan</td>
                         <td className="py-3 px-2 align-top text-slate-500">:</td>
-                        <td className="py-3 align-top text-justify font-medium text-slate-800">{selectedSurat.perihal}</td>
+                        <td className="py-3 align-top text-justify font-medium text-slate-800">{selectedSurat.uraianKegiatan}</td>
                       </tr>
                       <tr className="border-b border-slate-100 last:border-0">
                         <td className="py-3 pr-4 font-semibold align-top text-slate-700">Waktu</td>
@@ -716,7 +716,7 @@ export const ApprovalTugasPage = () => {
                         <td className="py-3 pr-4 font-semibold align-top text-slate-700">Lokasi</td>
                         <td className="py-3 px-2 align-top text-slate-500">:</td>
                         <td className="py-3 align-top">
-                          <span className="font-semibold text-slate-800">{selectedSurat.lokasiPenugasan}</span><br/>
+                          <span className="font-semibold text-slate-800">{selectedSurat.tempat}</span><br/>
                           <span className="text-slate-500 text-sm mt-1 inline-block">{selectedSurat.lokasiSpesifik}</span>
                         </td>
                       </tr>

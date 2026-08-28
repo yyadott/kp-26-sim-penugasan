@@ -82,7 +82,7 @@ export const TugasPage = () => {
 
   useEffect(() => {
     if (urlTaskId) {
-      const task = ajuanList.find(t => t.id === urlTaskId);
+      const task = ajuanList.find((t: any) => t.id === urlTaskId);
       if (task) {
         setSelectedAjuan(task);
         setIsModalOpen(true);
@@ -105,12 +105,12 @@ export const TugasPage = () => {
     const matchesStatus = selectedStatuses.length === 0 || selectedStatuses.includes(item.status);
     const matchesApplicant = selectedApplicants.length === 0 || selectedApplicants.includes(item.pengaju.nama);
     const matchesAssignee = selectedAssignees.length === 0 || item.pegawaiDitugaskan.some((pegawai) => selectedAssignees.includes(pegawai.nama));
-    const matchesLocation = selectedLocations.length === 0 || selectedLocations.includes(item.lokasiPenugasan);
+    const matchesLocation = selectedLocations.length === 0 || selectedLocations.includes(item.tempat);
     const matchesSpecificLocation = selectedSpecificLocations.length === 0 || selectedSpecificLocations.includes(item.lokasiSpesifik || '');
     return matchesUnit && matchesStatus && matchesApplicant && matchesAssignee && matchesLocation && matchesSpecificLocation;
   });
 
-  const unitOptions: UnitKerjaType[] = ['RBI', 'Fastingkom', 'Kepeg', 'PM'];
+  const unitOptions: UnitKerjaType[] = ['Kepeg', 'Fastingkom', 'PM'];
   const statusOptions = [
     { value: 'SURAT_TERBIT', label: 'Diapprove' },
     { value: 'VERIFIKASI_SUBBAGIAN', label: 'Diproses' },
@@ -120,7 +120,7 @@ export const TugasPage = () => {
   ];
   const applicantOptions = Array.from(new Map(ajuanList.map((item) => [item.pengaju.nama, item.pengaju.nama]))).map(([value, label]) => ({ value, label }));
   const assigneeOptions = Array.from(new Map(ajuanList.flatMap((item) => item.pegawaiDitugaskan).map((pegawai) => [pegawai.nama, pegawai.nama]))).map(([value, label]) => ({ value, label }));
-  const locationOptions = Array.from(new Set(ajuanList.map((item) => item.lokasiPenugasan))).map((value) => ({ value, label: value }));
+  const locationOptions = Array.from(new Set(ajuanList.map((item) => item.tempat))).map((value) => ({ value, label: value }));
   const specificLocationOptions = Array.from(new Set(ajuanList.map((item) => item.lokasiSpesifik).filter(Boolean) as string[])).map((value) => ({ value, label: value }));
 
   const toggleUnitFilter = (unit: UnitKerjaType) => {
@@ -144,7 +144,8 @@ export const TugasPage = () => {
     setOpenFilter(null);
   };
 
-  const formatLokasiKhusus = (lokasi: string) => {
+  const formatLokasiKhusus = (lokasi?: string) => {
+    if (!lokasi) return '';
     const cleaned = lokasi.trim();
     if (!cleaned) return '';
     let result = cleaned.replace(/,?\s*jawa barat$/i, '').trim();
@@ -157,8 +158,16 @@ export const TugasPage = () => {
   };
 
   const formatTanggal = (tanggal: string) => {
-    const [tahun, bulan, hari] = tanggal.split('-');
-    return `${hari}/${bulan}/${tahun}`;
+    try {
+      const date = new Date(tanggal);
+      if (isNaN(date.getTime())) return tanggal;
+      const d = String(date.getDate()).padStart(2, '0');
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const y = date.getFullYear();
+      return `${d}/${m}/${y}`;
+    } catch {
+      return tanggal;
+    }
   };
 
   const formatRentangTanggal = (tanggalMulai: string, tanggalSelesai: string) => {
@@ -385,7 +394,7 @@ export const TugasPage = () => {
                         <span className="font-mono text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 block w-fit mb-1">
                           {item.nomorSurat}
                         </span>
-                        <p className="font-semibold text-slate-800 whitespace-nowrap">{item.perihal}</p>
+                        <p className="font-semibold text-slate-800 whitespace-nowrap">{item.uraianKegiatan}</p>
                       </td>
                       <td className="px-6 py-4">
                         <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold ${unitColor.bg} ${unitColor.text} mb-1`}>
@@ -420,7 +429,7 @@ export const TugasPage = () => {
                         </p>
                         <div className="flex items-center gap-1 text-slate-500 text-xs mt-0.5">
                           <MapPin className="w-3.5 h-3.5 text-rose-500" />
-                          <span>{formatLokasiKhusus(item.lokasiPenugasan)}</span>
+                          <span>{formatLokasiKhusus(item.tempat)}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4 min-w-[190px] align-top">
@@ -525,8 +534,8 @@ export const TugasPage = () => {
                     <span className="text-[11px] font-mono font-bold text-blue-700">{item.nomorSurat}</span>
                     {getStatusBadge(item.status)}
                   </div>
-                  <h4 className="font-semibold text-slate-800 text-xs line-clamp-1">{item.perihal}</h4>
-                  <p className="text-[11px] text-slate-500 mt-1">{item.unitKerja} • {item.lokasiPenugasan}</p>
+                  <h4 className="font-semibold text-slate-800 text-xs line-clamp-1">{item.uraianKegiatan}</h4>
+                  <p className="text-[11px] text-slate-500 mt-1">{item.unitKerja} • {item.tempat}</p>
                 </div>
               ))}
             </div>
@@ -541,7 +550,7 @@ export const TugasPage = () => {
                     <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded border border-blue-200">
                       {selectedAjuan.nomorSurat}
                     </span>
-                    <h3 className="text-lg font-bold text-slate-800 mt-2">{selectedAjuan.perihal}</h3>
+                    <h3 className="text-lg font-bold text-slate-800 mt-2">{selectedAjuan.uraianKegiatan}</h3>
                     <p className="text-xs text-slate-500 mt-1">
                       Pengaju: <span className="font-semibold text-slate-700">{selectedAjuan.pengaju.nama}</span> ({selectedAjuan.unitKerja})
                     </p>

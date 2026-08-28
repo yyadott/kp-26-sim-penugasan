@@ -52,7 +52,7 @@ export const AbsensiPage = () => {
         pegawaiId: user?.id || 'pegawai',
         nama: user?.nama || 'Anggota',
         nip: user?.nip || '-',
-        unitKerja: user?.unitKerja || 'RBI',
+        unitKerja: user?.unitKerja |,
         tanggal,
         jamMasuk: waktu,
         lokasiPresensiMasuk: lokasi,

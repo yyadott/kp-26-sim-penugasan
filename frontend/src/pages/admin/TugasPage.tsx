@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { dummyAjuanSuratTugas, dummyPegawaiList, getUnitColor } from '@/data/dummyData';
+import { dummyAjuanSuratTugas, dummyPegawaiList } from '@/data/dummyData';
 import { FileText, Calendar, Activity, ChevronDown, FileCheck, X, Info } from 'lucide-react';
 import { format, isToday, isThisWeek, isThisMonth } from 'date-fns';
 import { id } from 'date-fns/locale';
 import SuratTugasTemplate from '@/components/SuratTugasTemplate';
 import { usePokja } from '@/hooks/usePokja';
+import { useSuratTugas } from '@/hooks/useSuratTugas';
 import { useSearchParams } from 'react-router-dom';
+
 
 // Utility for formatting date
 const formatDate = (dateStr: string) => format(new Date(dateStr), 'dd MMMM yyyy', { locale: id });
@@ -63,9 +65,10 @@ const StatusBadge = ({ status }: { status: string }) => {
 
 // 1. Pegawai Penugasan (Tabel Pegawai dan Tugas Aktifnya)
 const PegawaiPenugasanTab = () => {
-  const activeTasks = dummyAjuanSuratTugas.filter(t => t.status === 'SURAT_TERBIT' || t.status === 'PERSETUJUAN_PIMPINAN');
+  const { tugasList } = useSuratTugas();
+  const activeTasks = tugasList.filter((t: any) => t.status === 'SURAT_TERBIT' || t.status === 'PERSETUJUAN_PIMPINAN');
   const pegawaiWithTasks = dummyPegawaiList.map(pegawai => {
-    const tasks = activeTasks.filter(t => t.pegawaiDitugaskan.some(p => p.id === pegawai.id));
+    const tasks = activeTasks.filter((t: any) => t.pegawaiDitugaskan.some((p: any) => p.id === pegawai.id));
     return { ...pegawai, activeTasks: tasks };
   }).filter(p => p.activeTasks.length > 0);
 
@@ -95,7 +98,7 @@ const PegawaiPenugasanTab = () => {
               <td className="px-6 py-4"><span className="text-blue-700 bg-blue-50 px-2 py-1 rounded-md text-xs font-medium">{p.unitKerja}</span></td>
               <td className="px-6 py-4">
                 <ul className="list-disc list-inside text-slate-600 space-y-1">
-                  {p.activeTasks.map(t => <li key={t.id} className="truncate max-w-xs" title={t.perihal}>{t.nomorSurat}</li>)}
+                  {p.activeTasks.map((t: any) => <li key={t.id} className="truncate max-w-xs" title={t.uraianKegiatan}>{t.nomorSurat}</li>)}
                 </ul>
               </td>
               <td className="px-6 py-4 font-semibold text-slate-700">{p.activeTasks.length} Tugas</td>
@@ -110,8 +113,8 @@ const PegawaiPenugasanTab = () => {
 
 // Tooltip component untuk daftar pegawai (Tampilan Awan)
 const PegawaiTooltip = ({ pegawaiList }: { pegawaiList: typeof dummyPegawaiList }) => {
-  const { pokjas } = usePokja();
-  const unitOptions = pokjas.map(p => p.kode);
+  
+  
   const [isOpen, setIsOpen] = useState(false);
 
   if (!pegawaiList || pegawaiList.length === 0) return <span className="text-slate-400">-</span>;
@@ -174,11 +177,11 @@ const GenericTaskTable = ({ tasks, emptyMsg, onRowClick }: { tasks: typeof dummy
             onClick={() => onRowClick && onRowClick(t.id)}
           >
             <td className="px-6 py-4 font-medium text-slate-800">{t.nomorSurat}</td>
-            <td className="px-6 py-4 text-slate-600 max-w-xs truncate" title={t.perihal}>{t.perihal}</td>
+            <td className="px-6 py-4 text-slate-600 max-w-xs truncate" title={t.uraianKegiatan}>{t.uraianKegiatan}</td>
             <td className="px-6 py-4">
               <div className="flex flex-col items-start gap-1.5">
-                <span className="text-slate-600">{formatLokasiDisplay(t.lokasiPenugasan)}</span>
-                <JenisDinasBadge jenis={getJenisDinas(t.lokasiPenugasan)} />
+                <span className="text-slate-600">{formatLokasiDisplay(t.tempat)}</span>
+                <JenisDinasBadge jenis={getJenisDinas(t.tempat)} />
               </div>
             </td>
             <td className="px-6 py-4 text-slate-600">{formatDate(t.tanggalMulai)}</td>
@@ -211,7 +214,7 @@ const GenericReportTable = ({ reports, emptyMsg }: { reports: any[], emptyMsg: s
         {reports.map(r => (
           <tr key={r.id} className="hover:bg-slate-50 transition">
             <td className="px-6 py-4 font-medium text-blue-700 font-mono text-xs">{r.nomorSurat}</td>
-            <td className="px-6 py-4 text-slate-800 font-semibold max-w-xs truncate" title={r.perihal}>{r.perihal}</td>
+            <td className="px-6 py-4 text-slate-800 font-semibold max-w-xs truncate" title={r.uraianKegiatan}>{r.uraianKegiatan}</td>
             <td className="px-6 py-4">
               <div className="flex items-center gap-2">
                 <FileText className="w-4 h-4 text-slate-400" />
@@ -320,11 +323,12 @@ const LaporanPenugasanTab = () => {
 
 // 3. Periode Penugasan (Timeline/Date view)
 const PeriodePenugasanTab = () => {
+  const { tugasList } = useSuratTugas();
   const currentDate = new Date();
   const [selectedMonth, setSelectedMonth] = useState<string>(String(currentDate.getMonth() + 1));
   const [selectedYear, setSelectedYear] = useState<string>(String(currentDate.getFullYear()));
 
-  const filteredTasks = dummyAjuanSuratTugas.filter(t => {
+  const filteredTasks = tugasList.filter(t => {
     const taskDate = new Date(t.tanggalMulai);
     const matchMonth = selectedMonth === 'ALL' || String(taskDate.getMonth() + 1) === selectedMonth;
     const matchYear = selectedYear === 'ALL' || String(taskDate.getFullYear()) === selectedYear;
@@ -349,7 +353,7 @@ const PeriodePenugasanTab = () => {
     { value: '12', label: 'Desember' },
   ];
 
-  const availableYears = Array.from(new Set(dummyAjuanSuratTugas.map(t => new Date(t.tanggalMulai).getFullYear()))).sort().reverse();
+  const availableYears = Array.from(new Set(tugasList.map((t: any) => new Date(t.tanggalMulai).getFullYear()))).sort().reverse();
   const years = ['ALL', ...availableYears.map(String)];
   if (!availableYears.includes(currentDate.getFullYear()) && !years.includes(String(currentDate.getFullYear()))) {
     years.splice(1, 0, String(currentDate.getFullYear()));
@@ -383,6 +387,7 @@ const PeriodePenugasanTab = () => {
 
 // 4. Pivot Penugasan
 const PivotPenugasanTab = () => {
+  const { tugasList } = useSuratTugas();
   const { pokjas } = usePokja();
   const units = pokjas.map(p => p.kode);
   const statuses = ['DRAFT', 'VERIFIKASI_SUBBAGIAN', 'PERSETUJUAN_PIMPINAN', 'SURAT_TERBIT', 'DITOLAK'];
@@ -399,13 +404,13 @@ const PivotPenugasanTab = () => {
         </thead>
         <tbody className="divide-y divide-slate-200">
           {units.map(unit => {
-            const unitTasks = dummyAjuanSuratTugas.filter(t => t.unitKerja === unit);
+            const unitTasks = tugasList.filter((t: any) => t.unitKerja === unit);
             return (
               <tr key={unit} className="hover:bg-slate-50">
                 <td className="px-6 py-4 font-medium text-left border-r border-slate-200">{unit}</td>
                 {statuses.map(status => (
                   <td key={status} className="px-4 py-4 border-r border-slate-200 text-slate-600">
-                    {unitTasks.filter(t => t.status === status).length || '-'}
+                    {unitTasks.filter((t: any) => t.status === status).length || '-'}
                   </td>
                 ))}
                 <td className="px-6 py-4 font-bold bg-blue-50/50 text-blue-800">{unitTasks.length}</td>
@@ -420,14 +425,15 @@ const PivotPenugasanTab = () => {
 
 // 5. Penugasan Berlangsung
 const PenugasanBerlangsungTab = () => {
+  const { tugasList } = useSuratTugas();
   const [filter, setFilter] = useState<'ALL' | 'TODAY' | 'WEEK' | 'MONTH'>('ALL');
   const [jenisFilter, setJenisFilter] = useState<'ALL' | 'Luar' | 'Dalam'>('ALL');
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const filteredTasks = dummyAjuanSuratTugas.filter(t => {
+  const filteredTasks = tugasList.filter(t => {
     if (t.status !== 'SURAT_TERBIT') return false;
 
-    const jenis = getJenisDinas(t.lokasiPenugasan);
+    const jenis = getJenisDinas(t.tempat);
     if (jenisFilter !== 'ALL' && jenis !== jenisFilter) return false;
 
     // Check if the current date is within the start and end dates
@@ -499,25 +505,34 @@ const PenugasanBerlangsungTab = () => {
 };
 
 // 6. Draft Penugasan (Juga menampilkan yang sedang proses Approval)
-const DraftPenugasanTab = () => (
-  <GenericTaskTable
-    tasks={dummyAjuanSuratTugas.filter(t => ['DRAFT', 'VERIFIKASI_SUBBAGIAN', 'PERSETUJUAN_PIMPINAN'].includes(t.status))}
-    emptyMsg="Tidak ada draft atau surat penugasan yang sedang dalam proses approval."
-  />
-);
+const DraftPenugasanTab = () => {
+  const { tugasList } = useSuratTugas();
+  return (
+    <GenericTaskTable
+      tasks={tugasList.filter((t: any) => ['DRAFT', 'VERIFIKASI_SUBBAGIAN', 'PERSETUJUAN_PIMPINAN'].includes(t.status))}
+      emptyMsg="Tidak ada draft atau surat penugasan yang sedang dalam proses approval."
+    />
+  );
+};
 
 // 6. Blokir Penugasan (Ditolak)
-const BlokirPenugasanTab = () => <GenericTaskTable tasks={dummyAjuanSuratTugas.filter(t => t.status === 'DITOLAK')} emptyMsg="Tidak ada penugasan yang diblokir atau ditolak." />;
+const BlokirPenugasanTab = () => {
+  const { tugasList } = useSuratTugas();
+  return (
+    <GenericTaskTable tasks={tugasList.filter((t: any) => t.status === 'DITOLAK')} emptyMsg="Tidak ada penugasan yang diblokir atau ditolak." />
+  );
+};
 
 // Removed JPPenugasanTab
 
 // 8. Rekap Penugasan (Dashboard)
 const RekapPenugasanTab = () => {
+  const { tugasList } = useSuratTugas();
   const currentDate = new Date();
   const [selectedMonth, setSelectedMonth] = useState<string>(String(currentDate.getMonth() + 1));
   const [selectedYear, setSelectedYear] = useState<string>(String(currentDate.getFullYear()));
 
-  const filteredTasks = dummyAjuanSuratTugas.filter(t => {
+  const filteredTasks = tugasList.filter(t => {
     const taskDate = new Date(t.tanggalMulai);
     const matchMonth = selectedMonth === 'ALL' || String(taskDate.getMonth() + 1) === selectedMonth;
     const matchYear = selectedYear === 'ALL' || String(taskDate.getFullYear()) === selectedYear;
@@ -526,9 +541,9 @@ const RekapPenugasanTab = () => {
 
   const counts = {
     total: filteredTasks.length,
-    selesai: filteredTasks.filter(t => t.status === 'SURAT_TERBIT').length,
-    proses: filteredTasks.filter(t => t.status === 'VERIFIKASI_SUBBAGIAN' || t.status === 'PERSETUJUAN_PIMPINAN').length,
-    draft: filteredTasks.filter(t => t.status === 'DRAFT').length
+    selesai: filteredTasks.filter((t: any) => t.status === 'SURAT_TERBIT').length,
+    proses: filteredTasks.filter((t: any) => t.status === 'VERIFIKASI_SUBBAGIAN' || t.status === 'PERSETUJUAN_PIMPINAN').length,
+    draft: filteredTasks.filter((t: any) => t.status === 'DRAFT').length
   };
 
   const months = [
@@ -547,7 +562,7 @@ const RekapPenugasanTab = () => {
     { value: '12', label: 'Desember' },
   ];
 
-  const availableYears = Array.from(new Set(dummyAjuanSuratTugas.map(t => new Date(t.tanggalMulai).getFullYear()))).sort().reverse();
+  const availableYears = Array.from(new Set(tugasList.map((t: any) => new Date(t.tanggalMulai).getFullYear()))).sort().reverse();
   const years = ['ALL', ...availableYears.map(String)];
 
   if (!availableYears.includes(currentDate.getFullYear()) && !years.includes(String(currentDate.getFullYear()))) {
@@ -609,22 +624,23 @@ const RekapPenugasanTab = () => {
 };
 
 
-import { useSearchParams } from 'react-router-dom';
+
 
 export const TugasPage = () => {
+  const { tugasList } = useSuratTugas();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'rekap';
   const taskId = searchParams.get('taskId');
-  const [selectedAjuan, setSelectedAjuan] = useState<typeof dummyAjuanSuratTugas[0] | null>(null);
+  const [selectedAjuan, setSelectedAjuan] = useState<any | null>(null);
 
   useEffect(() => {
     if (taskId) {
-      const task = dummyAjuanSuratTugas.find(t => t.id === taskId);
+      const task = tugasList.find((t: any) => t.id === taskId);
       if (task) setSelectedAjuan(task);
     } else {
       setSelectedAjuan(null);
     }
-  }, [taskId]);
+  }, [taskId, tugasList]);
 
   const closeModal = () => {
     setSelectedAjuan(null);

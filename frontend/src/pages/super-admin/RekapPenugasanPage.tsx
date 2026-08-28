@@ -17,7 +17,7 @@ const getJenisDinas = (lokasi: string): string => {
 
 // Get unique jabatan list from pegawai
 const JABATAN_LIST = [...new Set(dummyPegawaiList.map(p => p.jabatan))];
-const UNIT_LIST: string[] = ['RBI', 'Fastingkom', 'Kepeg', 'PM'];
+const UNIT_LIST: string[] = ['Kepeg', 'Fastingkom', 'PM'];
 
 const SUB_TABS: { key: SubTab; label: string; icon: React.ReactNode }[] = [
   { key: 'jabatan', label: 'Kelompok Jabatan', icon: <Briefcase className="w-4 h-4" /> },
@@ -76,7 +76,7 @@ export const RekapPenugasanPage = () => {
       .flatMap(st =>
         st.pegawaiDitugaskan.map(peg => ({
           pegawai: peg,
-          jenisDinas: getJenisDinas(st.lokasiPenugasan),
+          jenisDinas: getJenisDinas(st.tempat),
           suratTugas: st,
         }))
       );

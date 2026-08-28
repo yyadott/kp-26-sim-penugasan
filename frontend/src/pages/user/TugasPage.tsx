@@ -47,8 +47,8 @@ export const TugasPage = () => {
   // Modal Form Ajuan Baru
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [formData, setFormData] = useState({
-    perihal: '',
-    unitKerja: 'RBI' as UnitKerjaType,
+    uraianKegiatan: '',
+    unitKerja: 'Kepeg' as UnitKerjaType,
     pegawaiIds: [dummyPegawaiList[0].id],
     tanggalMulai: '2026-08-01',
     tanggalSelesai: '2026-08-03',
@@ -109,7 +109,7 @@ export const TugasPage = () => {
     // Only show tasks where the logged in user is the pengaju or one of the assignees
     const isRelatedToUser = 
       item.pengaju?.id === user?.id || 
-      item.pegawaiDitugaskan.some(p => p.id === user?.id);
+      item.pegawaiDitugaskan.some((p: any) => p.id === user?.id);
 
     if (!isRelatedToUser) return false;
 
@@ -117,7 +117,7 @@ export const TugasPage = () => {
     const matchesStatus = selectedStatuses.length === 0 || selectedStatuses.includes(item.status);
     const matchesApplicant = selectedApplicants.length === 0 || selectedApplicants.includes(item.pengaju.nama);
     const matchesAssignee = selectedAssignees.length === 0 || item.pegawaiDitugaskan.some((pegawai) => selectedAssignees.includes(pegawai.nama));
-    const matchesLocation = selectedLocations.length === 0 || selectedLocations.includes(item.lokasiPenugasan);
+    const matchesLocation = selectedLocations.length === 0 || selectedLocations.includes(item.tempat);
     const matchesSpecificLocation = selectedSpecificLocations.length === 0 || selectedSpecificLocations.includes(item.lokasiSpesifik || '');
     
     const itemDate = new Date(item.tanggalMulai);
@@ -132,7 +132,8 @@ export const TugasPage = () => {
 
 
 
-  const formatLokasiKhusus = (lokasi: string) => {
+  const formatLokasiKhusus = (lokasi?: string) => {
+    if (!lokasi) return '';
     const cleaned = lokasi.trim();
     if (!cleaned) return '';
     let result = cleaned.replace(/,?\s*jawa barat$/i, '').trim();
@@ -145,8 +146,16 @@ export const TugasPage = () => {
   };
 
   const formatTanggal = (tanggal: string) => {
-    const [tahun, bulan, hari] = tanggal.split('-');
-    return `${hari}/${bulan}/${tahun}`;
+    try {
+      const date = new Date(tanggal);
+      if (isNaN(date.getTime())) return tanggal;
+      const d = String(date.getDate()).padStart(2, '0');
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const y = date.getFullYear();
+      return `${d}/${m}/${y}`;
+    } catch {
+      return tanggal;
+    }
   };
 
   const formatRentangTanggal = (tanggalMulai: string, tanggalSelesai: string) => {
@@ -169,7 +178,7 @@ export const TugasPage = () => {
     try {
       await addTugas({
         nomorSurat: newNomor,
-        perihal: formData.perihal,
+        uraianKegiatan: formData.uraianKegiatan,
         pengaju_id: dummyPegawaiList[0].id,
         unitKerja: formData.unitKerja,
         tanggalMulai: formData.tanggalMulai,
@@ -193,7 +202,7 @@ export const TugasPage = () => {
           to_email: pegawai.email || 'user@example.com',
           to_name: pegawai.nama,
           nomor_surat: newNomor,
-          perihal: formData.perihal,
+          uraianKegiatan: formData.uraianKegiatan,
           tanggal_mulai: formData.tanggalMulai,
           tanggal_selesai: formData.tanggalSelesai,
           lokasi: lokasiPenugasan,
@@ -206,8 +215,8 @@ export const TugasPage = () => {
 
     setIsFormModalOpen(false);
     setFormData({
-      perihal: '',
-      unitKerja: 'RBI',
+      uraianKegiatan: '',
+      unitKerja: 'Kepeg',
       pegawaiIds: [dummyPegawaiList[0].id],
       tanggalMulai: '2026-08-01',
       tanggalSelesai: '2026-08-03',
@@ -223,7 +232,7 @@ export const TugasPage = () => {
   };
 
   const getStatusBadge = (status: AjuanSuratTugas['status']) => {
-    const statusIsApproved = status === 'SURAT_TERBIT';
+    const statusIsApproved = status === ('SURAT_TERBIT' as any);
     const statusIsRejected = status === 'DITOLAK';
     const label = statusIsApproved ? 'Diapprove' : statusIsRejected ? 'Dibatalkan' : 'Diproses';
     const classes = statusIsApproved
@@ -321,7 +330,7 @@ export const TugasPage = () => {
                           className="cursor-pointer hover:text-blue-600 font-semibold text-slate-800 whitespace-nowrap transition-colors"
                           title="Klik untuk melihat dokumen surat"
                         >
-                          {item.perihal}
+                          {item.uraianKegiatan}
                         </p>
                       </td>
                       <td className="px-6 py-4">
@@ -354,7 +363,7 @@ export const TugasPage = () => {
                         </p>
                         <div className="flex items-center gap-1 text-slate-500 text-xs mt-0.5">
                           <MapPin className="w-3.5 h-3.5 text-rose-500" />
-                          <span>{formatLokasiKhusus(item.lokasiPenugasan)}</span>
+                          <span>{formatLokasiKhusus(item.tempat)}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4 min-w-[190px] align-top">
@@ -369,7 +378,7 @@ export const TugasPage = () => {
                           <Download className="w-3.5 h-3.5" />
                           Unduh
                         </a>
-                        {(item.status === 'SURAT_TERBIT' || item.status === 'SELESAI') && (
+                        {(item.status === ('SURAT_TERBIT' as any) || item.status === ('SURAT_TERBIT' as any)) && (
                           <Link
                             to="/pegawai/tugas/laporan"
                             state={{ selectedTaskId: item.id }}
@@ -414,8 +423,8 @@ export const TugasPage = () => {
                     <span className="text-[11px] font-mono font-bold text-blue-700">{item.nomorSurat}</span>
                     {getStatusBadge(item.status)}
                   </div>
-                  <h4 className="font-semibold text-slate-800 text-xs line-clamp-1">{item.perihal}</h4>
-                  <p className="text-[11px] text-slate-500 mt-1">{item.unitKerja} • {item.lokasiPenugasan}</p>
+                  <h4 className="font-semibold text-slate-800 text-xs line-clamp-1">{item.uraianKegiatan}</h4>
+                  <p className="text-[11px] text-slate-500 mt-1">{item.unitKerja} • {item.tempat}</p>
                 </div>
               ))}
             </div>
@@ -430,7 +439,7 @@ export const TugasPage = () => {
                     <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded border border-blue-200">
                       {selectedAjuan.nomorSurat}
                     </span>
-                    <h3 className="text-lg font-bold text-slate-800 mt-2">{selectedAjuan.perihal}</h3>
+                    <h3 className="text-lg font-bold text-slate-800 mt-2">{selectedAjuan.uraianKegiatan}</h3>
                     <p className="text-xs text-slate-500 mt-1">
                       Pengaju: <span className="font-semibold text-slate-700">{selectedAjuan.pengaju.nama}</span> ({selectedAjuan.unitKerja})
                     </p>
@@ -606,7 +615,7 @@ export const TugasPage = () => {
                            <tr className="align-top">
                              <td className="w-40 py-1.5 font-medium">Perihal</td>
                              <td className="w-4 py-1.5">:</td>
-                             <td className="py-1.5 font-bold">{previewAjuan.perihal}</td>
+                             <td className="py-1.5 font-bold">{previewAjuan.uraianKegiatan}</td>
                            </tr>
                            <tr className="align-top">
                              <td className="w-40 py-1.5 font-medium">Tanggal Pelaksanaan</td>
@@ -616,7 +625,7 @@ export const TugasPage = () => {
                            <tr className="align-top">
                              <td className="w-40 py-1.5 font-medium">Lokasi Penugasan</td>
                              <td className="w-4 py-1.5">:</td>
-                             <td className="py-1.5">{previewAjuan.lokasiSpesifik}, {previewAjuan.lokasiPenugasan}</td>
+                             <td className="py-1.5">{previewAjuan.lokasiSpesifik}, {previewAjuan.tempat}</td>
                            </tr>
                            <tr className="align-top">
                              <td className="w-40 py-1.5 font-medium">Agenda / Deskripsi</td>
@@ -684,7 +693,7 @@ export const TugasPage = () => {
                 <span className="font-mono text-xs font-bold text-blue-700">{selectedAjuan.nomorSurat}</span>
                 {getStatusBadge(selectedAjuan.status)}
               </div>
-              <h4 className="font-bold text-slate-900 text-sm">{selectedAjuan.perihal}</h4>
+              <h4 className="font-bold text-slate-900 text-sm">{selectedAjuan.uraianKegiatan}</h4>
               <p className="text-xs text-slate-600">{selectedAjuan.deskripsi}</p>
             </div>
 
@@ -752,8 +761,8 @@ export const TugasPage = () => {
                   type="text"
                   required
                   placeholder="Contoh: Pendampingan Monitoring Posko Kesehatan..."
-                  value={formData.perihal}
-                  onChange={(e) => setFormData({ ...formData, perihal: e.target.value })}
+                  value={formData.uraianKegiatan}
+                  onChange={(e) => setFormData({ ...formData, uraianKegiatan: e.target.value })}
                   className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 />
               </div>
@@ -766,7 +775,7 @@ export const TugasPage = () => {
                     onChange={(e) => setFormData({ ...formData, unitKerja: e.target.value as UnitKerjaType })}
                     className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                   >
-                    <option value="RBI">RBI</option>
+                    
                     <option value="Fastingkom">Fastingkom</option>
                     <option value="Kepeg">Kepeg</option>
                     <option value="PM">PM</option>

@@ -31,12 +31,12 @@ export const DashboardPage = () => {
       id: `anggota-${item.id}`,
       suratTugasId: item.id,
       nomorSurat: item.nomorSurat,
-      perihal: item.perihal,
+      uraianKegiatan: item.uraianKegiatan,
       pegawai: user || item.pengaju,
       unitKerja: item.unitKerja,
-      lokasi: item.lokasiPenugasan,
-      namaLokasi: item.lokasiSpesifik || item.lokasiPenugasan,
-      alamatLengkap: [item.lokasiSpesifik, item.lokasiPenugasan].filter(Boolean).join(', '),
+      lokasi: item.tempat,
+      namaLokasi: item.lokasiSpesifik || item.tempat,
+      alamatLengkap: [item.lokasiSpesifik, item.tempat].filter(Boolean).join(', '),
       koordinat: item.koordinat,
       tanggalMulai: item.tanggalMulai,
       tanggalSelesai: item.tanggalSelesai,
@@ -94,7 +94,7 @@ export const DashboardPage = () => {
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="flex items-center gap-2 text-sm font-semibold text-slate-600">
             <MapPin className="h-4 w-4 text-rose-600" />
-            Lokasi Penugasan
+            Tempat
           </div>
           <p className="mt-3 text-3xl font-semibold text-slate-900">{assignmentLocations.length}</p>
           <p className="mt-1 text-sm text-slate-500">Titik lokasi yang tampil di peta</p>
@@ -131,7 +131,7 @@ export const DashboardPage = () => {
       <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2 text-base font-semibold text-slate-800"><MapPinned className="h-4 w-4 text-blue-600" /> Visualisasi Pemetaan Lokasi Penugasan Pegawai</div>
+            <div className="flex items-center gap-2 text-base font-semibold text-slate-800"><MapPinned className="h-4 w-4 text-blue-600" /> Visualisasi Pemetaan Tempat Pegawai</div>
             <p className="mt-1 text-xs text-slate-500">Peta sebaran penugasan pegawai dari unit yang berbeda-beda secara realtime.</p>
           </div>
           <a href="/anggota/tugas/progres" className="flex shrink-0 items-center gap-1 rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100">Lihat Detail <ChevronRight className="h-3.5 w-3.5" /></a>
@@ -142,7 +142,7 @@ export const DashboardPage = () => {
       <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="flex items-center justify-between border-b border-slate-100 pb-3"><div className="flex items-center gap-2 text-sm font-semibold text-slate-800"><FileText className="h-4 w-4 text-blue-600" /> Proses Ajuan Surat Tugas Terbaru</div><a href="/anggota/tugas/pengajuan" className="text-xs font-semibold text-blue-600 hover:text-blue-800">Lihat Semua</a></div>
         <div className="mt-3 flex gap-3 overflow-x-auto pb-1">
-          {acceptedAssignments.length > 0 ? acceptedAssignments.map((item) => <article key={item.id} className="min-w-[310px] flex-1 rounded-2xl border border-slate-200 bg-slate-50 p-4"><div className="flex items-center justify-between gap-3"><p className="text-[10px] font-bold text-blue-700">{item.nomorSurat}</p><span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-semibold text-emerald-700">DISETUJUI</span></div><p className="mt-4 line-clamp-2 text-sm font-semibold leading-6 text-slate-700">{item.perihal}</p><div className="mt-4 flex items-center gap-3 text-xs"><span className="rounded-full bg-violet-100 px-2.5 py-1 font-semibold text-violet-700">{item.unitKerja}</span><span className="flex items-center gap-1 text-slate-500"><MapPin className="h-3.5 w-3.5 text-rose-500" />{item.lokasiPenugasan}</span></div></article>) : <div className="w-full rounded-xl border border-dashed border-slate-200 bg-slate-50 p-5 text-center text-sm text-slate-500">Belum ada proses ajuan surat tugas terbaru.</div>}
+          {acceptedAssignments.length > 0 ? acceptedAssignments.map((item) => <article key={item.id} className="min-w-[310px] flex-1 rounded-2xl border border-slate-200 bg-slate-50 p-4"><div className="flex items-center justify-between gap-3"><p className="text-[10px] font-bold text-blue-700">{item.nomorSurat}</p><span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-semibold text-emerald-700">DISETUJUI</span></div><p className="mt-4 line-clamp-2 text-sm font-semibold leading-6 text-slate-700">{item.uraianKegiatan}</p><div className="mt-4 flex items-center gap-3 text-xs"><span className="rounded-full bg-violet-100 px-2.5 py-1 font-semibold text-violet-700">{item.unitKerja}</span><span className="flex items-center gap-1 text-slate-500"><MapPin className="h-3.5 w-3.5 text-rose-500" />{item.tempat}</span></div></article>) : <div className="w-full rounded-xl border border-dashed border-slate-200 bg-slate-50 p-5 text-center text-sm text-slate-500">Belum ada proses ajuan surat tugas terbaru.</div>}
         </div>
       </section>
     </div>

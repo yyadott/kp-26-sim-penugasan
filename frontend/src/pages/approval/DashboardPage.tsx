@@ -38,7 +38,8 @@ export const DashboardPage = () => {
   const approvedLettersCount = myUnitData.filter(item => item.status === 'SURAT_TERBIT').length;
   const pendingLettersCount = myUnitData.filter(item => item.status === 'VERIFIKASI_SUBBAGIAN' || item.status === 'PERSETUJUAN_PIMPINAN').length;
 
-  const formatLokasiDisplay = (lokasi: string) => {
+  const formatLokasiDisplay = (lokasi?: string) => {
+    if (!lokasi) return '';
     const cleaned = lokasi.trim();
     if (!cleaned) return '';
     if (cleaned.toLowerCase().includes('jawa barat')) return cleaned;
@@ -146,7 +147,7 @@ export const DashboardPage = () => {
             <table className="w-full text-left text-sm border-collapse">
               <thead>
                 <tr className="border-b border-slate-200 text-slate-500 font-semibold bg-slate-50/50">
-                  <th className="py-3 px-4 font-medium">No. Surat / Perihal</th>
+                  <th className="py-3 px-4 font-medium">No. Surat / Uraian Kegiatan</th>
                   <th className="py-3 px-4 font-medium">Status</th>
                   <th className="py-3 px-4 font-medium">Unit & Lokasi</th>
                 </tr>
@@ -174,7 +175,7 @@ export const DashboardPage = () => {
                     >
                       <td className="py-3 px-4">
                         <div className="font-mono text-xs font-bold text-blue-700 mb-1">{item.nomorSurat}</div>
-                        <div className="font-medium text-slate-800 line-clamp-1">{item.perihal}</div>
+                        <div className="font-medium text-slate-800 line-clamp-1">{item.uraianKegiatan}</div>
                       </td>
                       <td className="py-3 px-4">
                         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border ${statusBadgeClass}`}>
@@ -195,7 +196,7 @@ export const DashboardPage = () => {
                           </span>
                           <span className="flex items-center gap-1 text-xs text-slate-500">
                             <MapPin className="w-3 h-3 shrink-0" />
-                            <span className="line-clamp-1">{formatLokasiDisplay(item.lokasiPenugasan)}</span>
+                            <span className="line-clamp-1">{formatLokasiDisplay(item.tempat)}</span>
                           </span>
                         </div>
                       </td>
@@ -229,7 +230,7 @@ export const DashboardPage = () => {
                 <span className="font-mono text-xs font-bold text-blue-700">{selectedAjuan.nomorSurat}</span>
                 <span className="text-xs text-slate-500">{selectedAjuan.unitKerja}</span>
               </div>
-              <h4 className="font-bold text-slate-900 text-sm">{selectedAjuan.perihal}</h4>
+              <h4 className="font-bold text-slate-900 text-sm">{selectedAjuan.uraianKegiatan}</h4>
               <p className="text-xs text-slate-600">{selectedAjuan.deskripsi}</p>
             </div>
 
@@ -240,7 +241,7 @@ export const DashboardPage = () => {
               </div>
               <div className="rounded-2xl border border-slate-200 p-4 bg-slate-50">
                 <div className="text-[11px] font-semibold uppercase text-slate-500 mb-2">Lokasi</div>
-                <div className="text-sm font-semibold text-slate-800">{formatLokasiDisplay(selectedAjuan.lokasiPenugasan)}</div>
+                <div className="text-sm font-semibold text-slate-800">{formatLokasiDisplay(selectedAjuan.tempat)}</div>
               </div>
             </div>
 

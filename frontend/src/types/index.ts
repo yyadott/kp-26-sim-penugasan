@@ -1,5 +1,5 @@
 export type UnitKerjaType =
-  | 'RBI'
+  
   | 'Fastingkom'
   | 'Kepeg'
   | 'PM';
@@ -32,18 +32,19 @@ export interface WorkflowStep {
 export interface AjuanSuratTugas {
   id: string;
   nomorSurat: string;
-  perihal: string;
+  uraianKegiatan: string;
   pengaju: Pegawai;
   pegawaiDitugaskan: Pegawai[];
   unitKerja: UnitKerjaType;
   tanggalMulai: string;
   tanggalSelesai: string;
-  lokasiPenugasan: string;
+  tempat: string;
   koordinat: [number, number]; // [latitude, longitude]
   lokasiSpesifik?: string;
   deskripsi: string;
   status: 'DRAFT' | 'VERIFIKASI_SUBBAGIAN' | 'PERSETUJUAN_PIMPINAN' | 'SURAT_TERBIT' | 'DITOLAK';
-  fileDraftUrl?: string;
+  linkSurat?: string;
+  biaya?: string;
   workflow: WorkflowStep[];
 }
 
@@ -95,12 +96,12 @@ export interface RekapPresensiPribadi {
   tukin: RekapTukinPribadi;
 }
 
-// Data Lokasi Penugasan untuk Pemetaan
+// Data Tempat untuk Pemetaan
 export interface LokasiPenugasanPegawai {
   id: string;
   suratTugasId: string;
   nomorSurat: string;
-  perihal: string;
+  uraianKegiatan: string;
   pegawai: Pegawai;
   unitKerja: UnitKerjaType;
   lokasi: string;
