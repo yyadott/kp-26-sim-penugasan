@@ -1,14 +1,17 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import L from 'leaflet';
 
 import type { Pegawai, AjuanSuratTugas, UnitKerjaType } from '@/types';
 import { useSuratTugas } from '@/hooks/useSuratTugas';
+import { usePokja } from '@/hooks/usePokja';
 import { sendEmailNotification } from '@/utils/emailService';
 import { generateSuratTugas } from '@/utils/generateSuratTugas';
 import { FileText, Send, ArrowLeft, Search, Download, AlertTriangle, X } from 'lucide-react';
 import apiClient from '@/api/client';
 
 import { useAuth } from '@/hooks/useAuth';
+import { dummyPegawaiList } from '@/data/dummyData';
 
 type Wilayah = { id: string; name: string };
 
@@ -16,11 +19,16 @@ export const BuatTugasPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { addTugas, tugasList } = useSuratTugas();
+  const { pokjas } = usePokja();
   const [provinces, setProvinces] = useState<Wilayah[]>([]);
   const [cities, setCities] = useState<Wilayah[]>([]);
   const [isWilayahLoading, setIsWilayahLoading] = useState(false);
   const [pegawaiSearch, setPegawaiSearch] = useState('');
   const [unitFilter, setUnitFilter] = useState('');
+  
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<L.Map | null>(null);
+  const mapMarkerRef = useRef<L.Marker | null>(null);
   
   // Pegawai List from API
   const [pegawaiList, setPegawaiList] = useState<Pegawai[]>([]);
@@ -71,9 +79,16 @@ export const BuatTugasPage = () => {
     // Fetch users (pegawai) from backend
     apiClient.get('/users')
       .then(res => {
-        if (res.data) setPegawaiList(res.data);
+        if (res.data && res.data.length > 0) {
+          setPegawaiList(res.data);
+        } else {
+          setPegawaiList(dummyPegawaiList);
+        }
       })
-      .catch(err => console.error("Gagal mengambil data pegawai", err));
+      .catch(err => {
+        console.error("Gagal mengambil data pegawai", err);
+        setPegawaiList(dummyPegawaiList); // Fallback to dummy data
+      });
 
     fetch('https://www.emsifa.com/api-wilayah-indonesia/api/provinces.json')
       .then((response) => response.ok ? response.json() : Promise.reject())
@@ -112,6 +127,44 @@ export const BuatTugasPage = () => {
     }
   }, [formData.kotaId, cities]);
   /* eslint-enable react-hooks/set-state-in-effect */
+
+  // Effect for handling the map initialization and updates
+  useEffect(() => {
+    if (!mapContainerRef.current) return;
+    
+    if (!mapInstanceRef.current) {
+      mapInstanceRef.current = L.map(mapContainerRef.current, {
+        center: [formData.koordinatLat, formData.koordinatLng],
+        zoom: 10,
+        zoomControl: true
+      });
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap'
+      }).addTo(mapInstanceRef.current);
+
+      const icon = L.divIcon({
+        className: 'custom-map-marker',
+        html: `
+          <div style="background-color: #ef4444; width: 30px; height: 40px; border-radius: 15px 15px 18px 18px; display: flex; align-items: center; justify-content: center; color: white; border: 2px solid white; box-shadow: 0 4px 8px rgba(0,0,0,0.3);">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="22" viewBox="0 0 24 24" fill="white" stroke="none">
+              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+              <circle cx="12" cy="9" r="3" fill="white" opacity="0.9" />
+            </svg>
+          </div>`,
+        iconSize: [30, 40],
+        iconAnchor: [15, 40]
+      });
+
+      mapMarkerRef.current = L.marker([formData.koordinatLat, formData.koordinatLng], { icon }).addTo(mapInstanceRef.current);
+    } else {
+      const latlng: [number, number] = [formData.koordinatLat, formData.koordinatLng];
+      mapInstanceRef.current.setView(latlng, 12);
+      if (mapMarkerRef.current) {
+        mapMarkerRef.current.setLatLng(latlng);
+      }
+    }
+  }, [formData.koordinatLat, formData.koordinatLng]);
 
   const handleActualSubmit = async () => {
     const assignedPegawai = pegawaiList.filter((p) => formData.pegawaiIds.includes(p.id));
@@ -235,10 +288,9 @@ export const BuatTugasPage = () => {
                 onChange={(e) => setFormData({ ...formData, unitKerja: e.target.value as UnitKerjaType })}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50 hover:bg-white transition-colors"
               >
-                <option value="RBI">RBI</option>
-                <option value="Fastingkom">Fastingkom</option>
-                <option value="Kepeg">Kepeg</option>
-                <option value="PM">PM</option>
+                {pokjas.map(p => (
+                  <option key={p.id} value={p.kode}>{p.nama} ({p.kode})</option>
+                ))}
               </select>
             </div>
           </div>
@@ -301,10 +353,9 @@ export const BuatTugasPage = () => {
                   className="sm:w-40 px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
                 >
                   <option value="">Semua Unit</option>
-                  <option value="RBI">RBI</option>
-                  <option value="Fastingkom">Fastingkom</option>
-                  <option value="Kepeg">Kepeg</option>
-                  <option value="PM">PM</option>
+                  {pokjas.map(p => (
+                    <option key={p.id} value={p.kode}>{p.nama} ({p.kode})</option>
+                  ))}
                 </select>
               </div>
 
@@ -427,6 +478,14 @@ export const BuatTugasPage = () => {
             <div>
               <label className="block text-sm font-bold text-slate-700 mb-1.5">Lokasi Penugasan Spesifik <span className="text-red-500">*</span></label>
               <input type="text" required placeholder="Contoh: SMKN 1 Bandung, Jl. Wastukencana No.3" value={formData.lokasiSpesifik} onChange={(e) => setFormData({ ...formData, lokasiSpesifik: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50 hover:bg-white transition-colors" />
+            </div>
+
+            <div>
+              <label className="block text-sm font-bold text-slate-700 mb-1.5">Preview Titik Lokasi Peta</label>
+              <div className="w-full h-[250px] bg-slate-100 rounded-lg border border-slate-300 overflow-hidden relative z-0">
+                <div ref={mapContainerRef} className="w-full h-full" />
+              </div>
+              <p className="text-xs text-slate-500 mt-1.5">💡 Titik lokasi di peta ini akan otomatis mengikuti Kota/Kabupaten yang Anda pilih.</p>
             </div>
           </div>
         </div>

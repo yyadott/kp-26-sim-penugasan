@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { dummyPegawaiList, UNIT_COLORS } from '@/data/dummyData';
+import { dummyPegawaiList, getUnitColor } from '@/data/dummyData';
 import { Trophy, ChevronDown, Briefcase, Building2, Table2, Filter } from 'lucide-react';
 import { useSuratTugas } from '@/hooks/useSuratTugas';
 
@@ -339,7 +339,7 @@ export const RekapPenugasanPage = () => {
             <BarChart
               data={unitKerjaChartData}
               maxValue={maxUnit}
-              colorFn={(label) => UNIT_COLORS[label]?.hex || '#6366f1'}
+              colorFn={(label) => getUnitColor(label).hex}
             />
             {unitKerjaChartData.every(d => d.value === 0) && (
               <p className="text-center text-sm text-slate-400 py-4">Tidak ada data penugasan untuk filter ini.</p>
@@ -376,10 +376,7 @@ export const RekapPenugasanPage = () => {
                         <td className="px-5 py-3.5 font-mono text-[13px] text-slate-600">{row.nip}</td>
                         <td className="px-5 py-3.5 font-medium text-slate-800">{row.nama}</td>
                         <td className="px-5 py-3.5">
-                          <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider border ${UNIT_COLORS[row.unitKerja]
-                              ? `${UNIT_COLORS[row.unitKerja].bg} ${UNIT_COLORS[row.unitKerja].text} ${UNIT_COLORS[row.unitKerja].border}`
-                              : 'bg-slate-100 text-slate-700 border-slate-200'
-                            }`}>
+                          <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider border ${getUnitColor(row.unitKerja).bg} ${getUnitColor(row.unitKerja).text} ${getUnitColor(row.unitKerja).border}`}>
                             {row.unitKerja}
                           </span>
                         </td>

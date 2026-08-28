@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { PenugasanMap } from '@/components/map/PenugasanMap';
 import { PenugasanCalendar } from '@/components/calendar/PenugasanCalendar';
-import { dummyAjuanSuratTugas, UNIT_COLORS } from '@/data/dummyData';
+import { dummyAjuanSuratTugas, getUnitColor } from '@/data/dummyData';
 import { MapPin, Navigation, User, Map as MapIcon, Calendar } from 'lucide-react';
 import { usePemetaanFilter } from '@/hooks/usePemetaanFilter';
 import { PemetaanFilterBar } from '@/components/penugasan/PemetaanFilterBar';
@@ -88,12 +88,12 @@ export const PemetaanPage = () => {
               <span
                 className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-bold border"
                 style={{
-                  backgroundColor: `${UNIT_COLORS[selectedUnit]?.hex || '#6366f1'}10`,
-                  color: UNIT_COLORS[selectedUnit]?.hex || '#6366f1',
-                  borderColor: `${UNIT_COLORS[selectedUnit]?.hex || '#6366f1'}40`,
+                  backgroundColor: `${getUnitColor(selectedUnit).hex}10`,
+                  color: getUnitColor(selectedUnit).hex,
+                  borderColor: `${getUnitColor(selectedUnit).hex}40`,
                 }}
               >
-                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: UNIT_COLORS[selectedUnit]?.hex }} />
+                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: getUnitColor(selectedUnit).hex }} />
                 Unit {selectedUnit}
               </span>
             )}
@@ -163,7 +163,7 @@ export const PemetaanPage = () => {
                   </div>
                 ) : (
                   filteredLocations.map((loc) => {
-                    const color = UNIT_COLORS[loc.unitKerja] || { bg: 'bg-slate-100', text: 'text-slate-800', hex: '#3b82f6' };
+                    const color = getUnitColor(loc.unitKerja);
 
                     return (
                       <div

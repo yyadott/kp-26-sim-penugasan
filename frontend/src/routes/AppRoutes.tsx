@@ -12,13 +12,18 @@ import { ApprovalRoutes } from '@/routes/ApprovalRoutes';
 import { UserRoutes } from '@/routes/UserRoutes';
 
 const HomeRedirect = () => {
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/auth/login" replace />;
+  }
+
   const normalizedRole = user?.role?.toUpperCase() || 'USER';
 
   if (normalizedRole === 'SUPER_ADMIN') return <Navigate to="/super-admin/dashboard" replace />;
   if (normalizedRole === 'ADMIN') return <Navigate to="/admin/dashboard" replace />;
   if (normalizedRole === 'APPROVAL') return <Navigate to="/approval/dashboard" replace />;
-  return <Navigate to="/user/dashboard" replace />;
+  return <Navigate to="/pegawai/dashboard" replace />;
 };
 
 const RoleRedirect = ({ to }: { to: string }) => {
@@ -28,7 +33,7 @@ const RoleRedirect = ({ to }: { to: string }) => {
   if (normalizedRole === 'SUPER_ADMIN') return <Navigate to={`/super-admin${to}`} replace />;
   if (normalizedRole === 'ADMIN') return <Navigate to={`/admin${to}`} replace />;
   if (normalizedRole === 'APPROVAL') return <Navigate to={`/approval${to}`} replace />;
-  return <Navigate to={`/user${to}`} replace />;
+  return <Navigate to={`/pegawai${to}`} replace />;
 };
 
 export const AppRoutes = () => {
@@ -79,7 +84,7 @@ export const AppRoutes = () => {
       />
 
       <Route
-        path="/user/*"
+        path="/pegawai/*"
         element={
           <ProtectedRoute requiredRole="pegawai">
             <UserLayout>

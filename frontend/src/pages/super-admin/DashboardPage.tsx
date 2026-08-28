@@ -7,8 +7,9 @@ import { PenugasanCalendar } from '@/components/calendar/PenugasanCalendar';
 import {
   dummyAjuanSuratTugas,
   dummyPresensiPegawaiLain,
+  dummyLokasiPenugasan,
   dummyPresensiPribadi,
-  UNIT_COLORS,
+  getUnitColor,
 } from '@/data/dummyData';
 import type { AjuanSuratTugas } from '@/types';
 import { Link } from 'react-router-dom';
@@ -336,7 +337,7 @@ export const DashboardPage = () => {
             {recentPresensi.length > 0 ? (
               <div className="flex gap-4 min-w-max">
                 {recentPresensi.map((p) => {
-                  const unitColor = UNIT_COLORS[p.unitKerja] || { bg: 'bg-slate-100', text: 'text-slate-800' };
+                  const unitColor = getUnitColor(p.unitKerja);
 
                   return (
                     <div key={p.id} className="w-[260px] shrink-0 rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3 shadow-sm">
@@ -393,7 +394,7 @@ export const DashboardPage = () => {
         <div className="overflow-x-auto pb-2">
           <div className="flex gap-4 min-w-max">
             {recentAjuan.map((item) => {
-              const unitColor = UNIT_COLORS[item.unitKerja] || { bg: 'bg-slate-100', text: 'text-slate-800' };
+              const unitColor = getUnitColor(item.unitKerja);
               const statusIsApproved = item.status === 'SURAT_TERBIT';
               const statusIsRejected = item.status === 'DITOLAK';
               const statusLabel = statusIsApproved ? 'DiApprove' : statusIsRejected ? 'Ditolak' : 'Diproses';

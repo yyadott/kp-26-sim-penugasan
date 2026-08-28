@@ -4,10 +4,15 @@ import { useSuratTugas } from '@/hooks/useSuratTugas';
 
 export type FilterMode = 'ALL' | 'UNIT' | 'INDIVIDU';
 
-export const usePemetaanFilter = () => {
-  const [filterMode, setFilterMode] = useState<FilterMode>('ALL');
+interface UsePemetaanFilterProps {
+  initialPegawaiId?: string;
+  forceMode?: FilterMode;
+}
+
+export const usePemetaanFilter = (props?: UsePemetaanFilterProps) => {
+  const [filterMode, setFilterMode] = useState<FilterMode>(props?.forceMode || 'ALL');
   const [selectedUnit, setSelectedUnit] = useState<string>('');
-  const [selectedPegawaiId, setSelectedPegawaiId] = useState<string>('');
+  const [selectedPegawaiId, setSelectedPegawaiId] = useState<string>(props?.initialPegawaiId || '');
   const [searchQuery, setSearchQuery] = useState('');
   
   const { tugasList, refreshTugas } = useSuratTugas();

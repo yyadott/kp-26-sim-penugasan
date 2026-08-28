@@ -19,7 +19,7 @@ export const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) 
   const normalizedRole = user?.role?.toUpperCase() || 'PEGAWAI';
   const isSuperAdmin = normalizedRole === 'SUPER_ADMIN';
   const isAdmin = normalizedRole === 'ADMIN';
-  const isPegawai = normalizedRole === 'PEGAWAI';
+  const isPegawai = normalizedRole === 'PEGAWAI' || normalizedRole === 'USER';
 
   if (requiredRole === 'super-admin' && !isSuperAdmin) {
     return <Navigate to={isAdmin ? "/admin/dashboard" : "/pegawai/dashboard"} replace />;

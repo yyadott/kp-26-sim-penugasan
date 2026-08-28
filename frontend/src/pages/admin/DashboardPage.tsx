@@ -30,6 +30,10 @@ import {
   BarChart3,
   Umbrella,
   ArrowUpRight,
+  KeyRound,
+  Eye,
+  EyeOff,
+  Save,
 } from 'lucide-react';
 
 export const DashboardPage = () => {
@@ -40,7 +44,27 @@ export const DashboardPage = () => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedAjuan, setSelectedAjuan] = useState<AjuanSuratTugas | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [mapViewMode, setMapViewMode] = useState<'peta' | 'kalender'>('peta');
+  
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [passwordMessage, setPasswordMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const { updateCredentials } = useAuth();
+
+  const handlePasswordSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordMessage(null);
+    const result = updateCredentials({ username: user?.username || '', currentPassword, newPassword });
+    setPasswordMessage({ type: result.success ? 'success' : 'error', text: result.message || 'Gagal menyimpan.' });
+    if (result.success) {
+      setCurrentPassword('');
+      setNewPassword('');
+      setTimeout(() => setIsPasswordModalOpen(false), 2000);
+    }
+  };
 
   useEffect(() => {
     refreshTugas();
@@ -103,6 +127,15 @@ export const DashboardPage = () => {
           <p className="text-slate-300 text-sm max-w-xl">
             Sistem Informasi Manajemen Penugasan, Presensi Pegawai, & Visualisasi Pemetaan Lokasi Terpadu.
           </p>
+          <div className="pt-2">
+            <button 
+              onClick={() => setIsPasswordModalOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold backdrop-blur-md border border-white/20 transition-all shadow-sm"
+            >
+              <KeyRound className="w-4 h-4" />
+              Ubah Password
+            </button>
+          </div>
         </div>
 
         <div className="z-10 bg-white/10 backdrop-blur-md px-5 py-3 rounded-2xl border border-white/15 text-right font-mono text-xs sm:text-sm">
@@ -533,6 +566,72 @@ export const DashboardPage = () => {
                 Tutup
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Ubah Password */}
+      {isPasswordModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-5 shadow-2xl border border-slate-200">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2">
+                <KeyRound className="w-5 h-5 text-blue-600" />
+                Ubah Password
+              </h3>
+              <button onClick={() => setIsPasswordModalOpen(false)} className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <form onSubmit={handlePasswordSubmit} className="space-y-4">
+              <div>
+                <label className="mb-2 block text-sm font-bold text-slate-700">Password Lama</label>
+                <div className="relative">
+                  <input
+                    type={showCurrentPassword ? 'text' : 'password'} 
+                    value={currentPassword} 
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    placeholder="Masukkan password lama" 
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-4 pr-12 font-mono text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
+                  />
+                  <button type="button" onClick={() => setShowCurrentPassword(!showCurrentPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-blue-600">
+                    {showCurrentPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-bold text-slate-700">Password Baru</label>
+                <div className="relative">
+                  <input
+                    type={showNewPassword ? 'text' : 'password'} 
+                    value={newPassword} 
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Masukkan password baru" 
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-4 pr-12 font-mono text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
+                  />
+                  <button type="button" onClick={() => setShowNewPassword(!showNewPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-blue-600">
+                    {showNewPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
+                </div>
+              </div>
+              
+              {passwordMessage && (
+                <div className={`flex items-center gap-2 rounded-xl border px-4 py-3 text-sm ${passwordMessage.type === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-red-200 bg-red-50 text-red-700'}`}>
+                  {passwordMessage.type === 'success' && <CheckCircle2 className="h-4 w-4 shrink-0" />}{passwordMessage.text}
+                </div>
+              )}
+
+              <div className="pt-2 flex justify-end gap-2">
+                <button type="button" onClick={() => setIsPasswordModalOpen(false)} className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors">
+                  Batal
+                </button>
+                <button type="submit" className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-colors shadow-md shadow-blue-500/20 flex items-center gap-2">
+                  <Save className="w-4 h-4" />
+                  Simpan
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

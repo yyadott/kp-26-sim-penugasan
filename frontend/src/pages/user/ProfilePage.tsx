@@ -1,9 +1,10 @@
-import { useState, type FormEvent } from 'react';
-import { CheckCircle2, Eye, EyeOff, Save } from 'lucide-react';
+import { useState, useRef, type FormEvent } from 'react';
+import { CheckCircle2, Eye, EyeOff, Save, Camera } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
 export const ProfilePage = () => {
-  const { user, updateCredentials } = useAuth();
+  const { user, updateCredentials, updateProfilePicture } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [username, setUsername] = useState(user?.username || 'yadiyudi');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -19,6 +20,20 @@ export const ProfilePage = () => {
     if (result.success) {
       setCurrentPassword('');
       setNewPassword('');
+    }
+  };
+
+  const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          updateProfilePicture(reader.result);
+          setMessage({ type: 'success', text: 'Foto profil berhasil diperbarui!' });
+        }
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -53,10 +68,23 @@ export const ProfilePage = () => {
 
       <main className="mx-auto max-w-4xl px-7 py-7 sm:px-10">
         <div className="flex items-center gap-5 border-b border-slate-200 pb-6">
-          <img src={user?.fotoAvatar || `${import.meta.env.BASE_URL}pp-navbar-2.jpg`} alt={user?.nama || 'Foto profil'} className="h-[88px] w-[88px] rounded-2xl border-2 border-slate-200 object-cover shadow-sm" />
+          <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+            <img src={user?.fotoAvatar || `${import.meta.env.BASE_URL}pp-navbar-2.jpg`} alt={user?.nama || 'Foto profil'} className="h-[88px] w-[88px] rounded-2xl border-2 border-slate-200 object-cover shadow-sm transition group-hover:brightness-75" />
+            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <Camera className="h-6 w-6 text-white drop-shadow-md" />
+            </div>
+            <input 
+              type="file" 
+              ref={fileInputRef}
+              onChange={handlePhotoChange}
+              accept="image/*"
+              className="hidden"
+            />
+          </div>
           <div>
             <h2 className="text-xl font-extrabold text-slate-900">{user?.nama}</h2>
             <p className="mt-1 font-mono text-sm text-[#57709b]">NIP. {user?.nip}</p>
+            <p className="mt-1 text-[11px] text-[#758fbc] cursor-pointer hover:text-blue-600" onClick={() => fileInputRef.current?.click()}>Klik foto untuk mengubah</p>
           </div>
         </div>
 
@@ -72,10 +100,16 @@ export const ProfilePage = () => {
             </div>
           </div>
 
-          <div>
-            <label className="mb-2 block text-sm font-bold text-slate-700">Username</label>
-            <div className="relative">
-              <input value={username} onChange={(event) => setUsername(event.target.value)} className="w-full rounded-2xl border border-[#d9e2f0] bg-[#f7f9fc] px-4 py-3.5 text-base text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100" />
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+            <div>
+              <label className="mb-2 block text-sm font-bold text-slate-700">Jabatan</label>
+              <input readOnly value={user?.jabatan || ''} className="w-full rounded-2xl border border-[#d9e2f0] bg-[#f7f9fc] px-4 py-3.5 text-base text-slate-800 outline-none" />
+            </div>
+            <div>
+              <label className="mb-2 block text-sm font-bold text-slate-700">Username</label>
+              <div className="relative">
+                <input value={username} onChange={(event) => setUsername(event.target.value)} className="w-full rounded-2xl border border-[#d9e2f0] bg-[#f7f9fc] px-4 py-3.5 text-base text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100" />
+              </div>
             </div>
           </div>
 

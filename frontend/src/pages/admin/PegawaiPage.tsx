@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { Search, MoreHorizontal, ChevronDown, Mail, MapPin, Building, Briefcase, Calendar as CalendarIcon, FileText, CheckCircle2, Clock, XCircle, ArrowLeft } from 'lucide-react';
-import { dummyPegawaiList, dummyAjuanSuratTugas, UNIT_COLORS } from '@/data/dummyData';
+import { Search, MoreHorizontal, ChevronDown, Mail, MapPin, Building, Briefcase, Calendar as CalendarIcon, FileText, CheckCircle2, Clock, XCircle, ArrowLeft, Edit2, Save, KeyRound } from 'lucide-react';
+import { usePokja } from '@/hooks/usePokja';
+import { dummyPegawaiList, dummyAjuanSuratTugas, getUnitColor } from '@/data/dummyData';
 import type { Pegawai } from '@/types';
 
 export const PegawaiPage = () => {
+  const { pokjas } = usePokja();
   const [searchTerm, setSearchTerm] = useState('');
   const [unitFilter, setUnitFilter] = useState('Semua Unit Kerja');
   const [roleFilter, setRoleFilter] = useState('Semua Role');
@@ -11,6 +13,34 @@ export const PegawaiPage = () => {
   
   // State for slide-over panel
   const [selectedPegawai, setSelectedPegawai] = useState<Pegawai | null>(null);
+  const [isEditingPegawai, setIsEditingPegawai] = useState(false);
+  const [editNama, setEditNama] = useState('');
+  const [editJabatan, setEditJabatan] = useState('');
+  const [editPassword, setEditPassword] = useState('');
+  const [editMessage, setEditMessage] = useState('');
+  
+  const handleEditClick = () => {
+    if (selectedPegawai) {
+      setEditNama(selectedPegawai.nama);
+      setEditJabatan(selectedPegawai.jabatan);
+      setEditPassword('');
+      setEditMessage('');
+      setIsEditingPegawai(true);
+    }
+  };
+
+  const handleSaveEdit = () => {
+    if (selectedPegawai) {
+      // In a real app, send to backend
+      selectedPegawai.nama = editNama;
+      selectedPegawai.jabatan = editJabatan;
+      setEditMessage('Data pegawai berhasil diperbarui!');
+      setTimeout(() => {
+        setIsEditingPegawai(false);
+        setEditMessage('');
+      }, 2000);
+    }
+  };
 
   // Filter logic for main table
   const filteredPegawai = dummyPegawaiList.filter((pegawai) => {
@@ -40,70 +70,139 @@ export const PegawaiPage = () => {
       <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-6">
         <div className="flex items-center gap-4 border-b border-slate-200 pb-4">
           <button 
-            onClick={() => setSelectedPegawai(null)}
+            onClick={() => {
+              setSelectedPegawai(null);
+              setIsEditingPegawai(false);
+            }}
             className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
-          <div>
+          <div className="flex-1">
             <h1 className="text-2xl font-bold text-slate-800">Detail Pegawai</h1>
             <p className="text-sm text-slate-500 mt-1">Profil lengkap dan riwayat penugasan.</p>
           </div>
+          {!isEditingPegawai && (
+            <button 
+              onClick={handleEditClick}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-xl text-sm font-bold transition-colors"
+            >
+              <Edit2 className="w-4 h-4" />
+              Edit Data
+            </button>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Profile Card */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex flex-col items-center text-center space-y-4 lg:col-span-1 h-fit">
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex flex-col items-center text-center space-y-4 lg:col-span-1 h-fit relative">
             <img 
               src={selectedPegawai.fotoAvatar} 
               alt={selectedPegawai.nama} 
               className="w-32 h-32 rounded-full object-cover border-4 border-slate-50 shadow-md"
             />
-            <div>
-              <h3 className="text-xl font-bold text-slate-800">{selectedPegawai.nama}</h3>
-              <p className="text-sm font-medium text-blue-600 mt-1">{selectedPegawai.jabatan}</p>
-            </div>
             
-            <div className="w-full h-px bg-slate-100 my-2"></div>
-            
-            <div className="w-full flex flex-col gap-3 text-sm text-slate-600 text-left">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center shrink-0">
-                  <Briefcase className="w-4 h-4 text-slate-400" />
+            {isEditingPegawai ? (
+              <div className="w-full space-y-3 mt-2 text-left">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Nama Lengkap</label>
+                  <input 
+                    type="text" 
+                    value={editNama} 
+                    onChange={(e) => setEditNama(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  />
                 </div>
                 <div>
-                  <div className="text-[11px] text-slate-400 font-medium">NIP</div>
-                  <div className="font-semibold text-slate-700">{selectedPegawai.nip}</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center shrink-0">
-                  <Mail className="w-4 h-4 text-slate-400" />
-                </div>
-                <div className="overflow-hidden">
-                  <div className="text-[11px] text-slate-400 font-medium">Email</div>
-                  <div className="font-semibold text-slate-700 truncate">{selectedPegawai.email}</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center shrink-0">
-                  <Building className="w-4 h-4 text-slate-400" />
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Jabatan</label>
+                  <input 
+                    type="text" 
+                    value={editJabatan} 
+                    onChange={(e) => setEditJabatan(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  />
                 </div>
                 <div>
-                  <div className="text-[11px] text-slate-400 font-medium">Unit Kerja</div>
-                  <div className="font-semibold text-slate-700">{selectedPegawai.unitKerja}</div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Password Baru (Opsional)</label>
+                  <div className="relative">
+                    <KeyRound className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input 
+                      type="password" 
+                      value={editPassword} 
+                      onChange={(e) => setEditPassword(e.target.value)}
+                      placeholder="Kosongkan jika tidak diubah"
+                      className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+                
+                {editMessage && <p className="text-xs font-bold text-emerald-600 bg-emerald-50 p-2 rounded-lg text-center">{editMessage}</p>}
+                
+                <div className="flex gap-2 pt-2">
+                  <button 
+                    onClick={() => setIsEditingPegawai(false)}
+                    className="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition-colors"
+                  >
+                    Batal
+                  </button>
+                  <button 
+                    onClick={handleSaveEdit}
+                    className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1.5"
+                  >
+                    <Save className="w-3.5 h-3.5" />
+                    Simpan
+                  </button>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center shrink-0">
-                  <CheckCircle2 className="w-4 h-4 text-slate-400" />
-                </div>
+            ) : (
+              <>
                 <div>
-                  <div className="text-[11px] text-slate-400 font-medium">Role</div>
-                  <div className="font-semibold text-slate-700">{selectedPegawai.role}</div>
+                  <h3 className="text-xl font-bold text-slate-800">{selectedPegawai.nama}</h3>
+                  <p className="text-sm font-medium text-blue-600 mt-1">{selectedPegawai.jabatan}</p>
                 </div>
-              </div>
-            </div>
+                
+                <div className="w-full h-px bg-slate-100 my-2"></div>
+                
+                <div className="w-full flex flex-col gap-3 text-sm text-slate-600 text-left">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center shrink-0">
+                      <Briefcase className="w-4 h-4 text-slate-400" />
+                    </div>
+                    <div>
+                      <div className="text-[11px] text-slate-400 font-medium">NIP</div>
+                      <div className="font-semibold text-slate-700">{selectedPegawai.nip}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center shrink-0">
+                      <Mail className="w-4 h-4 text-slate-400" />
+                    </div>
+                    <div className="overflow-hidden">
+                      <div className="text-[11px] text-slate-400 font-medium">Email</div>
+                      <div className="font-semibold text-slate-700 truncate">{selectedPegawai.email}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center shrink-0">
+                      <Building className="w-4 h-4 text-slate-400" />
+                    </div>
+                    <div>
+                      <div className="text-[11px] text-slate-400 font-medium">Unit Kerja</div>
+                      <div className="font-semibold text-slate-700">{selectedPegawai.unitKerja}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center shrink-0">
+                      <CheckCircle2 className="w-4 h-4 text-slate-400" />
+                    </div>
+                    <div>
+                      <div className="text-[11px] text-slate-400 font-medium">Role</div>
+                      <div className="font-semibold text-slate-700">{selectedPegawai.role}</div>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Assignments Table */}
@@ -209,10 +308,9 @@ export const PegawaiPage = () => {
                 className="w-full appearance-none px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer"
               >
                 <option>Semua Unit Kerja</option>
-                <option>RBI</option>
-                <option>Fastingkom</option>
-                <option>Kepeg</option>
-                <option>PM</option>
+                {pokjas.map(p => (
+                  <option key={p.id} value={p.kode}>{p.nama} ({p.kode})</option>
+                ))}
               </select>
               <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
             </div>
@@ -263,7 +361,7 @@ export const PegawaiPage = () => {
             <tbody className="divide-y divide-slate-100">
               {filteredPegawai.length > 0 ? (
                 filteredPegawai.map((pegawai) => {
-                  const colorCode = UNIT_COLORS[pegawai.unitKerja];
+                  const colorCode = getUnitColor(pegawai.unitKerja);
                   const finalUnitClasses = colorCode ? `${colorCode.bg} ${colorCode.text}` : 'bg-blue-50 text-blue-600';
                   const roleBg = pegawai.role === 'SUPER_ADMIN' ? 'bg-purple-100 text-purple-700' : 'bg-emerald-50 text-emerald-600';
 

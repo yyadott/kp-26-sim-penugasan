@@ -13,6 +13,7 @@ export const useAuth = (): AuthContextType => {
       isAuthenticated: true,
       login: async () => ({ success: true }),
       updateCredentials: () => ({ success: true }),
+      updateProfilePicture: () => {},
       getDemoCredentials: () => ({ username: 'yadiyudi', password: 'password123' }),
       logout: () => {},
     };

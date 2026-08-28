@@ -8,6 +8,7 @@ export interface AuthContextType {
   isAuthenticated: boolean;
   login: (usernameOrNip: string, password: string) => Promise<{ success: boolean; message?: string }>;
   updateCredentials: (data: { username: string; currentPassword: string; newPassword: string }) => { success: boolean; message?: string };
+  updateProfilePicture: (dataUrl: string) => void;
   getDemoCredentials: () => { username: string; password: string };
   logout: () => void;
 }
@@ -58,7 +59,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (cleanInput === 'superadmin') defaultUser.role = 'SUPER_ADMIN';
       else if (cleanInput === 'approval') defaultUser.role = 'APPROVAL';
       else if (cleanInput === 'admin') defaultUser.role = 'ADMIN';
-      else if (cleanInput === 'user') defaultUser.role = 'USER';
+      else if (cleanInput === 'user') defaultUser.role = 'PEGAWAI';
       
       setUser(defaultUser);
       localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(defaultUser));
@@ -105,6 +106,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { success: true, message: 'Username dan password berhasil diperbarui.' };
   };
 
+  const updateProfilePicture = (dataUrl: string) => {
+    setUser((currentUser) => {
+      if (!currentUser) return currentUser;
+      const updatedUser = { ...currentUser, fotoAvatar: dataUrl };
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(updatedUser));
+      return updatedUser;
+    });
+  };
+
   const getDemoCredentials = () => getCredentials();
 
   const logout = () => {
@@ -121,7 +131,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [user]);
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, login, updateCredentials, getDemoCredentials, logout }}>
+    <AuthContext.Provider value={{ user, isAuthenticated, login, updateCredentials, updateProfilePicture, getDemoCredentials, logout }}>
       {children}
     </AuthContext.Provider>
   );

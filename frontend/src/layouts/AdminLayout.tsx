@@ -34,7 +34,7 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
   const adminLinks = [
     { to: `${prefix}/dashboard`, label: 'Dashboard', icon: LayoutDashboard },
     { to: `${prefix}/pegawai`, label: 'Pegawai', icon: Users },
-    { to: `${prefix}/absensi`, label: 'Absensi', icon: CalendarCheck },
+    // { to: `${prefix}/absensi`, label: 'Absensi', icon: CalendarCheck },
     {
       to: '#',
       label: 'Penugasan',
@@ -42,7 +42,6 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
       items: [
         { to: `${prefix}/tugas?tab=rekap`, label: 'Rekap Penugasan' },
         { to: `${prefix}/tugas?tab=laporan`, label: 'Laporan Penugasan' },
-        { to: `${prefix}/tugas?tab=pivot`, label: 'Pivot Penugasan' },
         { to: `${prefix}/tugas?tab=berlangsung`, label: 'Penugasan Berlangsung' },
         { to: `${prefix}/tugas?tab=draft`, label: 'Draft Penugasan' },
         { to: `${prefix}/tugas/upload-surat`, label: 'Scan Dokumen' },

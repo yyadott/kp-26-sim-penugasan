@@ -1,20 +1,9 @@
 import { useMemo, useState } from 'react';
 import { Plus, Search, Edit, Trash2, X } from 'lucide-react';
-
-type Pokja = {
-  id: number;
-  kode: string;
-  nama: string;
-};
-
-const INITIAL_POKJAS: Pokja[] = [
-  { id: 1, kode: 'POKJA-01', nama: 'Departemen IT & Infrastruktur' },
-  { id: 2, kode: 'POKJA-02', nama: 'Departemen SDM & Keuangan' },
-  { id: 3, kode: 'POKJA-03', nama: 'Tim Riset & Pengembangan' },
-];
+import { usePokja, type Pokja } from '@/hooks/usePokja';
 
 export const PokjaPage = () => {
-  const [pokjas, setPokjas] = useState<Pokja[]>(INITIAL_POKJAS);
+  const { pokjas, addPokja, updatePokja, deletePokja } = usePokja();
   const [searchQuery, setSearchQuery] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingPokja, setEditingPokja] = useState<Pokja | null>(null);
@@ -57,16 +46,16 @@ export const PokjaPage = () => {
     }
 
     if (editingPokja) {
-      setPokjas((items) => items.map((pokja) => pokja.id === editingPokja.id ? { ...pokja, kode, nama } : pokja));
+      updatePokja(editingPokja.id, kode, nama);
     } else {
-      setPokjas((items) => [...items, { id: Date.now(), kode, nama }]);
+      addPokja(kode, nama);
     }
     closeForm();
   };
 
   const handleDelete = (pokja: Pokja) => {
     if (!window.confirm(`Hapus ${pokja.kode} — ${pokja.nama}?`)) return;
-    setPokjas((items) => items.filter((item) => item.id !== pokja.id));
+    deletePokja(pokja.id);
   };
 
   return (

@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { dummyAjuanSuratTugas, dummyPegawaiList } from '@/data/dummyData';
+import { dummyAjuanSuratTugas, dummyPegawaiList, getUnitColor } from '@/data/dummyData';
 import { FileText, Calendar, Activity, ChevronDown, FileCheck, X, Info } from 'lucide-react';
 import { format, isToday, isThisWeek, isThisMonth } from 'date-fns';
 import { id } from 'date-fns/locale';
 import SuratTugasTemplate from '@/components/SuratTugasTemplate';
+import { usePokja } from '@/hooks/usePokja';
+import { useSearchParams } from 'react-router-dom';
 
 // Utility for formatting date
 const formatDate = (dateStr: string) => format(new Date(dateStr), 'dd MMMM yyyy', { locale: id });
@@ -108,6 +110,8 @@ const PegawaiPenugasanTab = () => {
 
 // Tooltip component untuk daftar pegawai (Tampilan Awan)
 const PegawaiTooltip = ({ pegawaiList }: { pegawaiList: typeof dummyPegawaiList }) => {
+  const { pokjas } = usePokja();
+  const unitOptions = pokjas.map(p => p.kode);
   const [isOpen, setIsOpen] = useState(false);
 
   if (!pegawaiList || pegawaiList.length === 0) return <span className="text-slate-400">-</span>;
@@ -189,15 +193,61 @@ const GenericTaskTable = ({ tasks, emptyMsg, onRowClick }: { tasks: typeof dummy
   </div>
 );
 
+// Generic Table Component for Reports
+const GenericReportTable = ({ reports, emptyMsg }: { reports: any[], emptyMsg: string }) => (
+  <div className="overflow-x-auto">
+    <table className="w-full text-left text-sm">
+      <thead className="bg-slate-50 text-slate-600 border-b border-slate-200">
+        <tr>
+          <th className="px-6 py-4 font-semibold">Nomor Surat</th>
+          <th className="px-6 py-4 font-semibold">Perihal Tugas</th>
+          <th className="px-6 py-4 font-semibold">Nama File</th>
+          <th className="px-6 py-4 font-semibold">Catatan Laporan</th>
+          <th className="px-6 py-4 font-semibold">Tanggal Kirim</th>
+          <th className="px-6 py-4 font-semibold">Status</th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-slate-200">
+        {reports.map(r => (
+          <tr key={r.id} className="hover:bg-slate-50 transition">
+            <td className="px-6 py-4 font-medium text-blue-700 font-mono text-xs">{r.nomorSurat}</td>
+            <td className="px-6 py-4 text-slate-800 font-semibold max-w-xs truncate" title={r.perihal}>{r.perihal}</td>
+            <td className="px-6 py-4">
+              <div className="flex items-center gap-2">
+                <FileText className="w-4 h-4 text-slate-400" />
+                <span className="text-slate-700 font-medium">{r.fileName}</span>
+              </div>
+            </td>
+            <td className="px-6 py-4 text-slate-600 max-w-xs truncate" title={r.catatan}>{r.catatan || '-'}</td>
+            <td className="px-6 py-4 text-slate-600">{r.tanggalUpload}</td>
+            <td className="px-6 py-4">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                <FileCheck className="w-3 h-3" />
+                {r.status}
+              </span>
+            </td>
+          </tr>
+        ))}
+        {reports.length === 0 && <tr><td colSpan={6} className="px-6 py-8 text-center text-slate-500">{emptyMsg}</td></tr>}
+      </tbody>
+    </table>
+  </div>
+);
+
 // 2. Laporan Penugasan (SURAT_TERBIT)
 const LaporanPenugasanTab = () => {
   const [expandedPegawaiId, setExpandedPegawaiId] = useState<string | null>(null);
+  const [allReports, setAllReports] = useState<any[]>([]);
 
-  const pegawaiWithTasks = dummyPegawaiList.map(pegawai => {
-    // Collect all tasks for this employee
-    const tasks = dummyAjuanSuratTugas.filter(t => t.pegawaiDitugaskan.some(p => p.id === pegawai.id));
-    return { ...pegawai, allTasks: tasks };
-  }).filter(p => p.allTasks.length > 0);
+  useEffect(() => {
+    const saved = localStorage.getItem('sim_penugasan_laporan');
+    if (saved) setAllReports(JSON.parse(saved));
+  }, []);
+
+  const pegawaiWithReports = dummyPegawaiList.map(pegawai => {
+    const pegawaiReports = allReports.filter(r => r.pegawaiId === pegawai.id);
+    return { ...pegawai, allReports: pegawaiReports };
+  }).filter(p => p.allReports.length > 0);
 
   return (
     <div className="overflow-x-auto">
@@ -211,7 +261,7 @@ const LaporanPenugasanTab = () => {
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-200">
-          {pegawaiWithTasks.map(p => (
+          {pegawaiWithReports.map(p => (
             <React.Fragment key={p.id}>
               <tr
                 className={`hover:bg-slate-50 transition cursor-pointer ${expandedPegawaiId === p.id ? 'bg-blue-50/50' : ''}`}
@@ -230,7 +280,7 @@ const LaporanPenugasanTab = () => {
                   <span className="text-blue-700 bg-blue-50 px-2 py-1 rounded-md text-xs font-medium">{p.unitKerja}</span>
                 </td>
                 <td className="px-6 py-4 text-center font-semibold text-slate-700">
-                  <span className="bg-slate-100 text-slate-700 px-2.5 py-1 rounded-full text-xs">{p.allTasks.length} Penugasan</span>
+                  <span className="bg-slate-100 text-slate-700 px-2.5 py-1 rounded-full text-xs">{p.allReports.length} Laporan</span>
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex justify-end">
@@ -247,9 +297,9 @@ const LaporanPenugasanTab = () => {
                     <div className="p-6">
                       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
                         <div className="px-5 py-3 border-b border-slate-200 bg-white flex justify-between items-center">
-                          <h4 className="font-bold text-slate-700">Rincian Penugasan: {p.nama}</h4>
+                          <h4 className="font-bold text-slate-700">Daftar Laporan yang Dikirimkan</h4>
                         </div>
-                        <GenericTaskTable tasks={p.allTasks} emptyMsg="Belum ada penugasan." />
+                        <GenericReportTable reports={p.allReports} emptyMsg="Belum ada laporan." />
                       </div>
                     </div>
                   </td>
@@ -257,9 +307,9 @@ const LaporanPenugasanTab = () => {
               )}
             </React.Fragment>
           ))}
-          {pegawaiWithTasks.length === 0 && (
+          {pegawaiWithReports.length === 0 && (
             <tr>
-              <td colSpan={4} className="px-6 py-8 text-center text-slate-500">Belum ada data laporan penugasan pegawai.</td>
+              <td colSpan={4} className="px-6 py-8 text-center text-slate-500">Belum ada pegawai yang mengunggah laporan penugasan.</td>
             </tr>
           )}
         </tbody>
@@ -333,7 +383,8 @@ const PeriodePenugasanTab = () => {
 
 // 4. Pivot Penugasan
 const PivotPenugasanTab = () => {
-  const units = Array.from(new Set(dummyAjuanSuratTugas.map(t => t.unitKerja)));
+  const { pokjas } = usePokja();
+  const units = pokjas.map(p => p.kode);
   const statuses = ['DRAFT', 'VERIFIKASI_SUBBAGIAN', 'PERSETUJUAN_PIMPINAN', 'SURAT_TERBIT', 'DITOLAK'];
 
   return (

@@ -1,9 +1,10 @@
-import { useState } from 'react';
-import { Eye, EyeOff, KeyRound, UserRound, Save } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Eye, EyeOff, KeyRound, UserRound, Save, Camera } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
 export const ProfilePage = () => {
-  const { user, getDemoCredentials, updateCredentials } = useAuth();
+  const { user, getDemoCredentials, updateCredentials, updateProfilePicture } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const credentials = getDemoCredentials();
   const username = credentials.username;
   const currentPassword = credentials.password;
@@ -34,6 +35,20 @@ export const ProfilePage = () => {
     setMessage('Perubahan username dan password berhasil disimpan.');
   };
 
+  const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          updateProfilePicture(reader.result);
+          setMessage('Foto profil berhasil diperbarui!');
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   return (
     <div className="mx-auto max-w-3xl p-6">
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -44,14 +59,27 @@ export const ProfilePage = () => {
 
         <form onSubmit={handleSave} className="space-y-5 p-6">
           <div className="flex items-center gap-4 border-b border-slate-100 pb-5">
-            <img
-              src={user.fotoAvatar || `${import.meta.env.BASE_URL}pp-navbar-2.jpg`}
-              alt={user.nama}
-              className="h-20 w-20 rounded-2xl border-2 border-blue-100 object-cover shadow-sm"
-            />
+            <div className="relative group cursor-pointer shrink-0" onClick={() => fileInputRef.current?.click()}>
+              <img
+                src={user.fotoAvatar || `${import.meta.env.BASE_URL}pp-navbar-2.jpg`}
+                alt={user.nama}
+                className="h-20 w-20 rounded-2xl border-2 border-blue-100 object-cover shadow-sm transition group-hover:brightness-75"
+              />
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <Camera className="h-6 w-6 text-white drop-shadow-md" />
+              </div>
+              <input 
+                type="file" 
+                ref={fileInputRef}
+                onChange={handlePhotoChange}
+                accept="image/*"
+                className="hidden"
+              />
+            </div>
             <div>
               <h2 className="text-lg font-bold text-slate-800">{user.nama}</h2>
               <p className="font-mono text-sm text-slate-500">NIP. {user.nip}</p>
+              <p className="mt-1 text-[11px] text-blue-500 cursor-pointer hover:text-blue-700 font-medium" onClick={() => fileInputRef.current?.click()}>Ubah Foto Profil</p>
             </div>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -68,11 +96,20 @@ export const ProfilePage = () => {
             </div>
           </div>
 
-          <div>
-            <label className="mb-1.5 block text-xs font-bold text-slate-600">Username</label>
-            <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-700">
-              <UserRound className="h-4 w-4 text-slate-400" />
-              <input value={usernameInput} onChange={(event) => setUsernameInput(event.target.value)} className="w-full bg-transparent outline-none" />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-1.5 block text-xs font-bold text-slate-600">Jabatan</label>
+              <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-700">
+                <span>{user.jabatan}</span>
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-xs font-bold text-slate-600">Username</label>
+              <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-700">
+                <UserRound className="h-4 w-4 text-slate-400" />
+                <input value={usernameInput} onChange={(event) => setUsernameInput(event.target.value)} className="w-full bg-transparent outline-none" />
+              </div>
             </div>
           </div>
 

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { dummyPegawaiList, UNIT_COLORS } from '@/data/dummyData';
+import { Link } from 'react-router-dom';
+import { dummyPegawaiList, getUnitColor } from '@/data/dummyData';
 import type { AjuanSuratTugas, UnitKerjaType } from '@/types';
 import {
   FileText,
@@ -13,6 +14,7 @@ import {
   Users,
   Hourglass,
   Download,
+  UploadCloud,
 } from 'lucide-react';
 
 import { sendEmailNotification } from '@/utils/emailService';
@@ -302,7 +304,7 @@ export const TugasPage = () => {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filteredAjuan.map((item) => {
-                  const unitColor = UNIT_COLORS[item.unitKerja] || { bg: 'bg-slate-100', text: 'text-slate-800' };
+                  const unitColor = getUnitColor(item.unitKerja);
 
                   return (
                     <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
@@ -358,15 +360,25 @@ export const TugasPage = () => {
                       <td className="px-6 py-4 min-w-[190px] align-top">
                         <p className="text-xs font-semibold text-slate-800 whitespace-nowrap">{item.lokasiSpesifik || '-'}</p>
                       </td>
-                      <td className="px-6 py-4 text-right">
+                      <td className="px-6 py-4 flex flex-col gap-2 min-w-[130px]">
                         <a
                           href={`http://localhost:3001/api/download-surat/${item.id}`}
                           download
-                          className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white transition-all hover:bg-blue-700 hover:shadow-md hover:shadow-blue-500/20"
+                          className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white transition-all hover:bg-blue-700 hover:shadow-md hover:shadow-blue-500/20"
                         >
                           <Download className="w-3.5 h-3.5" />
                           Unduh
                         </a>
+                        {(item.status === 'SURAT_TERBIT' || item.status === 'SELESAI') && (
+                          <Link
+                            to="/pegawai/tugas/laporan"
+                            state={{ selectedTaskId: item.id }}
+                            className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white transition-all hover:bg-emerald-700 hover:shadow-md hover:shadow-emerald-500/20"
+                          >
+                            <UploadCloud className="w-3.5 h-3.5" />
+                            Laporan
+                          </Link>
+                        )}
                       </td>
                     </tr>
                   );
