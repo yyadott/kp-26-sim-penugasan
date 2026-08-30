@@ -12,10 +12,13 @@ export interface Pegawai {
   nip: string;
   unitKerja: UnitKerjaType;
   jabatan: string;
+  golongan?: string;
+  pangkat?: string;
   fotoAvatar?: string;
   email?: string;
   username?: string;
-  role?: 'SUPER_ADMIN' | 'ADMIN' | 'PEGAWAI' | 'APPROVAL' | 'USER';
+  role?: 'SUPER_ADMIN' | 'ADMIN' | 'PEGAWAI' | 'APPROVAL' | 'USER' | 'Super Admin' | 'Pegawai' | string;
+  totalTugas?: number;
 }
 
 // History / Workflow Timeline item untuk Surat Tugas

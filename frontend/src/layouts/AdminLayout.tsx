@@ -39,7 +39,7 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
       label: 'Penugasan',
       icon: ClipboardList,
       items: [
-        { to: `${prefix}/tugas?tab=rekap`, label: 'Rekap Penugasan' },
+        { to: `${prefix}/tugas?tab=data-tugas`, label: 'Data Tugas' },
         { to: `${prefix}/tugas?tab=laporan`, label: 'Laporan Penugasan' },
         { to: `${prefix}/tugas?tab=berlangsung`, label: 'Penugasan Berlangsung' },
         { to: `${prefix}/tugas?tab=draft`, label: 'Draft Penugasan' },

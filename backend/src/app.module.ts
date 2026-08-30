@@ -11,6 +11,8 @@ import { AuthController } from './modules/auth/auth.controller';
 import { TugasModule } from './modules/tugas/tugas.module';
 import { GeolocationModule } from './modules/geolocation/geolocation.module';
 import { UsersModule } from './modules/users/users.module';
+import { RolesModule } from './modules/roles/roles.module';
+import { UnitKerjaModule } from './modules/unit-kerja/unit-kerja.module';
 
 @Module({
   imports: [
@@ -33,6 +35,8 @@ import { UsersModule } from './modules/users/users.module';
       },
     }),
     UsersModule,
+    RolesModule,
+    UnitKerjaModule,
   ],
   controllers: [
     AppController,

@@ -58,9 +58,9 @@ async function main() {
       }
 
       // Find or create default department
-      let defaultDept = await prisma.departemen.findFirst({ where: { name: 'Umum' } });
+      let defaultDept = await prisma.unitKerja.findFirst({ where: { name: 'Umum' } });
       if (!defaultDept) {
-        defaultDept = await prisma.departemen.create({ data: { name: 'Umum' } });
+        defaultDept = await prisma.unitKerja.create({ data: { name: 'Umum' } });
       }
 
       // Find or create admin user
@@ -75,7 +75,7 @@ async function main() {
             email: 'admin@example.com',
             password: 'password',
             role_id: adminRole.id,
-            departemen_id: defaultDept.id,
+            unit_kerja_id: defaultDept.id,
           }
         });
       }
@@ -102,7 +102,7 @@ async function main() {
               email: `${username}@example.com`,
               password: 'password',
               role_id: pegawaiRole.id,
-              departemen_id: defaultDept.id
+              unit_kerja_id: defaultDept.id
             }
           });
         }

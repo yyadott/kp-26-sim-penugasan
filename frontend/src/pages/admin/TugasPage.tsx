@@ -325,8 +325,8 @@ const LaporanPenugasanTab = () => {
 const PeriodePenugasanTab = () => {
   const { tugasList } = useSuratTugas();
   const currentDate = new Date();
-  const [selectedMonth, setSelectedMonth] = useState<string>(String(currentDate.getMonth() + 1));
-  const [selectedYear, setSelectedYear] = useState<string>(String(currentDate.getFullYear()));
+  const [selectedMonth, setSelectedMonth] = useState<string>('ALL');
+  const [selectedYear, setSelectedYear] = useState<string>('ALL');
 
   const filteredTasks = tugasList.filter(t => {
     const taskDate = new Date(t.tanggalMulai);
@@ -529,8 +529,8 @@ const BlokirPenugasanTab = () => {
 const RekapPenugasanTab = () => {
   const { tugasList } = useSuratTugas();
   const currentDate = new Date();
-  const [selectedMonth, setSelectedMonth] = useState<string>(String(currentDate.getMonth() + 1));
-  const [selectedYear, setSelectedYear] = useState<string>(String(currentDate.getFullYear()));
+  const [selectedMonth, setSelectedMonth] = useState<string>('ALL');
+  const [selectedYear, setSelectedYear] = useState<string>('ALL');
 
   const filteredTasks = tugasList.filter(t => {
     const taskDate = new Date(t.tanggalMulai);
@@ -629,7 +629,7 @@ const RekapPenugasanTab = () => {
 export const TugasPage = () => {
   const { tugasList } = useSuratTugas();
   const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = searchParams.get('tab') || 'rekap';
+  const activeTab = searchParams.get('tab') || 'data-tugas';
   const taskId = searchParams.get('taskId');
   const [selectedAjuan, setSelectedAjuan] = useState<any | null>(null);
 
@@ -651,7 +651,7 @@ export const TugasPage = () => {
 
   const getPageTitle = () => {
     switch (activeTab) {
-      case 'rekap': return 'Rekap Penugasan';
+      case 'data-tugas': return 'Data Tugas';
       case 'pegawai': return 'Penugasan Pegawai';
       case 'laporan': return 'Laporan Penugasan';
       case 'periode': return 'Periode Penugasan';
@@ -665,7 +665,7 @@ export const TugasPage = () => {
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'rekap': return <RekapPenugasanTab />;
+      case 'data-tugas': return <RekapPenugasanTab />;
       case 'pegawai': return <PegawaiPenugasanTab />;
       case 'laporan': return <LaporanPenugasanTab />;
       case 'periode': return <PeriodePenugasanTab />;

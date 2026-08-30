@@ -28,7 +28,7 @@ export const usePemetaanFilter = (props?: UsePemetaanFilterProps) => {
       suratTugasId: item.id,
       nomorSurat: item.nomorSurat,
       uraianKegiatan: item.uraianKegiatan,
-      pegawai: item.pegawaiDitugaskan[0] || item.pengaju,
+      pegawai: item.pegawaiDitugaskan?.[0] || item.pengaju || { nama: 'Pegawai Tidak Diketahui', nip: '-', fotoAvatar: '', jabatan: 'Pegawai' },
       unitKerja: item.unitKerja,
       lokasi: item.tempat,
       namaLokasi: item.lokasiSpesifik || item.tempat,

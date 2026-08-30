@@ -62,8 +62,8 @@ export const PokjaPage = () => {
     <div className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6">
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-800">Data POKJA / Departemen</h1>
-          <p className="mt-1 text-sm text-slate-500">Kelola data kelompok kerja dan departemen secara terpusat.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-800">Data POKJA / Unit Kerja</h1>
+          <p className="mt-1 text-sm text-slate-500">Kelola data kelompok kerja dan unit kerja secara terpusat.</p>
         </div>
         <button onClick={openAddForm} className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:from-blue-700 hover:to-indigo-700 hover:shadow">
           <Plus className="h-4 w-4" />
@@ -75,7 +75,7 @@ export const PokjaPage = () => {
         <div className="border-b border-slate-200 bg-slate-50/50 p-4">
           <div className="relative max-w-md">
             <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} type="search" placeholder="Cari kode atau nama departemen..." className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+            <input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} type="search" placeholder="Cari kode atau nama unit kerja..." className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
           </div>
         </div>
         <div className="overflow-x-auto">
@@ -83,7 +83,7 @@ export const PokjaPage = () => {
             <thead className="border-b border-slate-200 bg-slate-50/80 text-slate-600">
               <tr>
                 <th className="w-44 px-5 py-3.5 font-semibold">Kode POKJA</th>
-                <th className="px-5 py-3.5 font-semibold">Nama Departemen / Kelompok Kerja</th>
+                <th className="px-5 py-3.5 font-semibold">Nama Unit Kerja / Kelompok Kerja</th>
                 <th className="w-36 px-5 py-3.5 text-center font-semibold">Aksi</th>
               </tr>
             </thead>
@@ -113,7 +113,7 @@ export const PokjaPage = () => {
             </div>
             <div className="space-y-4 p-5">
               <label className="block text-sm font-semibold text-slate-700">Kode POKJA<input required value={form.kode} onChange={(event) => setForm((current) => ({ ...current, kode: event.target.value }))} placeholder="Contoh: POKJA-04" className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-2.5 font-mono text-sm font-normal outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20" /></label>
-              <label className="block text-sm font-semibold text-slate-700">Nama Departemen / Kelompok Kerja<input required value={form.nama} onChange={(event) => setForm((current) => ({ ...current, nama: event.target.value }))} placeholder="Masukkan nama POKJA" className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm font-normal outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20" /></label>
+              <label className="block text-sm font-semibold text-slate-700">Nama Unit Kerja / Kelompok Kerja<input required value={form.nama} onChange={(event) => setForm((current) => ({ ...current, nama: event.target.value }))} placeholder="Masukkan nama POKJA" className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm font-normal outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20" /></label>
               <div className="flex justify-end gap-3 pt-2"><button type="button" onClick={closeForm} className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50">Batal</button><button type="submit" className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700">{editingPokja ? 'Simpan Perubahan' : 'Tambah POKJA'}</button></div>
             </div>
           </form>

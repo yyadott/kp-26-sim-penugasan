@@ -7,14 +7,13 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Departemen {
+model UnitKerja {
   id    Int    @id @default(autoincrement())
   name  String @db.VarChar(100)
 
   users   User[]
-  dokumen Dokumen[]
 
-  @@map("departemen")
+  @@map("unit_kerja")
 }
 
 model Role {
@@ -22,43 +21,24 @@ model Role {
   name  String @db.VarChar(100)
 
   users              User[]
-  featureActivations FeatureActivation[]
 
   @@map("role")
 }
 
-model Fitur {
-  id    Int    @id @default(autoincrement())
-  name  String @db.VarChar(100)
-
-  featureActivations FeatureActivation[]
-
-  @@map("fitur")
-}
-
-model FeatureActivation {
-  id       Int @id @default(autoincrement())
-  role_id  Int
-  fitur_id Int
-
-  role  Role  @relation(fields: [role_id], references: [id])
-  fitur Fitur @relation(fields: [fitur_id], references: [id])
-
-  @@map("feature_activation")
-}
-
 model User {
-  id            Int    @id @default(autoincrement())
-  nama          String @db.VarChar(100)
-  email         String @unique @db.VarChar(100)
-  password      String @db.VarChar(255)
-  departemen_id Int
+  id            Int     @id @default(autoincrement())
+  nama          String  @db.VarChar(255)
+  nip           String? @db.VarChar(30)
+  jabatan       String? @db.VarChar(255)
+  golongan      String? @db.VarChar(20)
+  pangkat       String? @db.VarChar(100)
+  email         String  @unique @db.VarChar(100)
+  password      String  @db.VarChar(255)
+  unit_kerja_id Int
   role_id       Int
 
-  departemen       Departemen         @relation(fields: [departemen_id], references: [id])
+  unitKerja        UnitKerja          @relation(fields: [unit_kerja_id], references: [id])
   role             Role               @relation(fields: [role_id], references: [id])
-  dokumen          Dokumen[]
-  dokumenPengajuan DokumenPengajuan[]
 
   // Relasi baru ke SIM Penugasan
   suratDiajukan     SuratTugas[]        @relation("PengajuTugas")
@@ -66,64 +46,6 @@ model User {
   absensi           Absensi[]
 
   @@map("users")
-}
-
-model JenisDokumen {
-  id    Int    @id @default(autoincrement())
-  name  String @db.VarChar(100)
-
-  dokumen Dokumen[]
-
-  @@map("jenis_dokumen")
-}
-
-model StatusDokumen {
-  id    Int    @id @default(autoincrement())
-  name  String @db.VarChar(100)
-
-  dokumenPengajuan DokumenPengajuan[]
-
-  @@map("status_dokumen")
-}
-
-model Pengajuan {
-  id    Int    @id @default(autoincrement())
-  name  String @db.VarChar(100)
-
-  dokumenPengajuan DokumenPengajuan[]
-
-  @@map("pengajuan")
-}
-
-model Dokumen {
-  id               Int    @id @default(autoincrement())
-  name             String @db.VarChar(150)
-  user_id          Int
-  departemen_id    Int
-  jenis_dokumen_id Int
-
-  user             User               @relation(fields: [user_id], references: [id])
-  departemen       Departemen         @relation(fields: [departemen_id], references: [id])
-  jenis_dokumen    JenisDokumen       @relation(fields: [jenis_dokumen_id], references: [id])
-  dokumenPengajuan DokumenPengajuan[]
-
-  @@map("dokumen")
-}
-
-model DokumenPengajuan {
-  id                Int      @id @default(autoincrement())
-  dokumen_id        Int
-  user_id           Int
-  pengajuan_id      Int
-  status_dokumen_id Int
-  tgl               DateTime
-
-  dokumen        Dokumen       @relation(fields: [dokumen_id], references: [id])
-  user           User          @relation(fields: [user_id], references: [id])
-  pengajuan      Pengajuan     @relation(fields: [pengajuan_id], references: [id])
-  status_dokumen StatusDokumen @relation(fields: [status_dokumen_id], references: [id])
-
-  @@map("dokumen_pengajuan")
 }
 
 // ----------------------------------------------------------------------

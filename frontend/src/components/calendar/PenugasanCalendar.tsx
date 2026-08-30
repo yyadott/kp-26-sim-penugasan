@@ -210,8 +210,8 @@ const DetailModal = ({ data, onClose }: { data: ModalData; onClose: () => void }
 
 export const PenugasanCalendar = ({ locations, height = 'h-[500px]' }: PenugasanCalendarProps) => {
   const now = new Date();
-  const [tahun, setTahun] = useState(now.getFullYear());
-  const [bulan, setBulan] = useState(now.getMonth());
+  const [tahun, setTahun] = useState(2026);
+  const [bulan, setBulan] = useState(0); // 0 = Januari
   const [modalData, setModalData] = useState<ModalData>(null);
   const [tooltipData, setTooltipData] = useState<{ entries: CalendarEntry[]; day: number; rect: DOMRect } | null>(null);
   const tooltipTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);

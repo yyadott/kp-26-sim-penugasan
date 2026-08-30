@@ -46,8 +46,8 @@ export const BuatTugasPage = () => {
     uraianKegiatan: '',
     unitKerja: 'Kepeg' as UnitKerjaType,
     pegawaiIds: [] as string[],
-    tanggalMulai: '2026-08-01',
-    tanggalSelesai: '2026-08-03',
+    tanggalMulai: '2026-01-01',
+    tanggalSelesai: '2026-01-02',
     tempat: 'Kecamatan Bandung Tengah',
     lokasiSpesifik: '',
     provinsiId: '',
@@ -310,7 +310,19 @@ export const BuatTugasPage = () => {
                   type="date"
                   required
                   value={formData.tanggalMulai}
-                  onChange={(e) => setFormData({ ...formData, tanggalMulai: e.target.value })}
+                  onChange={(e) => {
+                    const newMulai = e.target.value;
+                    let newSelesai = formData.tanggalSelesai;
+                    if (newMulai) {
+                      const dMulai = new Date(newMulai);
+                      dMulai.setDate(dMulai.getDate() + 1);
+                      const minSel = `${dMulai.getFullYear()}-${String(dMulai.getMonth() + 1).padStart(2, '0')}-${String(dMulai.getDate()).padStart(2, '0')}`;
+                      if (!newSelesai || newSelesai < minSel) {
+                        newSelesai = minSel;
+                      }
+                    }
+                    setFormData({ ...formData, tanggalMulai: newMulai, tanggalSelesai: newSelesai });
+                  }}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50 hover:bg-white transition-colors"
                 />
               </div>
@@ -319,6 +331,15 @@ export const BuatTugasPage = () => {
                 <input
                   type="date"
                   required
+                  min={
+                    formData.tanggalMulai
+                      ? (() => {
+                          const d = new Date(formData.tanggalMulai);
+                          d.setDate(d.getDate() + 1);
+                          return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                        })()
+                      : ''
+                  }
                   value={formData.tanggalSelesai}
                   onChange={(e) => setFormData({ ...formData, tanggalSelesai: e.target.value })}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50 hover:bg-white transition-colors"

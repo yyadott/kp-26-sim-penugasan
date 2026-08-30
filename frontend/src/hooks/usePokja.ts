@@ -7,19 +7,19 @@ export type Pokja = {
 };
 
 const INITIAL_POKJAS: Pokja[] = [
-  { id: 1, kode: 'POKJA-01', nama: 'Departemen IT & Infrastruktur' },
-  { id: 2, kode: 'POKJA-02', nama: 'Departemen SDM & Keuangan' },
-  { id: 3, kode: 'POKJA-03', nama: 'Tim Riset & Pengembangan' },
+  { id: 1, kode: 'UNIT-01', nama: 'Kepeg' },
+  { id: 2, kode: 'UNIT-02', nama: 'Fastingkom' },
+  { id: 3, kode: 'UNIT-03', nama: 'PM' },
 ];
 
 export const usePokja = () => {
   const [pokjas, setPokjas] = useState<Pokja[]>(() => {
-    const saved = localStorage.getItem('sim_penugasan_pokja');
+    const saved = localStorage.getItem('sim_penugasan_unit_kerja_v2');
     return saved ? JSON.parse(saved) : INITIAL_POKJAS;
   });
 
   useEffect(() => {
-    localStorage.setItem('sim_penugasan_pokja', JSON.stringify(pokjas));
+    localStorage.setItem('sim_penugasan_unit_kerja_v2', JSON.stringify(pokjas));
   }, [pokjas]);
 
   const addPokja = (kode: string, nama: string) => {

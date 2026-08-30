@@ -55,11 +55,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     // Quick demo overrides (bypass API for instant demo accounts)
     if (['superadmin', 'approval', 'admin', 'user'].includes(cleanInput)) {
-      const defaultUser = { ...dummyPegawaiList[0], username: cleanInput };
-      if (cleanInput === 'superadmin') defaultUser.role = 'SUPER_ADMIN';
-      else if (cleanInput === 'approval') defaultUser.role = 'APPROVAL';
-      else if (cleanInput === 'admin') defaultUser.role = 'ADMIN';
-      else if (cleanInput === 'user') defaultUser.role = 'PEGAWAI';
+      let defaultUser;
+      if (cleanInput === 'superadmin') {
+        defaultUser = { ...dummyPegawaiList[0], username: cleanInput, role: 'SUPER_ADMIN' };
+      } else if (cleanInput === 'admin') {
+        defaultUser = { ...dummyPegawaiList[7], username: cleanInput, role: 'ADMIN' };
+      } else if (cleanInput === 'user') {
+        defaultUser = { ...dummyPegawaiList[6], username: cleanInput, role: 'PEGAWAI' };
+      } else {
+        defaultUser = { ...dummyPegawaiList[0], username: cleanInput, role: 'APPROVAL' };
+      }
       
       setUser(defaultUser);
       localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(defaultUser));

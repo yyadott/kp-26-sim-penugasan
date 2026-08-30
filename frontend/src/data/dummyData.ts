@@ -93,7 +93,115 @@ export const dummyPegawaiList: Pegawai[] = [
 ];
 
 // Data Ajuan Surat Tugas & Workflow Stage
-export const dummyAjuanSuratTugas: AjuanSuratTugas[] = [];
+export const dummyAjuanSuratTugas: AjuanSuratTugas[] = [
+  {
+    id: 'AJ-001',
+    nomorSurat: '094/01/AJ-KEPEG/2026',
+    uraianKegiatan: 'Konsolidasi Data Kepegawaian Daerah',
+    pengaju: dummyPegawaiList[1], // Yudi (Fastingkom)
+    pegawaiDitugaskan: [dummyPegawaiList[1], dummyPegawaiList[4]],
+    unitKerja: 'Fastingkom',
+    tanggalMulai: '2026-09-01',
+    tanggalSelesai: '2026-09-03',
+    tempat: 'BKN Regional',
+    koordinat: [-6.9147, 107.6098],
+    lokasiSpesifik: 'Gedung A, Ruang Rapat Utama',
+    deskripsi: 'Sinkronisasi data sistem kepegawaian dengan BKN Regional dalam rangka pemutakhiran data.',
+    status: 'DRAFT',
+    workflow: [
+      {
+        stage: 'DRAFT',
+        label: 'Diajukan',
+        actor: 'Yudi',
+        tanggal: '2026-08-30 09:00',
+        status: 'COMPLETED'
+      },
+      {
+        stage: 'VERIFIKASI_SUBBAGIAN',
+        label: 'Menunggu Verifikasi',
+        actor: 'Admin Kepegawaian',
+        status: 'PENDING'
+      }
+    ]
+  },
+  {
+    id: 'AJ-002',
+    nomorSurat: '094/02/AJ-PM/2026',
+    uraianKegiatan: 'Survei Lokasi Penertiban Reklame',
+    pengaju: dummyPegawaiList[3], // Siti Rahmawati
+    pegawaiDitugaskan: [dummyPegawaiList[3]],
+    unitKerja: 'PM',
+    tanggalMulai: '2026-09-05',
+    tanggalSelesai: '2026-09-06',
+    tempat: 'Jalan Protokol Kota',
+    koordinat: [-6.9200, 107.6100],
+    lokasiSpesifik: 'Sepanjang Jalan Merdeka - Sudirman',
+    deskripsi: 'Melakukan pendataan dan penertiban reklame liar di sepanjang jalan protokol.',
+    status: 'VERIFIKASI_SUBBAGIAN',
+    workflow: [
+      {
+        stage: 'DRAFT',
+        label: 'Diajukan',
+        actor: 'Siti Rahmawati, S.H.',
+        tanggal: '2026-08-29 14:00',
+        status: 'COMPLETED'
+      },
+      {
+        stage: 'VERIFIKASI_SUBBAGIAN',
+        label: 'Sedang Diverifikasi',
+        actor: 'Admin Penertiban',
+        tanggal: '2026-08-30 10:30',
+        status: 'IN_PROGRESS'
+      }
+    ]
+  },
+  {
+    id: 'AJ-003',
+    nomorSurat: '094/03/AJ-KEPEG/2026',
+    uraianKegiatan: 'Pelatihan Administrator Jaringan',
+    pengaju: dummyPegawaiList[6], // Arnest
+    pegawaiDitugaskan: [dummyPegawaiList[6]],
+    unitKerja: 'Fastingkom',
+    tanggalMulai: '2026-08-20',
+    tanggalSelesai: '2026-08-25',
+    tempat: 'Hotel Aston',
+    koordinat: [-6.9175, 107.6191],
+    lokasiSpesifik: 'Grand Ballroom',
+    deskripsi: 'Mengikuti pelatihan sertifikasi Mikrotik tingkat lanjut.',
+    status: 'SURAT_TERBIT',
+    linkSurat: '#',
+    workflow: [
+      {
+        stage: 'DRAFT',
+        label: 'Diajukan',
+        actor: 'Arnest, S.Kom.',
+        tanggal: '2026-08-15 08:00',
+        status: 'COMPLETED'
+      },
+      {
+        stage: 'VERIFIKASI_SUBBAGIAN',
+        label: 'Terverifikasi',
+        actor: 'Admin IT',
+        tanggal: '2026-08-15 13:00',
+        status: 'COMPLETED'
+      },
+      {
+        stage: 'PERSETUJUAN_PIMPINAN',
+        label: 'Disetujui Pimpinan',
+        actor: 'Kepala Fastingkom',
+        tanggal: '2026-08-16 09:00',
+        status: 'COMPLETED'
+      },
+      {
+        stage: 'SURAT_TERBIT',
+        label: 'Surat Terbit',
+        actor: 'Sistem',
+        tanggal: '2026-08-16 09:05',
+        status: 'COMPLETED'
+      }
+    ]
+  }
+];
 
 // Data Rekap Presensi Pribadi Taryadi
 export const dummyPresensiPribadi: RekapPresensiPribadi = {
