@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { PenugasanMap } from '@/components/map/PenugasanMap';
 import { PenugasanCalendar } from '@/components/calendar/PenugasanCalendar';
-import { dummyAjuanSuratTugas, getUnitColor } from '@/data/dummyData';
+import { getUnitColor } from '@/data/dummyData';
 import { MapPin, Navigation, User, Map as MapIcon, Calendar } from 'lucide-react';
 import { usePemetaanFilter } from '@/hooks/usePemetaanFilter';
 import { PemetaanFilterBar } from '@/components/penugasan/PemetaanFilterBar';
+import { useSuratTugas } from '@/hooks/useSuratTugas';
 
 export const PemetaanPage = () => {
   const [viewMode, setViewMode] = useState<'peta' | 'kalender'>('peta');
@@ -18,15 +19,15 @@ export const PemetaanPage = () => {
     mapLocations,
     selectedPegawai,
   } = usePemetaanFilter();
+  const { tugasList } = useSuratTugas();
 
-
-  const totalOrangAktif = dummyAjuanSuratTugas
+  const totalOrangAktif = tugasList
     .filter((item) => item.status === 'SURAT_TERBIT')
     .reduce((total, item) => total + item.pegawaiDitugaskan.length, 0);
-  const totalOrangMendatang = dummyAjuanSuratTugas
+  const totalOrangMendatang = tugasList
     .filter((item) => item.status !== 'SURAT_TERBIT' && item.status !== 'DITOLAK')
     .reduce((total, item) => total + item.pegawaiDitugaskan.length, 0);
-  const totalOrangDitugaskan = dummyAjuanSuratTugas
+  const totalOrangDitugaskan = tugasList
     .reduce((total, item) => total + item.pegawaiDitugaskan.length, 0);
 
   return (

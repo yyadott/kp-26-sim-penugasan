@@ -149,7 +149,7 @@ export const DashboardPage = () => {
       </div>
 
       {/* Executive Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:border-blue-300 transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Penugasan Aktif</span>
@@ -163,7 +163,7 @@ export const DashboardPage = () => {
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:border-emerald-300 transition-all flex flex-col justify-between">
+        <div className="hidden bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:border-emerald-300 transition-all flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Presensi Hari Ini</span>
             <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
@@ -191,9 +191,9 @@ export const DashboardPage = () => {
       </div>
 
       {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Rekap Penugasan 2026 (Spans 2 columns) */}
-        <div className="lg:col-span-2 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col h-[280px]">
+      <div className="grid grid-cols-1 gap-6">
+        {/* Rekap Penugasan 2026 (Spans full width) */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col h-[280px]">
           <div className="flex justify-between items-start mb-6">
             <div className="flex gap-3">
               <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
@@ -239,7 +239,7 @@ export const DashboardPage = () => {
         </div>
 
         {/* Rekap Izin & Cuti (Spans 1 column) */}
-        <div className="lg:col-span-1 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col h-[280px]">
+        <div className="hidden bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex-col h-[280px]">
           <div className="flex justify-between items-start mb-6">
             <div className="flex gap-3">
               <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
@@ -357,9 +357,9 @@ export const DashboardPage = () => {
       {/* Stacked Tables Layout: Recent Assignments & Attendance Log */}
       <div className="space-y-6">
       {/* Presensi & Calendar Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 gap-6">
         {/* Ringkasan Presensi Pegawai Hari Ini */}
-        <div className="lg:col-span-3 bg-white rounded-2xl border-2 border-slate-300 p-6 shadow-sm space-y-4 overflow-hidden">
+        <div className="hidden bg-white rounded-2xl border-2 border-slate-300 p-6 shadow-sm space-y-4 overflow-hidden">
           <div className="flex items-center justify-between pb-3 border-b border-slate-200">
             <h3 className="font-bold text-slate-800 text-base flex items-center gap-2">
               <UserCheck className="w-4 h-4 text-emerald-600" />
@@ -411,7 +411,7 @@ export const DashboardPage = () => {
         </div>
 
         {/* Calendar Widget */}
-        <div className="lg:col-span-1">
+        <div className="max-w-md mx-auto w-full">
           <CalendarWidget selectedDate={selectedDate} onSelectDate={setSelectedDate} />
         </div>
       </div>
