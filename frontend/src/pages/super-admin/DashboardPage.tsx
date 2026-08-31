@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { formatDate } from '@/utils/formatter';
 import { useAuth } from '@/hooks/useAuth';
 import { CalendarWidget } from '@/components/ui/CalendarWidget';
@@ -31,7 +31,12 @@ import {
 
 export const DashboardPage = () => {
   const { user } = useAuth();
+  const { tugasList, refreshTugas } = useSuratTugas();
   const todayFormatted = formatDate(new Date().toISOString());
+
+  useEffect(() => {
+    refreshTugas();
+  }, []);
 
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedAjuan, setSelectedAjuan] = useState<AjuanSuratTugas | null>(null);
@@ -135,7 +140,7 @@ export const DashboardPage = () => {
       </div>
 
       {/* Executive Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:border-blue-300 transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Titik Penugasan</span>
