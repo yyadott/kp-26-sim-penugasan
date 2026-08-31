@@ -149,6 +149,11 @@ export const PenugasanMap = ({
         popupAnchor: [0, -40],
       });
 
+      if (!loc.koordinat || !loc.koordinat[0] || !loc.koordinat[1]) {
+        console.warn(`Warning: Koordinat data not found for location ${loc.lokasi}`);
+        return;
+      }
+
       const marker = L.marker(loc.koordinat, { icon: customIcon }).addTo(map);
       bounds.extend(loc.koordinat);
       const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${loc.koordinat[0]},${loc.koordinat[1]}`;
@@ -184,8 +189,8 @@ export const PenugasanMap = ({
             </div>
             
             <div>
-              <span class="text-slate-500 block font-medium">Perihal:</span>
-              <span class="text-slate-700 text-[11px] line-clamp-2">${loc.perihal}</span>
+              <span class="text-slate-500 block font-medium">Uraian Kegiatan:</span>
+              <span class="text-slate-700 text-[11px] line-clamp-2">${loc.uraianKegiatan}</span>
             </div>
             
             <div class="pt-1 flex items-center gap-1 text-slate-600">

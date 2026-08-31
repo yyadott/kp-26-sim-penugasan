@@ -1,22 +1,12 @@
 import { useContext } from 'react';
 import { AuthContext } from '@/context/AuthContext';
 import type { AuthContextType } from '@/context/AuthContext';
-import { dummyPegawaiList } from '@/data/dummyData';
 
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
 
   if (!context) {
-    // Fallback if rendered outside AuthProvider
-    return {
-      user: dummyPegawaiList[0],
-      isAuthenticated: true,
-      login: async () => ({ success: true }),
-      updateCredentials: () => ({ success: true }),
-      updateProfilePicture: () => {},
-      getDemoCredentials: () => ({ username: 'yadiyudi', password: 'password123' }),
-      logout: () => {},
-    };
+    throw new Error('useAuth must be used within an AuthProvider');
   }
 
   return context;

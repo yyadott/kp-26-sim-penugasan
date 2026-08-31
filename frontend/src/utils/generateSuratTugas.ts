@@ -29,7 +29,7 @@ export interface PegawaiSuratData {
 
 export interface SuratTugasData {
   nomorSurat: string;
-  perihal: string;
+  uraianKegiatan: string;
   pegawaiList: PegawaiSuratData[];
   tanggalMulai: string;   // display-ready string, e.g. "2 Juli 2026"
   tanggalSelesai: string;
@@ -224,7 +224,7 @@ function generateSuratPerorangan(data: SuratTugasData, kopBuffer: ArrayBuffer | 
     alignment: AlignmentType.JUSTIFIED,
     spacing: { after: 120 },
     children: [
-      textRun(`sebagai ${data.deskripsi || data.perihal}. Kegiatan akan diselenggarakan pada tanggal ${tanggalMulaiFormatted} di ${lokasiText}.`),
+      textRun(`sebagai ${data.deskripsi || data.uraianKegiatan}. Kegiatan akan diselenggarakan pada tanggal ${tanggalMulaiFormatted} di ${lokasiText}.`),
     ],
   });
 
@@ -362,7 +362,7 @@ function generateSuratRombongan(data: SuratTugasData, kopBuffer: ArrayBuffer | n
     spacing: { before: 200, after: 120 },
     children: [
       textRun(
-        `sebagai ${data.deskripsi || data.perihal}. Kegiatan akan dilaksanakan periode tanggal ${tanggalMulaiFormatted} s.d ${tanggalSelesaiFormatted} di ${lokasiText}.`,
+        `sebagai ${data.deskripsi || data.uraianKegiatan}. Kegiatan akan dilaksanakan periode tanggal ${tanggalMulaiFormatted} s.d ${tanggalSelesaiFormatted} di ${lokasiText}.`,
       ),
     ],
   });
@@ -389,7 +389,7 @@ function generateSuratRombongan(data: SuratTugasData, kopBuffer: ArrayBuffer | n
         borders: cellBorders,
         width: { size: 2500, type: WidthType.DXA },
         verticalAlign: VerticalAlign.CENTER,
-        children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [textRun('Lokasi Penugasan', { bold: true })] })],
+        children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [textRun('Tempat', { bold: true })] })],
       }),
       new TableCell({
         borders: cellBorders,
@@ -497,7 +497,7 @@ function generateSuratRombongan(data: SuratTugasData, kopBuffer: ArrayBuffer | n
           emptyParagraph(),
           new Paragraph({
             alignment: AlignmentType.CENTER,
-            children: [textRun((data.deskripsi || data.perihal || 'DAFTAR PETUGAS').toUpperCase(), { bold: true })],
+            children: [textRun((data.deskripsi || data.uraianKegiatan || 'DAFTAR PETUGAS').toUpperCase(), { bold: true })],
           }),
           emptyParagraph(),
           lampiranTable,

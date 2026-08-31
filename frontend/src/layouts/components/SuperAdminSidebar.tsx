@@ -18,9 +18,9 @@ export function SuperAdminSidebar({ isSidebarCollapsed }: { isSidebarCollapsed: 
   const location = useLocation();
   const prefix = '/super-admin';
 
-  useEffect(() => { setIsSuperAdminMenuOpen(location.pathname.includes('/akun') || location.pathname.includes('/pokja') || location.search.includes('tab=pivot')); }, [location.pathname, location.search]);
+  useEffect(() => { setIsSuperAdminMenuOpen(location.pathname.includes('/akun') || location.pathname.includes('/pokja')); }, [location.pathname]);
   const [isSuperAdminMenuOpen, setIsSuperAdminMenuOpen] = useState(
-    () => location.pathname.includes('/akun') || location.pathname.includes('/pokja') || location.search.includes('tab=pivot'),
+    () => location.pathname.includes('/akun') || location.pathname.includes('/pokja'),
   );
   useEffect(() => { setIsAdministratorMenuOpen(location.pathname.includes('/ajuan-pegawai') || location.pathname.includes('/rekap-penugasan')); }, [location.pathname]);
   const [isAdministratorMenuOpen, setIsAdministratorMenuOpen] = useState(
@@ -54,7 +54,7 @@ export function SuperAdminSidebar({ isSidebarCollapsed }: { isSidebarCollapsed: 
           title={isSidebarCollapsed ? 'Superadmin' : undefined}
           aria-expanded={isSuperAdminMenuOpen}
           className={`flex w-full items-center gap-2 rounded-lg py-2 text-[13px] transition ${isSidebarCollapsed ? 'justify-center px-0' : 'px-3'
-            } ${isSuperAdminMenuOpen || location.pathname.includes('/akun') || location.pathname.includes('/pokja') || location.search.includes('tab=pivot')
+            } ${isSuperAdminMenuOpen || location.pathname.includes('/akun') || location.pathname.includes('/pokja')
               ? 'bg-slate-800 text-white'
               : 'text-slate-300 hover:bg-slate-800 hover:text-white'
             }`}
@@ -74,9 +74,6 @@ export function SuperAdminSidebar({ isSidebarCollapsed }: { isSidebarCollapsed: 
             </NavLink>
             <NavLink to={`${prefix}/pokja`} className={({ isActive }) => `flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] transition ${isActive ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}>
               <Network className="h-3.5 w-3.5 shrink-0" /> POKJA
-            </NavLink>
-            <NavLink to={`${prefix}/tugas?tab=pivot`} className={() => `flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] transition ${location.search.includes('tab=pivot') ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}>
-              <FileText className="h-3.5 w-3.5 shrink-0" /> Pivot Penugasan
             </NavLink>
           </div>
         )}

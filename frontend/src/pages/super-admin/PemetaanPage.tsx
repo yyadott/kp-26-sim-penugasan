@@ -37,7 +37,7 @@ export const PemetaanPage = () => {
         <div>
           <div className="flex items-center gap-2">
             <MapPin className="w-7 h-7 text-blue-600" />
-            <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Visualisasi Pemetaan Lokasi Penugasan Pegawai</h2>
+            <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Visualisasi Pemetaan Tempat Pegawai</h2>
           </div>
           <p className="text-slate-500 text-sm mt-1">
             Pemantauan lokasi penugasan tiap-tiap pegawai dari unit kerja yang berbeda-beda secara realtime berbasis peta interaktif.
@@ -187,7 +187,7 @@ export const PemetaanPage = () => {
                         </div>
 
                         <div>
-                          <h4 className="font-bold text-slate-900 text-xs">{loc.perihal}</h4>
+                          <h4 className="font-bold text-slate-900 text-xs">{loc.uraianKegiatan}</h4>
                           <p className="text-[11px] text-slate-500 font-mono mt-0.5">{loc.nomorSurat}</p>
                         </div>
 

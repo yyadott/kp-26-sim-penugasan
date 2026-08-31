@@ -147,13 +147,13 @@ export const UploadSuratPage = () => {
                       const newTask = {
                         id: `st-dummy-${Date.now()}`,
                         nomorSurat: `ST/${Math.floor(Math.random() * 900) + 100}/${user?.unitKerja}/IX/2026`,
-                        perihal: 'Tugas Simulasi Tambahan (Otomatis)',
+                        uraianKegiatan: 'Tugas Simulasi Tambahan (Otomatis)',
                         pengaju: { nama: user?.nama || 'Admin' },
                         pegawaiDitugaskan: [],
-                        unitKerja: user?.unitKerja || 'RBI',
+                        unitKerja: user?.unitKerja || 'Kepeg',
                         tanggalMulai: '2026-10-01',
                         tanggalSelesai: '2026-10-02',
-                        lokasiPenugasan: 'Lokasi Uji Coba',
+                        tempat: 'Lokasi Uji Coba',
                         deskripsi: 'Ini adalah draft yang dibuat secara otomatis untuk keperluan testing.',
                         status: 'DRAFT',
                         workflow: []
@@ -174,7 +174,7 @@ export const UploadSuratPage = () => {
                 >
                   <option value="">-- Pilih Penugasan (Draft) --</option>
                   {draftTasks.map((t: any) => (
-                    <option key={t.id} value={t.id}>{t.nomorSurat} - {t.perihal}</option>
+                    <option key={t.id} value={t.id}>{t.nomorSurat} - {t.uraianKegiatan}</option>
                   ))}
                 </select>
               </div>

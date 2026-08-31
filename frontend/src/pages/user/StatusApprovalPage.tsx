@@ -45,8 +45,16 @@ export const StatusApprovalPage = () => {
 
   const formatTanggal = (tanggal: string) => {
     if (!tanggal) return '-';
-    const [tahun, bulan, hari] = tanggal.split('-');
-    return `${hari}/${bulan}/${tahun}`;
+    try {
+      const date = new Date(tanggal);
+      if (isNaN(date.getTime())) return tanggal;
+      const d = String(date.getDate()).padStart(2, '0');
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const y = date.getFullYear();
+      return `${d}/${m}/${y}`;
+    } catch {
+      return tanggal;
+    }
   };
 
   return (
@@ -105,7 +113,7 @@ export const StatusApprovalPage = () => {
             <thead className="bg-slate-50 text-slate-700 text-xs font-bold uppercase tracking-wider border-b border-slate-200">
               <tr>
                 <th className="px-6 py-4">Status & Nomor Surat</th>
-                <th className="px-6 py-4">Perihal Penugasan</th>
+                <th className="px-6 py-4">Uraian Kegiatan Penugasan</th>
                 <th className="px-6 py-4">Tanggal Penugasan</th>
                 <th className="px-6 py-4">Lokasi</th>
               </tr>
@@ -123,7 +131,7 @@ export const StatusApprovalPage = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <p className="font-semibold text-slate-800">{item.perihal}</p>
+                      <p className="font-semibold text-slate-800">{item.uraianKegiatan}</p>
                       <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">{item.deskripsi}</p>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -137,7 +145,7 @@ export const StatusApprovalPage = () => {
                         <MapPin className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
                         <span>
                           <strong className="block text-slate-800">{item.lokasiSpesifik || '-'}</strong>
-                          <span className="text-slate-500">{item.lokasiPenugasan}</span>
+                          <span className="text-slate-500">{item.tempat}</span>
                         </span>
                       </div>
                     </td>

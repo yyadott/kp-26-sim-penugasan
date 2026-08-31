@@ -74,7 +74,7 @@ const SuratTugasTemplate: React.FC<Props> = ({ ajuan }) => {
           </div>
 
           <p className="text-justify mt-6">
-            sebagai {ajuan.perihal}. Kegiatan akan diselenggarakan pada tanggal {formatDateFull(ajuan.tanggalMulai)} di {ajuan.lokasiPenugasan}.
+            sebagai {ajuan.uraianKegiatan}. Kegiatan akan diselenggarakan pada tanggal {formatDateFull(ajuan.tanggalMulai)} di {ajuan.tempat}.
           </p>
 
           <p className="text-justify">

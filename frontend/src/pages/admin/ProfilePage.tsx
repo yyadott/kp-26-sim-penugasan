@@ -6,12 +6,11 @@ export const ProfilePage = () => {
   const { user, getDemoCredentials, updateCredentials, updateProfilePicture } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const credentials = getDemoCredentials();
-  const username = credentials.username;
   const currentPassword = credentials.password;
   const [showPassword, setShowPassword] = useState(false);
   const [showOldPassword, setShowOldPassword] = useState(false);
   const [oldPasswordInput, setOldPasswordInput] = useState('');
-  const [usernameInput, setUsernameInput] = useState(username);
+  const [usernameInput, setUsernameInput] = useState(user?.username || credentials.username);
   const [passwordInput, setPasswordInput] = useState('');
   const [message, setMessage] = useState('');
 

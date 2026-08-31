@@ -13,7 +13,8 @@ const NAMA_BULAN = [
 const NAMA_HARI = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
 
 // Simulated "jenis dinas" for each surat tugas based on location
-const getJenisDinas = (lokasi: string): string => {
+const getJenisDinas = (lokasi?: string): string => {
+  if (!lokasi) return 'Luar';
   if (lokasi.includes('BBPPMPV BMTI')) return 'Dalam';
   return 'Luar';
 };
@@ -26,7 +27,7 @@ const JENIS_DINAS_COLORS: Record<string, { bg: string; text: string; border: str
 interface CalendarEntry {
   id: string;
   nomorSurat: string;
-  perihal: string;
+  uraianKegiatan: string;
   lokasi: string;
   jenisDinas: string;
   unitKerja: string;
@@ -175,7 +176,7 @@ const DetailModal = ({ data, onClose }: { data: ModalData; onClose: () => void }
 
                   <div className="flex items-start gap-2">
                     <FileText className="w-3.5 h-3.5 text-slate-400 mt-0.5 shrink-0" />
-                    <p className="text-sm text-slate-700 leading-relaxed">{e.perihal}</p>
+                    <p className="text-sm text-slate-700 leading-relaxed">{e.uraianKegiatan}</p>
                   </div>
 
                   <div className="flex items-start gap-2">
@@ -209,8 +210,8 @@ const DetailModal = ({ data, onClose }: { data: ModalData; onClose: () => void }
 
 export const PenugasanCalendar = ({ locations, height = 'h-[500px]' }: PenugasanCalendarProps) => {
   const now = new Date();
-  const [tahun, setTahun] = useState(now.getFullYear());
-  const [bulan, setBulan] = useState(now.getMonth());
+  const [tahun, setTahun] = useState(2026);
+  const [bulan, setBulan] = useState(0); // 0 = Januari
   const [modalData, setModalData] = useState<ModalData>(null);
   const [tooltipData, setTooltipData] = useState<{ entries: CalendarEntry[]; day: number; rect: DOMRect } | null>(null);
   const tooltipTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -273,7 +274,7 @@ export const PenugasanCalendar = ({ locations, height = 'h-[500px]' }: Penugasan
         return {
           id: firstLoc.suratTugasId,
           nomorSurat: firstLoc.nomorSurat,
-          perihal: firstLoc.perihal,
+          uraianKegiatan: firstLoc.uraianKegiatan,
           lokasi: firstLoc.lokasi,
           jenisDinas: getJenisDinas(firstLoc.lokasi),
           unitKerja: firstLoc.unitKerja,
@@ -478,7 +479,7 @@ export const PenugasanCalendar = ({ locations, height = 'h-[500px]' }: Penugasan
               {tooltipData.entries.slice(0, 3).map((e, i) => (
                 <div key={i} className="border-l-2 pl-2 py-0.5" style={{ borderColor: JENIS_DINAS_COLORS[e.jenisDinas]?.dot || '#94a3b8' }}>
                   <div className="font-semibold text-white/90">{e.nomorSurat}</div>
-                  <div className="text-white/60 truncate">{e.perihal}</div>
+                  <div className="text-white/60 truncate">{e.uraianKegiatan}</div>
                   <div className="text-white/50">{e.lokasi} · <span className="font-medium" style={{ color: JENIS_DINAS_COLORS[e.jenisDinas]?.dot }}>{e.jenisDinas}</span></div>
                 </div>
               ))}

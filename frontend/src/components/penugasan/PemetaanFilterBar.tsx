@@ -55,9 +55,9 @@ export const PemetaanFilterBar = ({
 
   const filteredPegawaiList = useMemo(() =>
     allPegawaiInPenugasan.filter((peg) =>
-      peg.nama.toLowerCase().includes(pegawaiSearchQuery.toLowerCase()) ||
-      peg.nip.includes(pegawaiSearchQuery) ||
-      peg.unitKerja.toLowerCase().includes(pegawaiSearchQuery.toLowerCase())
+      (peg.nama || '').toLowerCase().includes(pegawaiSearchQuery.toLowerCase()) ||
+      (peg.nip || '').includes(pegawaiSearchQuery) ||
+      (peg.unitKerja || '').toLowerCase().includes(pegawaiSearchQuery.toLowerCase())
     ),
     [allPegawaiInPenugasan, pegawaiSearchQuery]);
 

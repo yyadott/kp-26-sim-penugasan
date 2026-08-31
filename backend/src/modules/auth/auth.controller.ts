@@ -18,7 +18,7 @@ export class AuthController {
       },
       include: {
         role: true,
-        departemen: true,
+        unitKerja: true,
       }
     });
 
@@ -36,7 +36,7 @@ export class AuthController {
         nama: user.nama,
         email: user.email,
         role: user.role.name,
-        unitKerja: user.departemen.name,
+        unitKerja: user.unitKerja.name,
       },
     };
   }

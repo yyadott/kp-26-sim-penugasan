@@ -27,12 +27,12 @@ export const usePemetaanFilter = (props?: UsePemetaanFilterProps) => {
       id: `approved-${item.id}`,
       suratTugasId: item.id,
       nomorSurat: item.nomorSurat,
-      perihal: item.perihal,
-      pegawai: item.pegawaiDitugaskan[0] || item.pengaju,
+      uraianKegiatan: item.uraianKegiatan,
+      pegawai: item.pegawaiDitugaskan?.[0] || item.pengaju || { nama: 'Pegawai Tidak Diketahui', nip: '-', fotoAvatar: '', jabatan: 'Pegawai' },
       unitKerja: item.unitKerja,
-      lokasi: item.lokasiPenugasan,
-      namaLokasi: item.lokasiSpesifik || item.lokasiPenugasan,
-      alamatLengkap: [item.lokasiSpesifik, item.lokasiPenugasan].filter(Boolean).join(', '),
+      lokasi: item.tempat,
+      namaLokasi: item.lokasiSpesifik || item.tempat,
+      alamatLengkap: [item.lokasiSpesifik, item.tempat].filter(Boolean).join(', '),
       koordinat: item.koordinat,
       tanggalMulai: item.tanggalMulai,
       tanggalSelesai: item.tanggalSelesai,
@@ -70,10 +70,10 @@ export const usePemetaanFilter = (props?: UsePemetaanFilterProps) => {
 
     if (searchQuery) {
       filtered = filtered.filter((loc) =>
-        loc.pegawai.nama.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        loc.lokasi.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        loc.nomorSurat.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        loc.perihal.toLowerCase().includes(searchQuery.toLowerCase())
+        (loc.pegawai?.nama || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (loc.lokasi || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (loc.nomorSurat || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (loc.uraianKegiatan || '').toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 

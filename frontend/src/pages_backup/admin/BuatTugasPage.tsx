@@ -14,12 +14,12 @@ export const BuatTugasPage = () => {
   const [isWilayahLoading, setIsWilayahLoading] = useState(false);
 
   const [formData, setFormData] = useState({
-    perihal: '',
-    unitKerja: 'RBI' as UnitKerjaType,
+    uraianKegiatan: '',
+    unitKerja: 'Kepeg' as UnitKerjaType,
     pegawaiIds: [dummyPegawaiList[0].id],
     tanggalMulai: '2026-08-01',
     tanggalSelesai: '2026-08-03',
-    lokasiPenugasan: 'Kecamatan Bandung Tengah',
+    tempat: 'Kecamatan Bandung Tengah',
     lokasiSpesifik: '',
     provinsiId: '',
     kotaId: '',
@@ -81,13 +81,13 @@ export const BuatTugasPage = () => {
     const newAjuan: AjuanSuratTugas = {
       id: newId,
       nomorSurat: newNomor,
-      perihal: formData.perihal,
+      uraianKegiatan: formData.uraianKegiatan,
       pengaju: dummyPegawaiList[0], // Logged in user
       pegawaiDitugaskan: assignedPegawai,
       unitKerja: formData.unitKerja,
       tanggalMulai: formData.tanggalMulai,
       tanggalSelesai: formData.tanggalSelesai,
-      lokasiPenugasan: [kota, provinsi].filter(Boolean).join(', ') || formData.lokasiPenugasan,
+      tempat: [kota, provinsi].filter(Boolean).join(', ') || formData.tempat,
       lokasiSpesifik: formData.lokasiSpesifik,
       koordinat: [formData.koordinatLat, formData.koordinatLng],
       deskripsi: formData.deskripsi,
@@ -113,10 +113,10 @@ export const BuatTugasPage = () => {
           to_email: pegawai.email || 'user@example.com',
           to_name: pegawai.nama,
           nomor_surat: newAjuan.nomorSurat,
-          perihal: newAjuan.perihal,
+          uraianKegiatan: newAjuan.uraianKegiatan,
           tanggal_mulai: newAjuan.tanggalMulai,
           tanggal_selesai: newAjuan.tanggalSelesai,
-          lokasi: newAjuan.lokasiPenugasan,
+          lokasi: newAjuan.tempat,
           pesan_tambahan: newAjuan.deskripsi
         });
       }
@@ -147,13 +147,13 @@ export const BuatTugasPage = () => {
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-bold text-slate-700 mb-1">Perihal Penugasan</label>
+              <label className="block text-sm font-bold text-slate-700 mb-1">Uraian Kegiatan Penugasan</label>
               <input
                 type="text"
                 required
                 placeholder="Contoh: Pendampingan Monitoring Posko Kesehatan..."
-                value={formData.perihal}
-                onChange={(e) => setFormData({ ...formData, perihal: e.target.value })}
+                value={formData.uraianKegiatan}
+                onChange={(e) => setFormData({ ...formData, uraianKegiatan: e.target.value })}
                 className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50 hover:bg-white transition-colors"
               />
             </div>
@@ -166,7 +166,7 @@ export const BuatTugasPage = () => {
                   onChange={(e) => setFormData({ ...formData, unitKerja: e.target.value as UnitKerjaType })}
                   className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50 hover:bg-white transition-colors"
                 >
-                  <option value="RBI">RBI</option>
+                  
                   <option value="Fastingkom">Fastingkom</option>
                   <option value="Kepeg">Kepeg</option>
                   <option value="PM">PM</option>
@@ -218,7 +218,7 @@ export const BuatTugasPage = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-bold text-slate-700 mb-1">Domisili Lokasi Penugasan</label>
+              <label className="block text-sm font-bold text-slate-700 mb-1">Domisili Tempat</label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <select required value={formData.provinsiId} onChange={(e) => setFormData({ ...formData, provinsiId: e.target.value, kotaId: '' })} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50 hover:bg-white transition-colors">
                   <option value="">Pilih Provinsi</option>
@@ -232,7 +232,7 @@ export const BuatTugasPage = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-bold text-slate-700 mb-1">Lokasi Penugasan Spesifik</label>
+              <label className="block text-sm font-bold text-slate-700 mb-1">Tempat Spesifik</label>
               <input type="text" required placeholder="Contoh: Kantor, lembaga, atau sekolah tujuan" value={formData.lokasiSpesifik} onChange={(e) => setFormData({ ...formData, lokasiSpesifik: e.target.value })} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50 hover:bg-white transition-colors" />
             </div>
 

@@ -29,7 +29,7 @@ const JENIS_DINAS_COLORS: Record<string, { bg: string; text: string; border: str
 
 // Get unique jabatan list from pegawai
 const JABATAN_LIST = [...new Set(dummyPegawaiList.map(p => p.jabatan))];
-const UNIT_LIST: string[] = ['RBI', 'Fastingkom', 'Kepeg', 'PM'];
+const UNIT_LIST: string[] = ['Kepeg', 'Fastingkom', 'PM'];
 
 const SUB_TABS: { key: SubTab; label: string; icon: React.ReactNode }[] = [
   { key: 'jabatan', label: 'Kelompok Jabatan', icon: <Briefcase className="w-4 h-4" /> },
@@ -72,7 +72,7 @@ const isDateInRange = (dateStr: string, startStr: string, endStr: string): boole
   return d >= s && d <= e;
 };
 
-type TooltipEntry = { perihal: string; lokasi: string; jenisDinas: string; nomorSurat: string };
+type TooltipEntry = { uraianKegiatan: string; lokasi: string; jenisDinas: string; nomorSurat: string };
 type TooltipData = { entries: TooltipEntry[]; day: number; bulan: number; tahun: number; pegawaiNama: string; rect: DOMRect } | null;
 type ModalData = { entries: TooltipEntry[]; day: number; bulan: number; tahun: number; pegawaiNama: string } | null;
 
@@ -113,7 +113,7 @@ const FloatingTooltip = ({ data }: { data: TooltipData }) => {
           {entries.map((e, i) => (
             <div key={i} className="border-l-2 pl-2.5 py-0.5" style={{ borderColor: JENIS_DINAS_COLORS[e.jenisDinas]?.dot || '#94a3b8' }}>
               <div className="font-semibold text-white/90">{e.nomorSurat}</div>
-              <div className="text-white/70 leading-relaxed">{e.perihal}</div>
+              <div className="text-white/70 leading-relaxed">{e.uraianKegiatan}</div>
               <div className="text-white/50 mt-0.5">{e.lokasi} · <span className="font-medium" style={{ color: JENIS_DINAS_COLORS[e.jenisDinas]?.dot }}>{e.jenisDinas}</span></div>
             </div>
           ))}
@@ -184,12 +184,12 @@ const DetailModal = ({ data, onClose }: { data: ModalData; onClose: () => void }
                   </div>
                 </div>
 
-                {/* Perihal */}
+                {/* Uraian Kegiatan */}
                 <div className="flex items-start gap-2.5 mb-3">
                   <Info className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
                   <div>
-                    <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Perihal</div>
-                    <div className="text-sm text-slate-700 mt-0.5 leading-relaxed">{e.perihal}</div>
+                    <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Uraian Kegiatan</div>
+                    <div className="text-sm text-slate-700 mt-0.5 leading-relaxed">{e.uraianKegiatan}</div>
                   </div>
                 </div>
 
@@ -197,7 +197,7 @@ const DetailModal = ({ data, onClose }: { data: ModalData; onClose: () => void }
                 <div className="flex items-start gap-2.5 mb-3">
                   <MapPin className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
                   <div>
-                    <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Lokasi Penugasan</div>
+                    <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Tempat</div>
                     <div className="text-sm text-slate-700 mt-0.5">{e.lokasi}</div>
                   </div>
                 </div>
@@ -288,7 +288,7 @@ export const RekapPenugasanPage = () => {
       .flatMap(st =>
         st.pegawaiDitugaskan.map(peg => ({
           pegawai: peg,
-          jenisDinas: getJenisDinas(st.lokasiPenugasan),
+          jenisDinas: getJenisDinas(st.tempat),
           suratTugas: st,
         }))
       );
@@ -371,10 +371,10 @@ export const RekapPenugasanPage = () => {
       // Apply jenis dinas filter
       const filteredPegEntries = jenisDinasFilter === 'Semua'
         ? pegEntries
-        : pegEntries.filter(st => getJenisDinas(st.lokasiPenugasan) === jenisDinasFilter);
+        : pegEntries.filter(st => getJenisDinas(st.tempat) === jenisDinasFilter);
 
       // Build daily entries
-      const days: { day: number; entries: { perihal: string; lokasi: string; jenisDinas: string; nomorSurat: string }[] }[] = [];
+      const days: { day: number; entries: { uraianKegiatan: string; lokasi: string; jenisDinas: string; nomorSurat: string }[] }[] = [];
       let totalBulan = 0;
 
       for (let d = 1; d <= daysInMonth; d++) {
@@ -382,9 +382,9 @@ export const RekapPenugasanPage = () => {
         const dayEntries = filteredPegEntries
           .filter(st => isDateInRange(dateStr, st.tanggalMulai, st.tanggalSelesai))
           .map(st => ({
-            perihal: st.perihal,
-            lokasi: st.lokasiPenugasan,
-            jenisDinas: getJenisDinas(st.lokasiPenugasan),
+            uraianKegiatan: st.uraianKegiatan,
+            lokasi: st.tempat,
+            jenisDinas: getJenisDinas(st.tempat),
             nomorSurat: st.nomorSurat,
           }));
         days.push({ day: d, entries: dayEntries });

@@ -43,12 +43,12 @@ export const BuatTugasPage = () => {
   } | null>(null);
 
   const [formData, setFormData] = useState({
-    perihal: '',
-    unitKerja: 'RBI' as UnitKerjaType,
+    uraianKegiatan: '',
+    unitKerja: 'Kepeg' as UnitKerjaType,
     pegawaiIds: [] as string[],
-    tanggalMulai: '2026-08-01',
-    tanggalSelesai: '2026-08-03',
-    lokasiPenugasan: 'Kecamatan Bandung Tengah',
+    tanggalMulai: '2026-01-01',
+    tanggalSelesai: '2026-01-02',
+    tempat: 'Kecamatan Bandung Tengah',
     lokasiSpesifik: '',
     provinsiId: '',
     kotaId: '',
@@ -176,13 +176,13 @@ export const BuatTugasPage = () => {
 
     const newAjuan = {
       nomorSurat: newNomor,
-      perihal: formData.perihal,
+      uraianKegiatan: formData.uraianKegiatan,
       pengaju_id: user?.db_id || 1, // Pass the numeric ID to backend
       pegawaiDitugaskan: assignedPegawai.map(p => p.db_id || 1), // Pass array of numeric IDs
       unitKerja: formData.unitKerja,
       tanggalMulai: formData.tanggalMulai,
       tanggalSelesai: formData.tanggalSelesai,
-      lokasiPenugasan: [kota, provinsi].filter(Boolean).join(', ') || formData.lokasiPenugasan,
+      tempat: [kota, provinsi].filter(Boolean).join(', ') || formData.tempat,
       lokasiSpesifik: formData.lokasiSpesifik,
       koordinatLat: formData.koordinatLat,
       koordinatLng: formData.koordinatLng,
@@ -199,10 +199,10 @@ export const BuatTugasPage = () => {
           to_email: pegawai.email || 'user@example.com',
           to_name: pegawai.nama,
           nomor_surat: newNomor,
-          perihal: formData.perihal,
+          uraianKegiatan: formData.uraianKegiatan,
           tanggal_mulai: formData.tanggalMulai,
           tanggal_selesai: formData.tanggalSelesai,
-          lokasi: [kota, provinsi].filter(Boolean).join(', ') || formData.lokasiPenugasan,
+          lokasi: [kota, provinsi].filter(Boolean).join(', ') || formData.tempat,
           pesan_tambahan: formData.deskripsi
         });
       }
@@ -271,13 +271,13 @@ export const BuatTugasPage = () => {
           </div>
           <div className="p-5 space-y-4">
             <div>
-              <label className="block text-sm font-bold text-slate-700 mb-1.5">Perihal Penugasan <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-bold text-slate-700 mb-1.5">Uraian Kegiatan Penugasan <span className="text-red-500">*</span></label>
               <input
                 type="text"
                 required
                 placeholder="Contoh: Pendampingan Monitoring Posko Kesehatan..."
-                value={formData.perihal}
-                onChange={(e) => setFormData({ ...formData, perihal: e.target.value })}
+                value={formData.uraianKegiatan}
+                onChange={(e) => setFormData({ ...formData, uraianKegiatan: e.target.value })}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50 hover:bg-white transition-colors"
               />
             </div>
@@ -310,7 +310,19 @@ export const BuatTugasPage = () => {
                   type="date"
                   required
                   value={formData.tanggalMulai}
-                  onChange={(e) => setFormData({ ...formData, tanggalMulai: e.target.value })}
+                  onChange={(e) => {
+                    const newMulai = e.target.value;
+                    let newSelesai = formData.tanggalSelesai;
+                    if (newMulai) {
+                      const dMulai = new Date(newMulai);
+                      dMulai.setDate(dMulai.getDate() + 1);
+                      const minSel = `${dMulai.getFullYear()}-${String(dMulai.getMonth() + 1).padStart(2, '0')}-${String(dMulai.getDate()).padStart(2, '0')}`;
+                      if (!newSelesai || newSelesai < minSel) {
+                        newSelesai = minSel;
+                      }
+                    }
+                    setFormData({ ...formData, tanggalMulai: newMulai, tanggalSelesai: newSelesai });
+                  }}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50 hover:bg-white transition-colors"
                 />
               </div>
@@ -319,6 +331,15 @@ export const BuatTugasPage = () => {
                 <input
                   type="date"
                   required
+                  min={
+                    formData.tanggalMulai
+                      ? (() => {
+                          const d = new Date(formData.tanggalMulai);
+                          d.setDate(d.getDate() + 1);
+                          return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                        })()
+                      : ''
+                  }
                   value={formData.tanggalSelesai}
                   onChange={(e) => setFormData({ ...formData, tanggalSelesai: e.target.value })}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50 hover:bg-white transition-colors"
@@ -476,7 +497,7 @@ export const BuatTugasPage = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-bold text-slate-700 mb-1.5">Lokasi Penugasan Spesifik <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-bold text-slate-700 mb-1.5">Tempat Spesifik <span className="text-red-500">*</span></label>
               <input type="text" required placeholder="Contoh: SMKN 1 Bandung, Jl. Wastukencana No.3" value={formData.lokasiSpesifik} onChange={(e) => setFormData({ ...formData, lokasiSpesifik: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50 hover:bg-white transition-colors" />
             </div>
 
@@ -572,12 +593,12 @@ export const BuatTugasPage = () => {
 
               const provinsi = provinces.find((item) => item.id === formData.provinsiId)?.name || '';
               const kota = cities.find((item) => item.id === formData.kotaId)?.name || '';
-              const lokasiGabungan = [kota, provinsi].filter(Boolean).join(', ') || formData.lokasiPenugasan;
+              const lokasiGabungan = [kota, provinsi].filter(Boolean).join(', ') || formData.tempat;
               const newNomor = `DRAFT-ST/${formData.unitKerja.toUpperCase().replace(/\s+/g, '')}/2026/00X`;
 
               generateSuratTugas({
                 nomorSurat: newNomor,
-                perihal: formData.perihal || '-',
+                uraianKegiatan: formData.uraianKegiatan || '-',
                 pegawaiList: assignedPegawai.map((p) => ({
                   nama: p.nama,
                   nip: p.nip,
@@ -640,7 +661,7 @@ export const BuatTugasPage = () => {
                 {conflictAlert.conflicts.map(c => (
                   <div key={c.id} className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-1">
                     <div className="text-[11px] font-bold text-red-600">{c.nomorSurat}</div>
-                    <div className="text-sm text-slate-700 font-medium leading-snug">{c.perihal}</div>
+                    <div className="text-sm text-slate-700 font-medium leading-snug">{c.uraianKegiatan}</div>
                     <div className="text-xs text-slate-500">{c.tanggalMulai} s/d {c.tanggalSelesai}</div>
                   </div>
                 ))}
