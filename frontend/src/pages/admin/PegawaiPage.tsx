@@ -1,32 +1,16 @@
 import { useState } from 'react';
-import { Search, Edit, Trash2, Plus, X, Loader2 } from 'lucide-react';
+import { Search, Loader2 } from 'lucide-react';
 import { UNIT_COLORS } from '@/data/dummyData';
 import { usePegawai } from '@/hooks/usePegawai';
 import { useReferensi } from '@/hooks/useReferensi';
-import type { Pegawai } from '@/types';
 
 export const PegawaiPage = () => {
-  const { pegawaiList, isLoading, createPegawai, updatePegawai, deletePegawai } = usePegawai();
+  const { pegawaiList, isLoading } = usePegawai();
   const { roles, unitKerja } = useReferensi();
   const [searchTerm, setSearchTerm] = useState('');
   const [unitFilter, setUnitFilter] = useState('Semua Unit Kerja');
   const [roleFilter, setRoleFilter] = useState('Semua Role');
   const [jabatanFilter, setJabatanFilter] = useState('Semua Jabatan');
-
-  // Form State
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingPegawai, setEditingPegawai] = useState<Pegawai | null>(null);
-  const [form, setForm] = useState({
-    nama: '',
-    nip: '',
-    email: '',
-    password: '',
-    jabatan: '',
-    golongan: '',
-    pangkat: '',
-    unit_kerja_id: '',
-    role_id: '',
-  });
 
   // Helper to get color based on role
   const getRoleColor = (role: string = '') => {
@@ -64,16 +48,8 @@ export const PegawaiPage = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Data Pegawai</h1>
-          <p className="text-sm text-slate-500 mt-1">Kelola dan lihat daftar seluruh pegawai yang terdaftar di sistem.</p>
+          <p className="text-sm text-slate-500 mt-1">Lihat daftar seluruh pegawai yang terdaftar di sistem.</p>
         </div>
-        <button onClick={() => {
-          setEditingPegawai(null);
-          setForm({ nama: '', nip: '', email: '', password: '', jabatan: '', golongan: '', pangkat: '', unit_kerja_id: '', role_id: '' });
-          setIsFormOpen(true);
-        }} className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:from-blue-700 hover:to-indigo-700 hover:shadow">
-          <Plus className="h-4 w-4" />
-          Tambah Pegawai
-        </button>
       </div>
 
       {/* Main Card */}
@@ -143,7 +119,6 @@ export const PegawaiPage = () => {
                 <th className="px-6 py-4 text-xs font-bold text-slate-600">Jabatan</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-600">Unit Kerja</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-600">Role</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-600 text-right">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -190,37 +165,6 @@ export const PegawaiPage = () => {
                           {pegawai.role}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <button onClick={() => {
-                            setEditingPegawai(pegawai);
-                            // Find corresponding unit and role IDs to preset form
-                            const uId = unitKerja.find(u => u.name === pegawai.unitKerja)?.id || '';
-                            const rId = roles.find(r => r.name === pegawai.role)?.id || '';
-                            setForm({
-                              nama: pegawai.nama,
-                              nip: pegawai.nip || '',
-                              email: pegawai.email || '',
-                              password: '', // Leave empty when editing
-                              jabatan: pegawai.jabatan || '',
-                              golongan: pegawai.golongan || '',
-                              pangkat: pegawai.pangkat || '',
-                              unit_kerja_id: uId.toString(),
-                              role_id: rId.toString(),
-                            });
-                            setIsFormOpen(true);
-                          }} className="rounded-lg bg-blue-50 p-2 text-blue-600 transition-colors hover:bg-blue-100">
-                            <Edit className="h-4 w-4" />
-                          </button>
-                          <button onClick={() => {
-                            if (window.confirm(`Hapus pegawai ${pegawai.nama}?`)) {
-                              deletePegawai(pegawai.id);
-                            }
-                          }} className="rounded-lg bg-red-50 p-2 text-red-600 transition-colors hover:bg-red-100">
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </td>
                     </tr>
                   );
                 })
@@ -235,88 +179,6 @@ export const PegawaiPage = () => {
           </table>
         </div>
       </div>
-
-      {/* Modal Form */}
-      {isFormOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm overflow-y-auto">
-          <form onSubmit={async (e) => {
-            e.preventDefault();
-            const payload = {
-              nama: form.nama,
-              nip: form.nip,
-              email: form.email,
-              jabatan: form.jabatan,
-              golongan: form.golongan,
-              pangkat: form.pangkat,
-              unit_kerja_id: parseInt(form.unit_kerja_id),
-              role_id: parseInt(form.role_id),
-            };
-
-            try {
-              if (editingPegawai) {
-                // If password is not empty, include it in update (assuming backend supports it)
-                await updatePegawai(editingPegawai.id, payload);
-              } else {
-                if (!form.password) return alert("Password diperlukan untuk pegawai baru!");
-                await createPegawai({ ...payload, password: form.password });
-              }
-              setIsFormOpen(false);
-            } catch (err) {
-              alert("Gagal menyimpan data pegawai.");
-            }
-          }} className="w-full max-w-2xl bg-white rounded-2xl shadow-xl overflow-hidden my-8">
-            <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 p-4">
-              <h2 className="font-bold text-slate-800">{editingPegawai ? 'Edit Pegawai' : 'Tambah Pegawai'}</h2>
-              <button type="button" onClick={() => setIsFormOpen(false)} className="text-slate-400 hover:text-slate-700">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <label className="block text-sm font-semibold text-slate-700">Nama Lengkap
-                  <input required value={form.nama} onChange={e => setForm({...form, nama: e.target.value})} className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20" />
-                </label>
-                <label className="block text-sm font-semibold text-slate-700">NIP
-                  <input value={form.nip} onChange={e => setForm({...form, nip: e.target.value})} className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm font-mono outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20" />
-                </label>
-                <label className="block text-sm font-semibold text-slate-700">Email
-                  <input type="email" required value={form.email} onChange={e => setForm({...form, email: e.target.value})} className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20" />
-                </label>
-                <label className="block text-sm font-semibold text-slate-700">Password {!editingPegawai && <span className="text-red-500">*</span>}
-                  <input type="password" required={!editingPegawai} value={form.password} onChange={e => setForm({...form, password: e.target.value})} placeholder={editingPegawai ? "Kosongkan jika tidak diubah" : "Password akun"} className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20" />
-                </label>
-                <label className="block text-sm font-semibold text-slate-700">Jabatan
-                  <input value={form.jabatan} onChange={e => setForm({...form, jabatan: e.target.value})} className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20" />
-                </label>
-                <label className="block text-sm font-semibold text-slate-700">Unit Kerja
-                  <select required value={form.unit_kerja_id} onChange={e => setForm({...form, unit_kerja_id: e.target.value})} className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 bg-white">
-                    <option value="">Pilih Unit Kerja</option>
-                    {unitKerja.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-                  </select>
-                </label>
-                <label className="block text-sm font-semibold text-slate-700">Golongan
-                  <input value={form.golongan} onChange={e => setForm({...form, golongan: e.target.value})} className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20" />
-                </label>
-                <label className="block text-sm font-semibold text-slate-700">Pangkat
-                  <input value={form.pangkat} onChange={e => setForm({...form, pangkat: e.target.value})} className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20" />
-                </label>
-                <label className="block text-sm font-semibold text-slate-700 md:col-span-2">Role Aplikasi
-                  <select required value={form.role_id} onChange={e => setForm({...form, role_id: e.target.value})} className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 bg-white">
-                    <option value="">Pilih Role Akses</option>
-                    {roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-                  </select>
-                </label>
-              </div>
-            </div>
-            <div className="flex justify-end gap-3 p-4 border-t border-slate-200 bg-slate-50">
-              <button type="button" onClick={() => setIsFormOpen(false)} className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-white transition-colors">Batal</button>
-              <button type="submit" className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition-colors">
-                {editingPegawai ? 'Simpan Perubahan' : 'Tambah Pegawai'}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
     </div>
   );
 };

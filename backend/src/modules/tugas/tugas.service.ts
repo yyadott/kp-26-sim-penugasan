@@ -15,11 +15,13 @@ export class TugasService {
         id: item.pengaju.id.toString(),
         nama: item.pengaju.nama,
         email: item.pengaju.email,
+        nip: item.pengaju.nip || '-',
       },
       pegawaiDitugaskan: item.pegawaiDitugaskan.map((p: any) => ({
         id: p.user.id.toString(),
         nama: p.user.nama,
         email: p.user.email,
+        nip: p.user.nip || '-',
       })),
       unitKerja: item.unitKerja,
       tanggalMulai: item.tanggalMulai,

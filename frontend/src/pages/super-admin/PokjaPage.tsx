@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Plus, Search, Edit, Trash2, X } from 'lucide-react';
 import { usePokja, type Pokja } from '@/hooks/usePokja';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 export const PokjaPage = () => {
   const { pokjas, addPokja, updatePokja, deletePokja } = usePokja();
@@ -8,6 +9,9 @@ export const PokjaPage = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingPokja, setEditingPokja] = useState<Pokja | null>(null);
   const [form, setForm] = useState({ kode: '', nama: '' });
+
+  // Confirm Dialog State
+  const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, pokjaId: 0, pokjaCode: '', pokjaName: '' });
 
   const filteredPokjas = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -54,8 +58,12 @@ export const PokjaPage = () => {
   };
 
   const handleDelete = (pokja: Pokja) => {
-    if (!window.confirm(`Hapus ${pokja.kode} — ${pokja.nama}?`)) return;
-    deletePokja(pokja.id);
+    setConfirmDialog({
+      isOpen: true,
+      pokjaId: pokja.id,
+      pokjaCode: pokja.kode,
+      pokjaName: pokja.nama,
+    });
   };
 
   return (
@@ -119,6 +127,22 @@ export const PokjaPage = () => {
           </form>
         </div>
       )}
+
+      {/* Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        title="Hapus POKJA"
+        message={`Apakah Anda yakin ingin menghapus permanen POKJA ${confirmDialog.pokjaCode} — ${confirmDialog.pokjaName}?`}
+        confirmText="Hapus Permanen"
+        type="danger"
+        onCancel={() => setConfirmDialog({ ...confirmDialog, isOpen: false })}
+        onConfirm={() => {
+          if (confirmDialog.pokjaId) {
+            deletePokja(confirmDialog.pokjaId);
+            setConfirmDialog({ ...confirmDialog, isOpen: false });
+          }
+        }}
+      />
     </div>
   );
 };

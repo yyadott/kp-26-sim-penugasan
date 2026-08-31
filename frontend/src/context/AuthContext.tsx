@@ -22,7 +22,7 @@ const DEFAULT_CREDENTIALS = { username: 'yadiyudi', password: 'password123' };
 
 const getCredentials = () => {
   try {
-    const saved = localStorage.getItem(CREDENTIALS_STORAGE_KEY);
+    const saved = sessionStorage.getItem(CREDENTIALS_STORAGE_KEY);
     return saved ? { ...DEFAULT_CREDENTIALS, ...JSON.parse(saved) } : DEFAULT_CREDENTIALS;
   } catch {
     return DEFAULT_CREDENTIALS;
@@ -32,7 +32,7 @@ const getCredentials = () => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<Pegawai | null>(() => {
     try {
-      const stored = localStorage.getItem(AUTH_STORAGE_KEY);
+      const stored = sessionStorage.getItem(AUTH_STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
         if (parsed.id === 'peg-07') parsed.nama = 'Arnest, S.Kom.';
@@ -67,7 +67,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       setUser(defaultUser);
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(defaultUser));
+      sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(defaultUser));
       return { success: true };
     }
 
@@ -81,10 +81,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (res.data && res.data.user) {
         setUser(res.data.user);
-        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(res.data.user));
-        // You might want to save the token in localStorage too
+        sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(res.data.user));
+        // You might want to save the token in sessionStorage too
         if (res.data.token) {
-          localStorage.setItem('sim_penugasan_token', res.data.token);
+          sessionStorage.setItem('sim_penugasan_token', res.data.token);
         }
         return { success: true };
       }
@@ -106,7 +106,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!newPassword || newPassword.length < 6) return { success: false, message: 'Password baru minimal 6 karakter.' };
 
     const nextCredentials = { username: trimmedUsername, password: newPassword };
-    localStorage.setItem(CREDENTIALS_STORAGE_KEY, JSON.stringify(nextCredentials));
+    sessionStorage.setItem(CREDENTIALS_STORAGE_KEY, JSON.stringify(nextCredentials));
     setUser((currentUser) => currentUser ? { ...currentUser, username: trimmedUsername } : currentUser);
     return { success: true, message: 'Username dan password berhasil diperbarui.' };
   };
@@ -115,7 +115,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser((currentUser) => {
       if (!currentUser) return currentUser;
       const updatedUser = { ...currentUser, fotoAvatar: dataUrl };
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(updatedUser));
+      sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(updatedUser));
       return updatedUser;
     });
   };
@@ -124,14 +124,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem(AUTH_STORAGE_KEY);
+    sessionStorage.removeItem(AUTH_STORAGE_KEY);
+    sessionStorage.removeItem('sim_penugasan_token');
   };
 
   useEffect(() => {
     if (user) {
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+      sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
     } else {
-      localStorage.removeItem(AUTH_STORAGE_KEY);
+      sessionStorage.removeItem(AUTH_STORAGE_KEY);
     }
   }, [user]);
 

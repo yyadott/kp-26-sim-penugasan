@@ -11,7 +11,7 @@ const apiClient = axios.create({
 // Interceptor to add auth token if needed
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('sim_penugasan_token');
+    const token = sessionStorage.getItem('sim_penugasan_token');
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }

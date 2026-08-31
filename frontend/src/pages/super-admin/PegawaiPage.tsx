@@ -4,6 +4,7 @@ import { UNIT_COLORS } from '@/data/dummyData';
 import { usePegawai } from '@/hooks/usePegawai';
 import { useReferensi } from '@/hooks/useReferensi';
 import type { Pegawai } from '@/types';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 export const PegawaiPage = () => {
   const { pegawaiList, isLoading, createPegawai, updatePegawai, deletePegawai } = usePegawai();
@@ -12,6 +13,9 @@ export const PegawaiPage = () => {
   const [unitFilter, setUnitFilter] = useState('Semua Unit Kerja');
   const [roleFilter, setRoleFilter] = useState('Semua Role');
   const [jabatanFilter, setJabatanFilter] = useState('Semua Jabatan');
+
+  // Confirm Dialog State
+  const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, pegawaiId: '', pegawaiName: '' });
 
   // Form State
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -48,13 +52,13 @@ export const PegawaiPage = () => {
       return false;
     }
 
-    const matchesSearch = 
-      pegawai.nama.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    const matchesSearch =
+      pegawai.nama.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (pegawai.nip || '').includes(searchTerm);
     const matchesUnit = unitFilter === 'Semua Unit Kerja' || pegawai.unitKerja === unitFilter;
     const matchesRole = roleFilter === 'Semua Role' || pegawai.role?.toUpperCase() === roleFilter.toUpperCase();
     const matchesJabatan = jabatanFilter === 'Semua Jabatan' || pegawai.jabatan === jabatanFilter;
-    
+
     return matchesSearch && matchesUnit && matchesRole && matchesJabatan;
   });
 
@@ -78,23 +82,23 @@ export const PegawaiPage = () => {
 
       {/* Main Card */}
       <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-        
+
         {/* Toolbar */}
         <div className="p-4 border-b border-slate-100 flex flex-col md:flex-row gap-4 items-center bg-white">
           <div className="relative flex-1 w-full">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <input 
-              type="text" 
-              placeholder="Cari berdasarkan nama atau NIP..." 
+            <input
+              type="text"
+              placeholder="Cari berdasarkan nama atau NIP..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
             />
           </div>
-          
+
           <div className="flex flex-wrap gap-3 w-full md:w-auto">
             <div className="relative min-w-[170px] flex-1 md:flex-none">
-              <select 
+              <select
                 value={unitFilter}
                 onChange={(e) => setUnitFilter(e.target.value)}
                 className="w-full appearance-none px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer"
@@ -107,7 +111,7 @@ export const PegawaiPage = () => {
             </div>
 
             <div className="relative min-w-[150px] flex-1 md:flex-none">
-              <select 
+              <select
                 value={roleFilter}
                 onChange={(e) => setRoleFilter(e.target.value)}
                 className="w-full appearance-none px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer"
@@ -120,7 +124,7 @@ export const PegawaiPage = () => {
             </div>
 
             <div className="relative min-w-[180px] flex-1 md:flex-none">
-              <select 
+              <select
                 value={jabatanFilter}
                 onChange={(e) => setJabatanFilter(e.target.value)}
                 className="w-full appearance-none px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer"
@@ -213,10 +217,12 @@ export const PegawaiPage = () => {
                             <Edit className="h-4 w-4" />
                           </button>
                           <button onClick={() => {
-                            if (window.confirm(`Hapus pegawai ${pegawai.nama}?`)) {
-                              deletePegawai(pegawai.id);
-                            }
-                          }} className="rounded-lg bg-red-50 p-2 text-red-600 transition-colors hover:bg-red-100">
+                            setConfirmDialog({
+                              isOpen: true,
+                              pegawaiId: pegawai.id,
+                              pegawaiName: pegawai.nama
+                            });
+                          }} className="rounded-lg bg-red-50 p-2 text-red-600 transition-colors hover:bg-red-100" title="Hapus Pegawai">
                             <Trash2 className="h-4 w-4" />
                           </button>
                         </div>
@@ -254,10 +260,12 @@ export const PegawaiPage = () => {
 
             try {
               if (editingPegawai) {
-                // If password is not empty, include it in update (assuming backend supports it)
+                // Tambahkan password jika diisi
+                if (form.password) {
+                  (payload as any).password = form.password;
+                }
                 await updatePegawai(editingPegawai.id, payload);
               } else {
-                if (!form.password) return alert("Password diperlukan untuk pegawai baru!");
                 await createPegawai({ ...payload, password: form.password });
               }
               setIsFormOpen(false);
@@ -271,41 +279,53 @@ export const PegawaiPage = () => {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <label className="block text-sm font-semibold text-slate-700">Nama Lengkap
-                  <input required value={form.nama} onChange={e => setForm({...form, nama: e.target.value})} className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20" />
-                </label>
-                <label className="block text-sm font-semibold text-slate-700">NIP
-                  <input value={form.nip} onChange={e => setForm({...form, nip: e.target.value})} className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm font-mono outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20" />
-                </label>
-                <label className="block text-sm font-semibold text-slate-700">Email
-                  <input type="email" required value={form.email} onChange={e => setForm({...form, email: e.target.value})} className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20" />
-                </label>
-                <label className="block text-sm font-semibold text-slate-700">Password {!editingPegawai && <span className="text-red-500">*</span>}
-                  <input type="password" required={!editingPegawai} value={form.password} onChange={e => setForm({...form, password: e.target.value})} placeholder={editingPegawai ? "Kosongkan jika tidak diubah" : "Password akun"} className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20" />
-                </label>
-                <label className="block text-sm font-semibold text-slate-700">Jabatan
-                  <input value={form.jabatan} onChange={e => setForm({...form, jabatan: e.target.value})} className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20" />
-                </label>
-                <label className="block text-sm font-semibold text-slate-700">Unit Kerja
-                  <select required value={form.unit_kerja_id} onChange={e => setForm({...form, unit_kerja_id: e.target.value})} className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 bg-white">
-                    <option value="">Pilih Unit Kerja</option>
-                    {unitKerja.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-                  </select>
-                </label>
-                <label className="block text-sm font-semibold text-slate-700">Golongan
-                  <input value={form.golongan} onChange={e => setForm({...form, golongan: e.target.value})} className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20" />
-                </label>
-                <label className="block text-sm font-semibold text-slate-700">Pangkat
-                  <input value={form.pangkat} onChange={e => setForm({...form, pangkat: e.target.value})} className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20" />
-                </label>
-                <label className="block text-sm font-semibold text-slate-700 md:col-span-2">Role Aplikasi
-                  <select required value={form.role_id} onChange={e => setForm({...form, role_id: e.target.value})} className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 bg-white">
-                    <option value="">Pilih Role Akses</option>
-                    {roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-                  </select>
-                </label>
+            <div className="p-5 space-y-6 max-h-[70vh] overflow-y-auto">
+
+              {/* Seksi A: Informasi Kepegawaian */}
+              <div>
+                <h3 className="text-sm font-bold text-slate-800 border-b border-slate-200 pb-2 mb-4">Informasi Kepegawaian</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <label className="block text-sm font-semibold text-slate-700">Nama Lengkap
+                    <input required value={form.nama} onChange={e => setForm({ ...form, nama: e.target.value })} placeholder="Contoh: Taryadi, S.Kom." className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20" />
+                  </label>
+                  <label className="block text-sm font-semibold text-slate-700">NIP
+                    <input value={form.nip} onChange={e => setForm({ ...form, nip: e.target.value })} placeholder="Contoh: 198001012010011001" className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm font-mono outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20" />
+                  </label>
+                  <label className="block text-sm font-semibold text-slate-700">Unit Kerja
+                    <select required value={form.unit_kerja_id} onChange={e => setForm({ ...form, unit_kerja_id: e.target.value })} className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 bg-white">
+                      <option value="">Pilih Unit Kerja</option>
+                      {unitKerja.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                    </select>
+                  </label>
+                  <label className="block text-sm font-semibold text-slate-700">Jabatan
+                    <input value={form.jabatan} onChange={e => setForm({ ...form, jabatan: e.target.value })} placeholder="Contoh: Analis Kebijakan Ahli Muda" className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20" />
+                  </label>
+                  <label className="block text-sm font-semibold text-slate-700">Golongan
+                    <input value={form.golongan} onChange={e => setForm({ ...form, golongan: e.target.value })} placeholder="Contoh: III/c" className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20" />
+                  </label>
+                  <label className="block text-sm font-semibold text-slate-700">Pangkat
+                    <input value={form.pangkat} onChange={e => setForm({ ...form, pangkat: e.target.value })} placeholder="Contoh: Penata" className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20" />
+                  </label>
+                </div>
+              </div>
+
+              {/* Seksi B: Kredensial & Akses Akun */}
+              <div>
+                <h3 className="text-sm font-bold text-slate-800 border-b border-slate-200 pb-2 mb-4">Kredensial & Akses Akun</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <label className="block text-sm font-semibold text-slate-700">Email
+                    <input type="email" required value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder="Contoh: taryadi@email.com" className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20" />
+                  </label>
+                  <label className="block text-sm font-semibold text-slate-700">Password
+                    <input type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} placeholder={editingPegawai ? "Kosongkan jika tidak diubah" : "Kosongkan untuk default (NIP)"} className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20" />
+                  </label>
+                  <label className="block text-sm font-semibold text-slate-700 md:col-span-2">Role Aplikasi
+                    <select required value={form.role_id} onChange={e => setForm({ ...form, role_id: e.target.value })} className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 bg-white">
+                      <option value="">Pilih Role Akses</option>
+                      {roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                    </select>
+                  </label>
+                </div>
               </div>
             </div>
             <div className="flex justify-end gap-3 p-4 border-t border-slate-200 bg-slate-50">
@@ -317,6 +337,22 @@ export const PegawaiPage = () => {
           </form>
         </div>
       )}
+
+      {/* Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        title="Hapus Pegawai"
+        message={`Apakah Anda yakin ingin menghapus permanen pegawai bernama ${confirmDialog.pegawaiName}?`}
+        confirmText="Hapus Permanen"
+        type="danger"
+        onCancel={() => setConfirmDialog({ ...confirmDialog, isOpen: false })}
+        onConfirm={() => {
+          if (confirmDialog.pegawaiId) {
+            deletePegawai(confirmDialog.pegawaiId);
+            setConfirmDialog({ ...confirmDialog, isOpen: false });
+          }
+        }}
+      />
     </div>
   );
 };

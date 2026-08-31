@@ -36,6 +36,7 @@ model User {
   password      String  @db.VarChar(255)
   unit_kerja_id Int
   role_id       Int
+  is_active     Boolean @default(true) @map("is_active")
 
   unitKerja        UnitKerja          @relation(fields: [unit_kerja_id], references: [id])
   role             Role               @relation(fields: [role_id], references: [id])

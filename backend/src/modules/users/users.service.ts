@@ -25,6 +25,7 @@ export class UsersService {
       jabatan: user.jabatan || '-',
       golongan: user.golongan || '-',
       pangkat: user.pangkat || '-',
+      is_active: user.is_active,
       fotoAvatar: '',
     }));
   }
@@ -58,6 +59,7 @@ export class UsersService {
       jabatan: user.jabatan || '-',
       golongan: user.golongan || '-',
       pangkat: user.pangkat || '-',
+      is_active: user.is_active,
       fotoAvatar: '',
       totalTugas: user.suratDitugaskan.length,
     };
@@ -74,6 +76,10 @@ export class UsersService {
     unit_kerja_id: number;
     role_id: number;
   }) {
+    // Gunakan nip sebagai default password jika password kosong
+    if (!data.password && data.nip) {
+      data.password = data.nip;
+    }
     const user = await this.prisma.user.create({ data });
     return { ...user, id: user.id.toString() };
   }
@@ -87,6 +93,7 @@ export class UsersService {
     email?: string;
     unit_kerja_id?: number;
     role_id?: number;
+    is_active?: boolean;
   }) {
     const user = await this.prisma.user.update({
       where: { id },

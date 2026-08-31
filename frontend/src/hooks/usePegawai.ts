@@ -71,6 +71,8 @@ export const usePegawai = () => {
     email?: string;
     unit_kerja_id?: number;
     role_id?: number;
+    password?: string;
+    is_active?: boolean;
   }) => {
     try {
       const response = await fetch(`${API_BASE}/users/${id}`, {

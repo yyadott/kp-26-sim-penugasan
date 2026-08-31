@@ -40,6 +40,7 @@ export class UsersController {
     email?: string;
     unit_kerja_id?: number;
     role_id?: number;
+    is_active?: boolean;
   }) {
     return this.usersService.update(+id, body);
   }

@@ -18,6 +18,7 @@ export interface Pegawai {
   email?: string;
   username?: string;
   role?: 'SUPER_ADMIN' | 'ADMIN' | 'PEGAWAI' | 'APPROVAL' | 'USER' | 'Super Admin' | 'Pegawai' | string;
+  is_active?: boolean;
   totalTugas?: number;
 }
 
