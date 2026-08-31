@@ -5,7 +5,6 @@ import { getUnitColor } from '@/data/dummyData';
 import { MapPin, Navigation, User, Map as MapIcon, Calendar } from 'lucide-react';
 import { usePemetaanFilter } from '@/hooks/usePemetaanFilter';
 import { PemetaanFilterBar } from '@/components/penugasan/PemetaanFilterBar';
-import { useSuratTugas } from '@/hooks/useSuratTugas';
 
 export const PemetaanPage = () => {
   const [viewMode, setViewMode] = useState<'peta' | 'kalender'>('peta');
@@ -20,7 +19,6 @@ export const PemetaanPage = () => {
     selectedPegawai,
     tugasList,
   } = usePemetaanFilter();
-  const { tugasList } = useSuratTugas();
 
   const totalOrangAktif = (tugasList || [])
     .filter((item: any) => item.status === 'SURAT_TERBIT')

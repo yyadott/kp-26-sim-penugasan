@@ -56,7 +56,6 @@ export const DashboardPage = () => {
   const { pegawaiList } = usePegawai();
 
   const activeLocations = mapLocations.filter((l) => l.status === 'AKTIF');
-  const { tugasList } = useSuratTugas();
 
   // Hitung total orang aktif seperti di halaman Pemetaan
   const totalOrangAktif = (tugasList || [])
