@@ -1,10 +1,8 @@
 import { useState } from 'react';
 import { useSuratTugas } from '@/hooks/useSuratTugas';
-import { useAuth } from '@/hooks/useAuth';
 import { FileText, CheckCircle2, X, Hourglass, CalendarDays, MapPin } from 'lucide-react';
 
 export const StatusApprovalPage = () => {
-  const { user } = useAuth();
   const { tugasList } = useSuratTugas();
 
   const [filterBulan, setFilterBulan] = useState<string>('');

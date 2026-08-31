@@ -1,7 +1,7 @@
 import { useState, useEffect, type ReactNode } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { LayoutDashboard, FileText, Send, ChartNoAxesCombined, ChevronDown, Bell, UserCircle2, LogOut, ShieldCheck } from 'lucide-react';
+import { LayoutDashboard, FileText, ChartNoAxesCombined, ChevronDown, Bell, UserCircle2, LogOut, ShieldCheck } from 'lucide-react';
 
 interface UserLayoutProps {
   children: ReactNode;

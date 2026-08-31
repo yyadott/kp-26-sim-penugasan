@@ -6,7 +6,6 @@ import { PenugasanMap } from '@/components/map/PenugasanMap';
 import { PenugasanCalendar } from '@/components/calendar/PenugasanCalendar';
 import {
   dummyPresensiPegawaiLain,
-  dummyLokasiPenugasan,
   dummyPresensiPribadi,
   getUnitColor,
 } from '@/data/dummyData';

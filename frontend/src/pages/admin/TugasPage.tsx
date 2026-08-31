@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { dummyAjuanSuratTugas, dummyPegawaiList, getUnitColor } from '@/data/dummyData';
+import { dummyAjuanSuratTugas, dummyPegawaiList } from '@/data/dummyData';
 import { FileText, Calendar, Activity, ChevronDown, FileCheck, X, Info } from 'lucide-react';
 import { format, isToday, isThisWeek, isThisMonth } from 'date-fns';
 import { id } from 'date-fns/locale';
@@ -110,8 +110,6 @@ const PegawaiPenugasanTab = () => {
 
 // Tooltip component untuk daftar pegawai (Tampilan Awan)
 const PegawaiTooltip = ({ pegawaiList }: { pegawaiList: typeof dummyPegawaiList }) => {
-  const { pokjas } = usePokja();
-  const unitOptions = pokjas.map(p => p.kode);
   const [isOpen, setIsOpen] = useState(false);
 
   if (!pegawaiList || pegawaiList.length === 0) return <span className="text-slate-400">-</span>;
@@ -609,7 +607,7 @@ const RekapPenugasanTab = () => {
 };
 
 
-import { useSearchParams } from 'react-router-dom';
+
 
 export const TugasPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();

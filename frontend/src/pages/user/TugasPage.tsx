@@ -369,7 +369,7 @@ export const TugasPage = () => {
                           <Download className="w-3.5 h-3.5" />
                           Unduh
                         </a>
-                        {(item.status === 'SURAT_TERBIT' || item.status === 'SELESAI') && (
+                        {(item.status === 'SURAT_TERBIT') && (
                           <Link
                             to="/pegawai/tugas/laporan"
                             state={{ selectedTaskId: item.id }}

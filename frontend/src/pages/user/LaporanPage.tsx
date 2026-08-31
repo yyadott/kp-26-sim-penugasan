@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useSuratTugas } from '@/hooks/useSuratTugas';
-import { ChartNoAxesCombined, UploadCloud, FileText, CheckCircle2, Clock, X, FileUp, Send } from 'lucide-react';
+import { ChartNoAxesCombined, UploadCloud, FileText, CheckCircle2, FileUp, Send } from 'lucide-react';
 
 export const LaporanPage = () => {
   const location = useLocation();
@@ -28,7 +28,7 @@ export const LaporanPage = () => {
   // For the user, only show their own reports
   const myReports = reports.filter(r => r.pegawaiId === user?.id);
 
-  const activeTasks = tugasList.filter(t => t.status === 'SURAT_TERBIT' || t.status === 'SELESAI');
+  const activeTasks = tugasList.filter(t => t.status === 'SURAT_TERBIT');
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
