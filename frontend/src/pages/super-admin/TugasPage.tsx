@@ -70,6 +70,7 @@ export const TugasPage = () => {
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
   const [selectedSpecificLocations, setSelectedSpecificLocations] = useState<string[]>([]);
+  const [dataLimit, setDataLimit] = useState<number>(0);
 
   // Modal Detail Workflow / Timeline
   const [selectedAjuan, setSelectedAjuan] = useState<AjuanSuratTugas | null>(null);
@@ -124,7 +125,7 @@ export const TugasPage = () => {
   };
 
   // Filter list
-  const filteredAjuan = ajuanList.filter((item) => {
+  let filteredAjuan = ajuanList.filter((item) => {
     const matchesUnit = selectedUnits.length === 0 || selectedUnits.includes(item.unitKerja);
     const matchesStatus = selectedStatuses.length === 0 || selectedStatuses.includes(item.status);
     const matchesApplicant = selectedApplicants.length === 0 || selectedApplicants.includes(item.pengaju.nama);
@@ -133,6 +134,10 @@ export const TugasPage = () => {
     const matchesSpecificLocation = selectedSpecificLocations.length === 0 || selectedSpecificLocations.includes(item.lokasiSpesifik || '');
     return matchesUnit && matchesStatus && matchesApplicant && matchesAssignee && matchesLocation && matchesSpecificLocation;
   });
+
+  if (dataLimit > 0) {
+    filteredAjuan = filteredAjuan.slice(0, dataLimit);
+  }
 
   const unitOptions: UnitKerjaType[] = ['Kepeg', 'Fastingkom', 'PM'];
   const statusOptions = [
@@ -166,6 +171,7 @@ export const TugasPage = () => {
     setSelectedSpecificLocations([]);
     setIsUnitFilterOpen(false);
     setOpenFilter(null);
+    setDataLimit(0);
   };
 
   const formatLokasiKhusus = (lokasi?: string) => {
@@ -384,7 +390,24 @@ export const TugasPage = () => {
 
       {/* TAB 1: DAFTAR PROSES AJUAN SURAT TUGAS */}
       {activeTab === 'DAFTAR' && (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+        <div className="space-y-4">
+          <div className="flex justify-end">
+            <div className="relative flex items-center gap-3">
+              <p className="text-sm font-medium text-slate-700">Tampilkan:</p>
+              <select
+                value={dataLimit}
+                onChange={(e) => setDataLimit(Number(e.target.value))}
+                className="appearance-none px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer min-w-[140px]"
+              >
+                <option value={0}>Semua Data</option>
+                <option value={10}>10 Data</option>
+                <option value={20}>20 Data</option>
+                <option value={50}>50 Data</option>
+                <option value={100}>100 Data</option>
+              </select>
+            </div>
+          </div>
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
           <div 
             ref={tableWrapperRef}
             className={`overflow-x-auto ${isDragging ? 'cursor-grabbing select-none' : 'cursor-grab'}`}
@@ -396,6 +419,7 @@ export const TugasPage = () => {
             <table className="w-full text-left text-sm text-slate-600">
               <thead className="bg-slate-50 text-slate-700 text-xs font-bold uppercase tracking-wider border-b border-slate-200">
                 <tr>
+                  <th className="px-6 py-4 w-16 text-center">No</th>
                   <th className="px-6 py-4">Nomor & Perihal Surat</th>
                   <th className="px-6 py-4">Unit Kerja & Pengaju</th>
                   <th className="px-6 py-4">Pegawai Ditugaskan</th>
@@ -407,7 +431,7 @@ export const TugasPage = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredAjuan.map((item) => {
+                {filteredAjuan.map((item, index) => {
                   const unitColor = UNIT_COLORS[item.unitKerja] || { bg: 'bg-slate-100', text: 'text-slate-800' };
 
                   return (
@@ -415,6 +439,9 @@ export const TugasPage = () => {
                       key={item.id}
                       className="hover:bg-slate-50/80 transition-colors"
                     >
+                      <td className="px-6 py-4 text-sm text-slate-500 text-center font-medium">
+                        {index + 1}
+                      </td>
                       <td className="px-6 py-4 min-w-[430px]">
                         <span className="font-mono text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 block w-fit mb-1">
                           {item.nomorSurat}
@@ -550,6 +577,7 @@ export const TugasPage = () => {
               </tbody>
             </table>
           </div>
+        </div>
         </div>
       )}
 

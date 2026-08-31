@@ -99,5 +99,6 @@ export const usePemetaanFilter = (props?: UsePemetaanFilterProps) => {
     allPegawaiInPenugasan,
     mapLocations,
     selectedPegawai,
+    tugasList,
   };
 };

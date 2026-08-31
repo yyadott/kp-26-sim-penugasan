@@ -52,6 +52,12 @@ export const DashboardPage = () => {
 
   const activeLocations = mapLocations.filter((l) => l.status === 'AKTIF');
   const { tugasList } = useSuratTugas();
+
+  // Hitung total orang aktif seperti di halaman Pemetaan
+  const totalOrangAktif = (tugasList || [])
+    .filter((item: any) => item.status === 'SURAT_TERBIT')
+    .reduce((total: number, item: any) => total + (item.pegawaiDitugaskan?.length || 0), 0);
+
   const recentAjuan = tugasList.slice(0, 8);
 
   let displayDateStr = "Pilih Tanggal";
@@ -132,27 +138,27 @@ export const DashboardPage = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:border-blue-300 transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Penugasan Aktif</span>
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Titik Penugasan</span>
             <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
-              <FileText className="w-5 h-5" />
+              <MapPin className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-4">
             <span className="text-3xl font-black text-slate-800">{activeLocations.length}</span>
-            <span className="text-xs text-slate-500 block mt-0.5">Pegawai On-Site di Lapangan</span>
+            <span className="text-xs text-slate-500 block mt-0.5">Titik Lokasi Aktif di Lapangan</span>
           </div>
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:border-amber-300 transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Draft Butuh Approval</span>
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Penugasan Aktif</span>
             <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
-              <Clock className="w-5 h-5" />
+              <FileText className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-4">
-            <span className="text-3xl font-black text-amber-800">2</span>
-            <span className="text-xs text-slate-500 block mt-0.5">Ajuan Tahap Verifikasi</span>
+            <span className="text-3xl font-black text-amber-800">{totalOrangAktif}</span>
+            <span className="text-xs text-slate-500 block mt-0.5">Pegawai Terlibat (On-Site)</span>
           </div>
         </div>
 

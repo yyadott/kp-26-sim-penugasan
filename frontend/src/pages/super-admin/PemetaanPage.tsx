@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { PenugasanMap } from '@/components/map/PenugasanMap';
 import { PenugasanCalendar } from '@/components/calendar/PenugasanCalendar';
-import { dummyAjuanSuratTugas, getUnitColor } from '@/data/dummyData';
+import { getUnitColor } from '@/data/dummyData';
 import { MapPin, Navigation, User, Map as MapIcon, Calendar } from 'lucide-react';
 import { usePemetaanFilter } from '@/hooks/usePemetaanFilter';
 import { PemetaanFilterBar } from '@/components/penugasan/PemetaanFilterBar';
@@ -17,17 +17,19 @@ export const PemetaanPage = () => {
     allPegawaiInPenugasan,
     mapLocations,
     selectedPegawai,
+    tugasList,
   } = usePemetaanFilter();
 
 
-  const totalOrangAktif = dummyAjuanSuratTugas
-    .filter((item) => item.status === 'SURAT_TERBIT')
-    .reduce((total, item) => total + item.pegawaiDitugaskan.length, 0);
-  const totalOrangMendatang = dummyAjuanSuratTugas
-    .filter((item) => item.status !== 'SURAT_TERBIT' && item.status !== 'DITOLAK')
-    .reduce((total, item) => total + item.pegawaiDitugaskan.length, 0);
-  const totalOrangDitugaskan = dummyAjuanSuratTugas
-    .reduce((total, item) => total + item.pegawaiDitugaskan.length, 0);
+  const totalOrangAktif = (tugasList || [])
+    .filter((item: any) => item.status === 'SURAT_TERBIT')
+    .reduce((total: number, item: any) => total + (item.pegawaiDitugaskan?.length || 0), 0);
+  
+  const totalSuratDiterbitkan = (tugasList || [])
+    .filter((item: any) => item.status === 'SURAT_TERBIT').length;
+  
+  const totalOrangDitugaskan = (tugasList || [])
+    .reduce((total: number, item: any) => total + (item.pegawaiDitugaskan?.length || 0), 0);
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
@@ -50,8 +52,8 @@ export const PemetaanPage = () => {
             <span className="text-lg font-extrabold text-emerald-800">{totalOrangAktif} Orang</span>
           </div>
           <div className="bg-amber-50 border border-amber-200 px-4 py-2 rounded-xl text-center">
-            <span className="text-xs text-amber-700 font-medium block">Jadwal Mendatang</span>
-            <span className="text-lg font-extrabold text-amber-800">{totalOrangMendatang} Orang</span>
+            <span className="text-xs text-amber-700 font-medium block">Surat Diterbitkan</span>
+            <span className="text-lg font-extrabold text-amber-800">{totalSuratDiterbitkan} Surat</span>
           </div>
           <div className="bg-blue-50 border border-blue-200 px-4 py-2 rounded-xl text-center">
             <span className="text-xs text-blue-700 font-medium block">Total Ditugaskan</span>

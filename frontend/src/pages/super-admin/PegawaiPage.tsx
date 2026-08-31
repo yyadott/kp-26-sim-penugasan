@@ -13,6 +13,7 @@ export const PegawaiPage = () => {
   const [unitFilter, setUnitFilter] = useState('Semua Unit Kerja');
   const [roleFilter, setRoleFilter] = useState('Semua Role');
   const [jabatanFilter, setJabatanFilter] = useState('Semua Jabatan');
+  const [dataLimit, setDataLimit] = useState<number>(0);
 
   // Confirm Dialog State
   const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, pegawaiId: '', pegawaiName: '' });
@@ -45,8 +46,7 @@ export const PegawaiPage = () => {
   const jabatanOptions = [...new Set(pegawaiList.map(p => p.jabatan).filter(j => j && j !== '-'))];
 
 
-  // Filter logic
-  const filteredPegawai = pegawaiList.filter((pegawai) => {
+  let filteredPegawai = pegawaiList.filter((pegawai) => {
     // Exclude Super Admin from being shown in the table
     if (pegawai.role?.toUpperCase() === 'SUPER ADMIN' || pegawai.role === 'SUPER_ADMIN') {
       return false;
@@ -61,6 +61,10 @@ export const PegawaiPage = () => {
 
     return matchesSearch && matchesUnit && matchesRole && matchesJabatan;
   });
+
+  if (dataLimit > 0) {
+    filteredPegawai = filteredPegawai.slice(0, dataLimit);
+  }
 
   return (
     <div className="p-4 md:p-6 max-w-[1400px] mx-auto space-y-6">
@@ -129,10 +133,24 @@ export const PegawaiPage = () => {
                 onChange={(e) => setJabatanFilter(e.target.value)}
                 className="w-full appearance-none px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer"
               >
-                <option>Semua Jabatan</option>
+                <option value="Semua Jabatan">Semua Jabatan</option>
                 {jabatanOptions.map(j => (
                   <option key={j} value={j}>{j}</option>
                 ))}
+              </select>
+            </div>
+
+            <div className="relative min-w-[120px] flex-1 md:flex-none">
+              <select
+                value={dataLimit}
+                onChange={(e) => setDataLimit(Number(e.target.value))}
+                className="w-full appearance-none px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer"
+              >
+                <option value={0}>Semua Data</option>
+                <option value={10}>10 Data</option>
+                <option value={20}>20 Data</option>
+                <option value={50}>50 Data</option>
+                <option value={100}>100 Data</option>
               </select>
             </div>
           </div>
@@ -143,6 +161,7 @@ export const PegawaiPage = () => {
           <table className="w-full text-left border-collapse">
             <thead className="bg-slate-50/80 border-b border-slate-100">
               <tr>
+                <th className="px-6 py-4 text-xs font-bold text-slate-600 w-16 text-center">No</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-600">Pegawai</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-600">Jabatan</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-600">Unit Kerja</th>
@@ -153,13 +172,13 @@ export const PegawaiPage = () => {
             <tbody className="divide-y divide-slate-100">
               {isLoading ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center">
+                  <td colSpan={6} className="px-6 py-12 text-center">
                     <Loader2 className="w-6 h-6 animate-spin text-blue-500 mx-auto" />
                     <p className="text-slate-400 text-sm mt-2">Memuat data pegawai...</p>
                   </td>
                 </tr>
               ) : filteredPegawai.length > 0 ? (
-                filteredPegawai.map((pegawai) => {
+                filteredPegawai.map((pegawai, index) => {
                   const colorCode = UNIT_COLORS[pegawai.unitKerja];
                   const finalUnitClasses = colorCode ? `${colorCode.bg} ${colorCode.text}` : 'bg-blue-50 text-blue-600';
                   const roleBg = getRoleColor(pegawai.role);
@@ -167,6 +186,9 @@ export const PegawaiPage = () => {
 
                   return (
                     <tr key={pegawai.id} className="hover:bg-slate-50/50 transition-colors group bg-white">
+                      <td className="px-6 py-4 text-sm text-slate-500 text-center font-medium">
+                        {index + 1}
+                      </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-4">
                           <div className="w-10 h-10 rounded-full border border-slate-200 shadow-sm bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold">
@@ -232,7 +254,7 @@ export const PegawaiPage = () => {
                 })
               ) : (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-slate-500">
+                  <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
                     Tidak ada data pegawai yang ditemukan.
                   </td>
                 </tr>
