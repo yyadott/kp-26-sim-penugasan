@@ -212,7 +212,21 @@ export const TugasPage = () => {
 
   const addDraftAjuan = async (newAjuan: any) => {
     try {
-      await addTugas(newAjuan);
+      const payload = {
+        nomorSurat: newAjuan.nomorSurat,
+        uraianKegiatan: newAjuan.uraianKegiatan,
+        pengaju_id: Number(newAjuan.pengaju.id) || 1,
+        pegawaiDitugaskan: newAjuan.pegawaiDitugaskan.map((p: any) => Number(p.id) || 1),
+        unitKerja: newAjuan.unitKerja,
+        tanggalMulai: newAjuan.tanggalMulai,
+        tanggalSelesai: newAjuan.tanggalSelesai,
+        tempat: newAjuan.lokasiSpesifik ? `${newAjuan.lokasiSpesifik}, ${newAjuan.tempat}` : newAjuan.tempat,
+        koordinatLat: newAjuan.koordinat[0],
+        koordinatLng: newAjuan.koordinat[1],
+        deskripsi: newAjuan.deskripsi,
+        status: newAjuan.status,
+      };
+      await addTugas(payload);
       setIsDraftModalOpen(false);
     } catch (e) { console.error(e); }
   };

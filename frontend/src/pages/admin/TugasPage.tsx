@@ -15,15 +15,9 @@ const formatDate = (dateStr: string) => format(new Date(dateStr), 'dd MMMM yyyy'
 const formatLokasiDisplay = (lokasi: string) => {
   const cleaned = lokasi.trim();
   if (!cleaned) return '';
-  if (cleaned.toLowerCase().includes('jawa barat')) return cleaned;
-  if (
-    cleaned.toLowerCase().includes('kota ') ||
-    cleaned.toLowerCase().includes('kabupaten ') ||
-    cleaned.toLowerCase().includes('kecamatan ')
-  ) {
-    return `${cleaned}, Jawa Barat`;
-  }
-  return cleaned;
+  // Remove trailing "Jawa Barat" if present. Do not append province name anymore;
+  // the province will be filled automatically when creating tugas in admin.
+  return cleaned.replace(/,?\s*jawa barat$/i, '').trim();
 };
 
 const getJenisDinas = (lokasi: string): string => {

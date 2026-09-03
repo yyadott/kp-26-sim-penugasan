@@ -1,11 +1,9 @@
 import { useState } from 'react';
 import { formatDate } from '@/utils/formatter';
 import { useAuth } from '@/hooks/useAuth';
+import { useSuratTugas } from '@/hooks/useSuratTugas';
 import { CalendarWidget } from '@/components/ui/CalendarWidget';
-import {
-  dummyAjuanSuratTugas,
-  UNIT_COLORS,
-} from '@/data/dummyData';
+import { UNIT_COLORS } from '@/data/dummyData';
 import type { AjuanSuratTugas } from '@/types';
 import { Link } from 'react-router-dom';
 import {
@@ -20,13 +18,14 @@ import {
 
 export const DashboardPage = () => {
   const { user } = useAuth();
+  const { tugasList } = useSuratTugas();
   const todayFormatted = formatDate(new Date().toISOString());
 
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedAjuan, setSelectedAjuan] = useState<AjuanSuratTugas | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [tableFilter, setTableFilter] = useState<'ALL' | 'APPROVED' | 'PENDING'>('ALL');
-  const myUnitData = dummyAjuanSuratTugas.filter(t => t.unitKerja === user?.unitKerja);
+  const myUnitData = tugasList.filter((t: any) => t.unitKerja === user?.unitKerja);
 
   const recentAjuan = myUnitData.filter((item) => {
     if (tableFilter === 'APPROVED' && item.status !== 'SURAT_TERBIT') return false;

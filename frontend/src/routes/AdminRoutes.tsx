@@ -34,7 +34,7 @@ export const AdminRoutes = () => {
         <Route path="pegawai" element={<PegawaiPage />} />
         
         {/* Pegawai / Ajuan */}
-        <Route path="pegawai/detail" element={<DetailPegawaiPage />} />
+        <Route path="pegawai/detail/:id" element={<DetailPegawaiPage />} />
         <Route path="ajuan-pegawai" element={<AjuanPegawaiPage />} />
         <Route path="rekap-penugasan" element={<RekapPenugasanPage />} />
         

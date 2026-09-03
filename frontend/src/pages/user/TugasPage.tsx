@@ -108,8 +108,8 @@ export const TugasPage = () => {
   const filteredAjuan = tugasList.filter((item) => {
     // Only show tasks where the logged in user is the pengaju or one of the assignees
     const isRelatedToUser =
-      item.pengaju?.id === user?.id ||
-      item.pegawaiDitugaskan.some((p: any) => p.id === user?.id);
+      String(item.pengaju?.id) === String(user?.id) ||
+      item.pegawaiDitugaskan.some((p: any) => String(p.id) === String(user?.id));
 
     if (!isRelatedToUser) return false;
 
@@ -142,7 +142,8 @@ export const TugasPage = () => {
     result = result.replace(/^kelurahan\s+/i, '').trim();
     result = result.replace(/^kota\s+/i, 'Kota ').trim();
     result = result.replace(/^kabupaten\s+/i, 'Kabupaten ').trim();
-    return `${result}, Jawa Barat`;
+    // Do not append province name here; it will be auto-filled when creating tugas.
+    return result;
   };
 
   const formatTanggal = (tanggal: string) => {
@@ -179,17 +180,16 @@ export const TugasPage = () => {
       await addTugas({
         nomorSurat: newNomor,
         uraianKegiatan: formData.uraianKegiatan,
-        pengaju_id: dummyPegawaiList[0].id,
+        pengaju_id: Number(user?.id) || 1,
         unitKerja: formData.unitKerja,
         tanggalMulai: formData.tanggalMulai,
         tanggalSelesai: formData.tanggalSelesai,
-        lokasiPenugasan: lokasiPenugasan,
-        lokasiSpesifik: formData.lokasiSpesifik,
+        tempat: formData.lokasiSpesifik ? `${formData.lokasiSpesifik}, ${lokasiPenugasan}` : lokasiPenugasan,
         koordinatLat: formData.koordinatLat,
         koordinatLng: formData.koordinatLng,
         deskripsi: formData.deskripsi,
         status: 'DRAFT',
-        pegawaiDitugaskan: formData.pegawaiIds
+        pegawaiDitugaskan: formData.pegawaiIds.map(id => Number(id) || 1)
       });
     } catch (err) {
       console.error('Gagal menyimpan ke database', err);

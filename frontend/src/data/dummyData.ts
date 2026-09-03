@@ -69,7 +69,7 @@ export const dummyPegawaiList: Pegawai[] = [
     role: 'PEGAWAI',
   },
   {
-    id: '7',
+    id: '230',
     nama: 'Arnest, S.Kom.',
     nip: '200101010001',
     unitKerja: 'Fastingkom',

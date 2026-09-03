@@ -81,8 +81,8 @@ export const DashboardPage = () => {
   
   const recentAjuan = tugasList.filter((item) => {
     const isRelatedToUser = 
-      item.pengaju?.id === user?.id || 
-      item.pegawaiDitugaskan.some(p => p.id === user?.id);
+      String(item.pengaju?.id) === String(user?.id) || 
+      item.pegawaiDitugaskan.some(p => String(p.id) === String(user?.id));
     return isRelatedToUser;
   }).slice(0, 8);
 

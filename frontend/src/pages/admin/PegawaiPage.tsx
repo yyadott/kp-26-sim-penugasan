@@ -1,10 +1,12 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Search, Loader2 } from 'lucide-react';
 import { UNIT_COLORS } from '@/data/dummyData';
 import { usePegawai } from '@/hooks/usePegawai';
 import { useReferensi } from '@/hooks/useReferensi';
 
 export const PegawaiPage = () => {
+  const navigate = useNavigate();
   const { pegawaiList, isLoading } = usePegawai();
   const { roles, unitKerja } = useReferensi();
   const [searchTerm, setSearchTerm] = useState('');
@@ -144,7 +146,12 @@ export const PegawaiPage = () => {
                             {initials}
                           </div>
                           <div>
-                            <div className="font-bold text-slate-800 text-[14px]">{pegawai.nama}</div>
+                            <div 
+                              className="font-bold text-slate-800 text-[14px] cursor-pointer hover:text-blue-600 transition-colors"
+                              onClick={() => navigate(`/admin/pegawai/detail/${pegawai.id}`)}
+                            >
+                              {pegawai.nama}
+                            </div>
                             <div className="text-[13px] text-slate-400 font-medium mt-0.5">NIP. {pegawai.nip}</div>
                           </div>
                         </div>

@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
-import { dummyAjuanSuratTugas } from '@/data/dummyData';
 import { useAuth } from '@/hooks/useAuth';
+import { useSuratTugas } from '@/hooks/useSuratTugas';
 import { 
   FileText, CheckCircle2, Eye, Download, 
   MapPin, Calendar as CalendarIcon, Users, X
@@ -9,6 +9,7 @@ import Swal from 'sweetalert2';
 
 export const SuratTugasPage = () => {
   const { user } = useAuth();
+  const { tugasList } = useSuratTugas();
   const currentDate = new Date();
   
   // Set default to current month and year
@@ -17,7 +18,7 @@ export const SuratTugasPage = () => {
   const [selectedSurat, setSelectedSurat] = useState<any | null>(null);
   const [selectedPegawaiDetail, setSelectedPegawaiDetail] = useState<any[] | null>(null);
 
-  const myUnitData = dummyAjuanSuratTugas.filter((t: any) => t.unitKerja === user?.unitKerja);
+  const myUnitData = tugasList.filter((t: any) => t.unitKerja === user?.unitKerja);
 
   const displayData = useMemo(() => {
     return myUnitData.filter(t => {

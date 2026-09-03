@@ -42,21 +42,25 @@ export const BuatTugasPage = () => {
     pegawai: { id: string; nama: string; unitKerja: string }[];
   } | null>(null);
 
-  const [formData, setFormData] = useState({
-    uraianKegiatan: '',
-    unitKerja: 'Kepeg' as UnitKerjaType,
-    pegawaiIds: [] as string[],
-    tanggalMulai: '2026-01-01',
-    tanggalSelesai: '2026-01-02',
-    tempat: 'Kecamatan Bandung Tengah',
-    lokasiSpesifik: '',
-    provinsiId: '',
-    kotaId: '',
-    koordinatLat: -6.9147,
-    koordinatLng: 107.6098,
-    deskripsi: '',
-    file: null as File | null,
-    pangkatGolongan: {} as Record<string, string>,
+  const [formData, setFormData] = useState(() => {
+    const d = new Date();
+    const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    return {
+      uraianKegiatan: '',
+      unitKerja: 'Kepeg' as UnitKerjaType,
+      pegawaiIds: [] as string[],
+      tanggalMulai: today,
+      tanggalSelesai: today,
+      tempat: 'Kecamatan Bandung Tengah',
+      lokasiSpesifik: '',
+      provinsiId: '',
+      kotaId: '',
+      koordinatLat: -6.9147,
+      koordinatLng: 107.6098,
+      deskripsi: '',
+      file: null as File | null,
+      pangkatGolongan: {} as Record<string, string>,
+    };
   });
 
   // Helper: cek apakah pegawai memiliki tugas yang bentrok dengan rentang tanggal yang dipilih
@@ -177,13 +181,14 @@ export const BuatTugasPage = () => {
     const newAjuan = {
       nomorSurat: newNomor,
       uraianKegiatan: formData.uraianKegiatan,
-      pengaju_id: user?.db_id || 1, // Pass the numeric ID to backend
-      pegawaiDitugaskan: assignedPegawai.map(p => p.db_id || 1), // Pass array of numeric IDs
+      pengaju_id: Number(user?.id) || 1, // Pass the numeric ID to backend
+      pegawaiDitugaskan: assignedPegawai.map(p => Number(p.id) || 1), // Pass array of numeric IDs
       unitKerja: formData.unitKerja,
       tanggalMulai: formData.tanggalMulai,
       tanggalSelesai: formData.tanggalSelesai,
-      tempat: [kota, provinsi].filter(Boolean).join(', ') || formData.tempat,
-      lokasiSpesifik: formData.lokasiSpesifik,
+      tempat: formData.lokasiSpesifik 
+        ? `${formData.lokasiSpesifik}, ${[kota, provinsi].filter(Boolean).join(', ')}`
+        : ([kota, provinsi].filter(Boolean).join(', ') || formData.tempat),
       koordinatLat: formData.koordinatLat,
       koordinatLng: formData.koordinatLng,
       deskripsi: formData.deskripsi,
@@ -314,11 +319,8 @@ export const BuatTugasPage = () => {
                     const newMulai = e.target.value;
                     let newSelesai = formData.tanggalSelesai;
                     if (newMulai) {
-                      const dMulai = new Date(newMulai);
-                      dMulai.setDate(dMulai.getDate() + 1);
-                      const minSel = `${dMulai.getFullYear()}-${String(dMulai.getMonth() + 1).padStart(2, '0')}-${String(dMulai.getDate()).padStart(2, '0')}`;
-                      if (!newSelesai || newSelesai < minSel) {
-                        newSelesai = minSel;
+                      if (!newSelesai || newSelesai < newMulai) {
+                        newSelesai = newMulai;
                       }
                     }
                     setFormData({ ...formData, tanggalMulai: newMulai, tanggalSelesai: newSelesai });
@@ -331,15 +333,7 @@ export const BuatTugasPage = () => {
                 <input
                   type="date"
                   required
-                  min={
-                    formData.tanggalMulai
-                      ? (() => {
-                          const d = new Date(formData.tanggalMulai);
-                          d.setDate(d.getDate() + 1);
-                          return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-                        })()
-                      : ''
-                  }
+                  min={formData.tanggalMulai}
                   value={formData.tanggalSelesai}
                   onChange={(e) => setFormData({ ...formData, tanggalSelesai: e.target.value })}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50 hover:bg-white transition-colors"
