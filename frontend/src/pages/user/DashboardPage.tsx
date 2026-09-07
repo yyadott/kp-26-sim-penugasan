@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { formatDate } from '@/utils/formatter';
 import { useAuth } from '@/hooks/useAuth';
 import { CalendarWidget } from '@/components/ui/CalendarWidget';
 import { PenugasanMap } from '@/components/map/PenugasanMap';
 import { PenugasanCalendar } from '@/components/calendar/PenugasanCalendar';
-import { usePemetaanFilter } from '@/hooks/usePemetaanFilter';
+import { usePemetaanFilter, idsMatch } from '@/hooks/usePemetaanFilter';
 import { PemetaanFilterBar } from '@/components/penugasan/PemetaanFilterBar';
 import { useSuratTugas } from '@/hooks/useSuratTugas';
 import {
@@ -35,18 +35,16 @@ import {
 
 export const DashboardPage = () => {
   const { user } = useAuth();
-  const { tugasList, refreshTugas } = useSuratTugas();
+  const { tugasList } = useSuratTugas();
   const todayFormatted = formatDate(new Date().toISOString());
-
-  useEffect(() => {
-    refreshTugas();
-  }, []);
 
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedAjuan, setSelectedAjuan] = useState<AjuanSuratTugas | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [mapViewMode, setMapViewMode] = useState<'peta' | 'kalender'>('peta');
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState<string | null>(null);
+  const [selectedSuratId, setSelectedSuratId] = useState('ALL');
   
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -58,7 +56,7 @@ export const DashboardPage = () => {
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setPasswordMessage(null);
-    const result = updateCredentials({ username: user?.username || '', currentPassword, newPassword });
+    const result = updateCredentials({ username: user?.username || '', email: user?.email || '', currentPassword, newPassword });
     setPasswordMessage({ type: result.success ? 'success' : 'error', text: result.message || 'Gagal menyimpan.' });
     if (result.success) {
       setCurrentPassword('');
@@ -75,31 +73,62 @@ export const DashboardPage = () => {
     filteredLocations,
     allPegawaiInPenugasan,
     mapLocations,
-  } = usePemetaanFilter({ forceMode: 'INDIVIDU', initialPegawaiId: user?.id });
+  } = usePemetaanFilter({ initialPegawaiId: user?.id });
 
   const activeLocations = mapLocations.filter((l) => l.status === 'AKTIF');
+
+  const isUserTask = (item: AjuanSuratTugas) => {
+    if (!user) return true;
+    return idsMatch(item.pengaju?.id, user.id) || item.pegawaiDitugaskan?.some((peg) => idsMatch(peg.id, user.id));
+  };
+
+  const pegawaiTugas = tugasList.filter((item) => isUserTask(item));
+
+  const filteredPegawaiTugas = pegawaiTugas.filter((item) => {
+    const matchesSurat = selectedSuratId === 'ALL' || item.id === selectedSuratId;
+    const matchesDate = !selectedCalendarDate || (
+      item.tanggalMulai.slice(0, 10) <= selectedCalendarDate &&
+      item.tanggalSelesai.slice(0, 10) >= selectedCalendarDate
+    );
+    return matchesSurat && matchesDate;
+  });
   
+  const selectedDateKey = selectedDate
+    ? `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`
+    : null;
+
+  const checkHasTask = (date: Date) => {
+    const dKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    return tugasList.some((item) => {
+      if (!isUserTask(item)) return false;
+      const startKey = item.tanggalMulai ? item.tanggalMulai.slice(0, 10) : '';
+      const endKey = item.tanggalSelesai ? item.tanggalSelesai.slice(0, 10) : '';
+      return startKey <= dKey && endKey >= dKey;
+    });
+  };
+
+  const handleSelectDate = (date: Date) => {
+    if (selectedDate && date.toDateString() === selectedDate.toDateString()) {
+      setSelectedDate(null);
+    } else {
+      setSelectedDate(date);
+    }
+  };
+
   const recentAjuan = tugasList.filter((item) => {
-    const isRelatedToUser = 
-      item.pengaju?.id === user?.id || 
-      item.pegawaiDitugaskan.some(p => p.id === user?.id);
-    return isRelatedToUser;
+    const isRelatedToUser = isUserTask(item);
+    const startKey = item.tanggalMulai ? item.tanggalMulai.slice(0, 10) : '';
+    const endKey = item.tanggalSelesai ? item.tanggalSelesai.slice(0, 10) : '';
+    const isScheduledOnSelectedDate = !selectedDateKey || (
+      startKey <= selectedDateKey && endKey >= selectedDateKey
+    );
+    return isRelatedToUser && isScheduledOnSelectedDate;
   }).slice(0, 8);
 
-  let recentPresensi = dummyPresensiPegawaiLain;
-  let displayDateStr = "Hari Ini";
-
-  if (selectedDate) {
-    const yyyy = selectedDate.getFullYear();
-    const mm = String(selectedDate.getMonth() + 1).padStart(2, '0');
-    const dd = String(selectedDate.getDate()).padStart(2, '0');
-    const formattedDate = `${yyyy}-${mm}-${dd}`;
-    
-    recentPresensi = dummyPresensiPegawaiLain.filter(p => p.tanggal === formattedDate);
-    displayDateStr = formatDate(selectedDate.toISOString());
-  } else {
-    recentPresensi = dummyPresensiPegawaiLain.slice(0, 8);
-  }
+  const recentPresensi = selectedDate
+    ? dummyPresensiPegawaiLain.filter(p => p.tanggal === selectedDateKey)
+    : dummyPresensiPegawaiLain.slice(0, 8);
+  const displayDateStr = selectedDateKey ? formatDate(`${selectedDateKey}T12:00:00`) : 'Hari Ini';
 
   const formatLokasiDisplay = (lokasi?: string) => {
     if (!lokasi) return '';
@@ -154,7 +183,7 @@ export const DashboardPage = () => {
 
       {/* Executive Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:border-blue-300 transition-all flex flex-col justify-between">
+        <Link to="pemetaan" className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:border-blue-300 transition-all flex flex-col justify-between block cursor-pointer">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Penugasan Aktif</span>
             <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
@@ -165,7 +194,7 @@ export const DashboardPage = () => {
             <span className="text-3xl font-black text-slate-800">{activeLocations.length}</span>
             <span className="text-xs text-slate-500 block mt-0.5">Pegawai On-Site di Lapangan</span>
           </div>
-        </div>
+        </Link>
 
         <div className="hidden bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:border-emerald-300 transition-all flex-col justify-between">
           <div className="flex items-center justify-between">
@@ -180,18 +209,18 @@ export const DashboardPage = () => {
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:border-amber-300 transition-all flex flex-col justify-between">
+        <Link to="tugas" className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:border-emerald-300 transition-all flex flex-col justify-between block cursor-pointer">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Draft Butuh Approval</span>
-            <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
-              <Clock className="w-5 h-5" />
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Surat Sudah Dilaksanakan</span>
+            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+              <CheckCircle2 className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-4">
-            <span className="text-3xl font-black text-amber-800">2</span>
-            <span className="text-xs text-slate-500 block mt-0.5">Ajuan Tahap Verifikasi</span>
+            <span className="text-3xl font-black text-emerald-800">{tugasList.filter(t => t.status === 'SURAT_TERBIT').length}</span>
+            <span className="text-xs text-slate-500 block mt-0.5">Penugasan Selesai</span>
           </div>
-        </div>
+        </Link>
       </div>
 
       {/* Map Widget Section */}
@@ -261,7 +290,65 @@ export const DashboardPage = () => {
           <PenugasanCalendar
             locations={filteredLocations}
             height="h-[600px]"
+            onDateSelect={setSelectedCalendarDate}
           />
+        )}
+
+        {mapViewMode === 'kalender' && (
+          <div className="border-t border-slate-200 pt-5 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h4 className="font-bold text-slate-800 flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-blue-600" />
+                  Surat Tugas Pegawai
+                </h4>
+                <p className="text-xs text-slate-500 mt-1">
+                  {selectedCalendarDate
+                    ? `Surat tugas pada tanggal ${formatDate(`${selectedCalendarDate}T00:00:00`)}`
+                    : 'Pilih tanggal pada kalender untuk melihat surat tugasnya.'}
+                </p>
+              </div>
+              <select
+                value={selectedSuratId}
+                onChange={(event) => setSelectedSuratId(event.target.value)}
+                className="w-full sm:w-auto sm:min-w-[260px] rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                aria-label="Filter surat tugas"
+              >
+                <option value="ALL">Semua surat tugas</option>
+                {pegawaiTugas.map((item) => (
+                  <option key={item.id} value={item.id}>{item.nomorSurat}</option>
+                ))}
+              </select>
+            </div>
+
+            {filteredPegawaiTugas.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {filteredPegawaiTugas.map((item) => (
+                  <Link
+                    key={item.id}
+                    to={`/pegawai/tugas/pengajuan?taskId=${item.id}`}
+                    className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 hover:border-blue-400 hover:bg-white transition-colors"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-mono text-xs font-bold text-blue-700">{item.nomorSurat}</p>
+                        <h5 className="mt-1 text-sm font-bold text-slate-800">{item.uraianKegiatan}</h5>
+                      </div>
+                      <span className="shrink-0 rounded-full bg-blue-50 px-2 py-1 text-[10px] font-bold text-blue-700">
+                        {item.status === 'SURAT_TERBIT' ? 'Aktif' : 'Proses'}
+                      </span>
+                    </div>
+                    <p className="mt-3 text-xs text-slate-500">{item.tempat}</p>
+                    <p className="mt-1 text-[11px] text-slate-400">{item.tanggalMulai.slice(0, 10)} s.d. {item.tanggalSelesai.slice(0, 10)}</p>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-500">
+                Tidak ada surat tugas pada filter yang dipilih.
+              </div>
+            )}
+          </div>
         )}
       </div>
 
@@ -323,29 +410,42 @@ export const DashboardPage = () => {
 
         {/* Calendar Widget */}
         <div className="max-w-md mx-auto w-full">
-          <CalendarWidget selectedDate={selectedDate} onSelectDate={setSelectedDate} />
+          <CalendarWidget selectedDate={selectedDate} onSelectDate={handleSelectDate} hasTask={checkHasTask} />
         </div>
       </div>
 
       {/* Ajuan Surat Tugas Terbaru */}
       <div className="w-full bg-white rounded-2xl border-2 border-slate-300 p-6 shadow-sm space-y-4">
         <div className="flex items-center justify-between pb-3 border-b border-slate-200">
-          <h3 className="font-bold text-slate-800 text-base flex items-center gap-2">
-            <FileText className="w-4 h-4 text-blue-600" />
-            Info Surat Terbaru
-          </h3>
-          <Link to="/tugas" className="text-sm font-semibold text-blue-600 hover:underline">
+          <div className="flex items-center gap-3">
+            <h3 className="font-bold text-slate-800 text-base flex items-center gap-2">
+              <FileText className="w-4 h-4 text-blue-600" />
+              {selectedDateKey ? `Surat Tugas (${displayDateStr})` : 'Info Surat Terbaru'}
+            </h3>
+            {selectedDateKey && (
+              <button
+                type="button"
+                onClick={() => setSelectedDate(null)}
+                className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-full text-xs font-bold transition border border-blue-200"
+              >
+                <span>Reset Filter Tanggal</span>
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+          <Link to="/pegawai/tugas/pengajuan" className="text-sm font-semibold text-blue-600 hover:underline">
             Lihat Semua
           </Link>
         </div>
 
         <div className="overflow-x-auto pb-2">
-          <div className="flex gap-4 min-w-max">
-            {recentAjuan.map((item) => {
+          {recentAjuan.length > 0 ? (
+            <div className="flex gap-4 min-w-max">
+              {recentAjuan.map((item) => {
               const unitColor = UNIT_COLORS[item.unitKerja] || { bg: 'bg-slate-100', text: 'text-slate-800' };
               const statusIsApproved = item.status === 'SURAT_TERBIT';
               const statusIsRejected = item.status === 'DITOLAK';
-              const statusLabel = statusIsApproved ? 'DiApprove' : statusIsRejected ? 'Ditolak' : 'Diproses';
+              const statusLabel = statusIsApproved ? 'Telah Dilaksanakan' : statusIsRejected ? 'Ditolak' : 'Diproses';
               const statusBadgeClass = statusIsApproved
                 ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
                 : statusIsRejected
@@ -391,8 +491,13 @@ export const DashboardPage = () => {
                   </div>
                 </button>
               );
-            })}
-          </div>
+              })}
+            </div>
+          ) : (
+            <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-500">
+              Tidak ada surat tugas pada tanggal yang dipilih.
+            </div>
+          )}
         </div>
       </div>
       </div>

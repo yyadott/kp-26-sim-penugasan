@@ -1,13 +1,15 @@
 import { useState } from 'react';
-import { Search, Edit, Trash2, Plus, X, Loader2 } from 'lucide-react';
+import { Search, Edit, Trash2, Plus, X, Loader2, FileText, Calendar, MapPin } from 'lucide-react';
 import { UNIT_COLORS } from '@/data/dummyData';
 import { usePegawai } from '@/hooks/usePegawai';
 import { useReferensi } from '@/hooks/useReferensi';
+import { useSuratTugas } from '@/hooks/useSuratTugas';
 import type { Pegawai } from '@/types';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 export const PegawaiPage = () => {
   const { pegawaiList, isLoading, createPegawai, updatePegawai, deletePegawai } = usePegawai();
+  const { tugasList } = useSuratTugas();
   const { roles, unitKerja } = useReferensi();
   const [searchTerm, setSearchTerm] = useState('');
   const [unitFilter, setUnitFilter] = useState('Semua Unit Kerja');
@@ -16,6 +18,8 @@ export const PegawaiPage = () => {
 
   // Confirm Dialog State
   const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, pegawaiId: '', pegawaiName: '' });
+
+  const [selectedPegawai, setSelectedPegawai] = useState<Pegawai | null>(null);
 
   // Form State
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -166,7 +170,11 @@ export const PegawaiPage = () => {
                   const initials = pegawai.nama.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
 
                   return (
-                    <tr key={pegawai.id} className="hover:bg-slate-50/50 transition-colors group bg-white">
+                    <tr 
+                      key={pegawai.id} 
+                      onClick={() => setSelectedPegawai(pegawai)}
+                      className="hover:bg-slate-50/50 transition-colors group bg-white cursor-pointer"
+                    >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-4">
                           <div className="w-10 h-10 rounded-full border border-slate-200 shadow-sm bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold">
@@ -196,7 +204,8 @@ export const PegawaiPage = () => {
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
-                          <button onClick={() => {
+                          <button onClick={(e) => {
+                            e.stopPropagation();
                             setEditingPegawai(pegawai);
                             // Find corresponding unit and role IDs to preset form
                             const uId = unitKerja.find(u => u.name === pegawai.unitKerja)?.id || '';
@@ -216,7 +225,8 @@ export const PegawaiPage = () => {
                           }} className="rounded-lg bg-blue-50 p-2 text-blue-600 transition-colors hover:bg-blue-100">
                             <Edit className="h-4 w-4" />
                           </button>
-                          <button onClick={() => {
+                          <button onClick={(e) => {
+                            e.stopPropagation();
                             setConfirmDialog({
                               isOpen: true,
                               pegawaiId: pegawai.id,
@@ -338,7 +348,7 @@ export const PegawaiPage = () => {
         </div>
       )}
 
-      {/* Confirm Dialog */}
+      {/* Modal Confirm Delete */}
       <ConfirmDialog
         isOpen={confirmDialog.isOpen}
         title="Hapus Pegawai"
@@ -353,6 +363,76 @@ export const PegawaiPage = () => {
           }
         }}
       />
+
+      {/* MODAL INFORMASI TUGAS PEGAWAI */}
+      {selectedPegawai && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm">
+          <div className="w-[95vw] h-[95vh] flex flex-col space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="flex items-center gap-2 text-lg font-bold text-slate-800">
+                  <FileText className="h-5 w-5 text-blue-600" />
+                  Informasi Tugas Pegawai
+                </h3>
+                <p className="mt-1 text-xs text-slate-500">Riwayat penugasan yang pernah diterima oleh {selectedPegawai.nama}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedPegawai(null)}
+                className="rounded-lg p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto pr-2 space-y-3">
+              {(() => {
+                const formattedId = `peg-${Number(selectedPegawai.id) < 10 ? '0' + Number(selectedPegawai.id) : selectedPegawai.id}`;
+                const riwayatTugas = tugasList.filter((t: any) => 
+                  t.status !== 'DITOLAK' && 
+                  t.pegawaiDitugaskan.some((p: any) => p.id === formattedId || p.id === selectedPegawai.id || p.db_id === selectedPegawai.db_id)
+                );
+                
+                if (riwayatTugas.length === 0) {
+                  return (
+                    <div className="text-center py-10 text-slate-500">
+                      Belum ada riwayat tugas untuk pegawai ini.
+                    </div>
+                  );
+                }
+
+                return riwayatTugas.map((tugas: any) => (
+                  <div key={tugas.id} className="p-4 rounded-xl border border-slate-200 bg-slate-50">
+                    <div className="flex justify-between items-start gap-4 mb-2">
+                      <h4 className="font-bold text-slate-800 text-sm">{tugas.uraianKegiatan}</h4>
+                      <span className="shrink-0 px-2.5 py-1 bg-emerald-100 text-emerald-700 rounded-md text-[10px] font-bold uppercase">
+                        {tugas.status === 'SURAT_TERBIT' ? 'Telah Dilaksanakan' : 'Diproses'}
+                      </span>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
+                      <div className="flex items-start gap-2 text-xs text-slate-600">
+                        <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-semibold text-slate-700">Waktu Pelaksanaan</p>
+                          <p>{new Date(tugas.tanggalMulai).toLocaleDateString('id-ID')} - {new Date(tugas.tanggalSelesai).toLocaleDateString('id-ID')}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-2 text-xs text-slate-600">
+                        <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-semibold text-slate-700">Lokasi</p>
+                          <p>{tugas.lokasiSpesifik || tugas.tempat}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ));
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

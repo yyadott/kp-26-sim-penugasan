@@ -7,7 +7,7 @@ export interface AuthContextType {
   user: Pegawai | null;
   isAuthenticated: boolean;
   login: (usernameOrNip: string, password: string) => Promise<{ success: boolean; message?: string }>;
-  updateCredentials: (data: { username: string; currentPassword: string; newPassword: string }) => { success: boolean; message?: string };
+  updateCredentials: (data: { username: string; email: string; currentPassword: string; newPassword: string }) => { success: boolean; message?: string };
   updateProfilePicture: (dataUrl: string) => void;
   getDemoCredentials: () => { username: string; password: string };
   logout: () => void;
@@ -97,18 +97,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const updateCredentials: AuthContextType['updateCredentials'] = ({ username, currentPassword, newPassword }) => {
+  const updateCredentials: AuthContextType['updateCredentials'] = ({ username, email, currentPassword, newPassword }) => {
     const trimmedUsername = username.trim();
+    const trimmedEmail = email?.trim() || '';
     const credentials = getCredentials();
 
     if (!trimmedUsername) return { success: false, message: 'Username wajib diisi.' };
+    if (!trimmedEmail) return { success: false, message: 'Email wajib diisi.' };
     if (currentPassword !== credentials.password) return { success: false, message: 'Password lama tidak sesuai.' };
     if (!newPassword || newPassword.length < 6) return { success: false, message: 'Password baru minimal 6 karakter.' };
 
-    const nextCredentials = { username: trimmedUsername, password: newPassword };
+    const nextCredentials = { username: trimmedUsername, email: trimmedEmail, password: newPassword };
     sessionStorage.setItem(CREDENTIALS_STORAGE_KEY, JSON.stringify(nextCredentials));
-    setUser((currentUser) => currentUser ? { ...currentUser, username: trimmedUsername } : currentUser);
-    return { success: true, message: 'Username dan password berhasil diperbarui.' };
+    setUser((currentUser) => currentUser ? { ...currentUser, username: trimmedUsername, email: trimmedEmail } : currentUser);
+    return { success: true, message: 'Profil dan password berhasil diperbarui.' };
   };
 
   const updateProfilePicture = (dataUrl: string) => {

@@ -31,31 +31,51 @@ type CheckboxDropdownProps = {
   onReset: () => void;
 };
 
-const CheckboxDropdown = ({ label, options, selected, isOpen, onToggle, onChange, onReset }: CheckboxDropdownProps) => (
-  <div className="relative">
-    <p className="mb-2 text-sm font-medium text-slate-800">{label}</p>
-    <button type="button" onClick={onToggle} className="flex w-full items-center justify-between gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-600 transition-colors hover:border-blue-400 hover:bg-blue-50" aria-expanded={isOpen}>
-      <span className="max-w-[190px] truncate">{selected.length === 0 ? `Pilih ${label}` : `${selected.length} dipilih`}</span>
-      <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-    </button>
-    {isOpen && (
-      <div className={`absolute right-0 z-40 max-h-72 w-60 overflow-y-auto rounded-xl border border-slate-200 bg-white p-2 shadow-xl ${label === 'Status' ? 'bottom-full mb-2' : 'top-full mt-2'}`} onMouseLeave={onToggle}>
-        <div className="flex items-center justify-between border-b border-slate-100 px-2 pb-2">
-          <span className="text-xs font-bold text-slate-700">{label}</span>
-          {selected.length > 0 && <button type="button" onClick={onReset} className="text-[11px] font-semibold text-blue-600 hover:underline">Reset</button>}
+const CheckboxDropdown = ({ label, options, selected, isOpen, onToggle, onChange, onReset }: CheckboxDropdownProps) => {
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  const filteredOptions = options.filter(opt => opt.label.toLowerCase().includes(searchQuery.toLowerCase()));
+
+  return (
+    <div className="relative">
+      <p className="mb-2 text-sm font-medium text-slate-800">{label}</p>
+      <button type="button" onClick={onToggle} className="flex w-full items-center justify-between gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-600 transition-colors hover:border-blue-400 hover:bg-blue-50" aria-expanded={isOpen}>
+        <span className="max-w-[190px] truncate">{selected.length === 0 ? `Pilih ${label}` : `${selected.length} dipilih`}</span>
+        <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+      {isOpen && (
+        <div className={`absolute right-0 z-40 max-h-80 w-60 overflow-hidden flex flex-col rounded-xl border border-slate-200 bg-white shadow-xl ${label === 'Status' ? 'bottom-full mb-2' : 'top-full mt-2'}`}>
+          <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2.5 bg-slate-50">
+            <span className="text-xs font-bold text-slate-700">{label}</span>
+            {selected.length > 0 && <button type="button" onClick={onReset} className="text-[11px] font-semibold text-blue-600 hover:underline">Reset</button>}
+          </div>
+          <div className="p-2 border-b border-slate-100 bg-white">
+            <input 
+              type="text" 
+              placeholder="Cari..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full px-2.5 py-1.5 text-xs border border-slate-200 rounded-md focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400"
+            />
+          </div>
+          <div className="space-y-1 p-2 overflow-y-auto custom-scrollbar">
+            {filteredOptions.length > 0 ? filteredOptions.map((option) => (
+              <label key={option.value} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-xs text-slate-700 hover:bg-slate-50">
+                <input type="checkbox" checked={selected.includes(option.value)} onChange={() => onChange(option.value)} className="h-4 w-4 rounded border-slate-300 accent-blue-600 focus:ring-blue-500" />
+                <span className="truncate">{option.label}</span>
+              </label>
+            )) : (
+              <p className="text-xs text-center text-slate-500 py-4">Tidak ditemukan</p>
+            )}
+          </div>
+          <div className="border-t border-slate-100 bg-slate-50 p-2 text-right">
+            <button type="button" onClick={onToggle} className="text-[11px] font-bold text-slate-600 hover:text-slate-800 bg-slate-200 hover:bg-slate-300 px-3 py-1 rounded-md transition-colors">Tutup</button>
+          </div>
         </div>
-        <div className="space-y-1 pt-2">
-          {options.map((option) => (
-            <label key={option.value} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-xs text-slate-700 hover:bg-slate-50">
-              <input type="checkbox" checked={selected.includes(option.value)} onChange={() => onChange(option.value)} className="h-4 w-4 rounded border-slate-300 accent-blue-600 focus:ring-blue-500" />
-              <span className="truncate">{option.label}</span>
-            </label>
-          ))}
-        </div>
-      </div>
-    )}
-  </div>
-);
+      )}
+    </div>
+  );
+};
 
 export const TugasPage = () => {
   const { tugasList: ajuanList, refreshTugas, updateTugasStatus, addTugas } = useSuratTugas();
@@ -136,7 +156,7 @@ export const TugasPage = () => {
 
   const unitOptions: UnitKerjaType[] = ['Kepeg', 'Fastingkom', 'PM'];
   const statusOptions = [
-    { value: 'SURAT_TERBIT', label: 'Diapprove' },
+    { value: 'SURAT_TERBIT', label: 'Telah Dilaksanakan' },
     { value: 'VERIFIKASI_SUBBAGIAN', label: 'Diproses' },
     { value: 'PERSETUJUAN_PIMPINAN', label: 'Diproses (Pimpinan)' },
     { value: 'DRAFT', label: 'Draft' },
@@ -214,7 +234,7 @@ export const TugasPage = () => {
   const getStatusBadge = (status: AjuanSuratTugas['status']) => {
     const statusIsApproved = status === 'SURAT_TERBIT';
     const statusIsRejected = status === 'DITOLAK';
-    const label = statusIsApproved ? 'Diapprove' : statusIsRejected ? 'Dibatalkan' : 'Diproses';
+    const label = statusIsApproved ? 'Telah Dilaksanakan' : statusIsRejected ? 'Dibatalkan' : 'Diproses';
     const classes = statusIsApproved
       ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
       : statusIsRejected
@@ -302,7 +322,7 @@ export const TugasPage = () => {
                     </button>
                   )}
                 </div>
-                <div className="space-y-1 pt-2">
+                <div className="space-y-1 pt-2 max-h-48 overflow-y-auto custom-scrollbar">
                   {unitOptions.map((unit) => (
                     <label key={unit} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-xs text-slate-700 hover:bg-slate-50">
                       <input
@@ -498,7 +518,7 @@ export const TugasPage = () => {
                         {openStatusId === item.id && (
                           <div className="absolute left-6 top-14 z-20 w-40 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg">
                             <button type="button" onClick={(e) => { e.stopPropagation(); updateStatusAjuan(item.id, 'SURAT_TERBIT'); }} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-semibold text-emerald-700 hover:bg-emerald-50">
-                              <CheckCircle2 className="w-4 h-4" /> Diapprove
+                              <CheckCircle2 className="w-4 h-4" /> Telah Dilaksanakan
                             </button>
                             <button type="button" onClick={(e) => { e.stopPropagation(); updateStatusAjuan(item.id, 'VERIFIKASI_SUBBAGIAN'); }} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-semibold text-slate-600 hover:bg-slate-100">
                               <Hourglass className="w-4 h-4" /> Diproses

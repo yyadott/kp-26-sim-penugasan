@@ -26,7 +26,7 @@ export const ProfilePage = () => {
       setMessage('Password lama tidak sesuai.');
       return;
     }
-    updateCredentials({ username: usernameInput, currentPassword: oldPasswordInput, newPassword: passwordInput });
+    updateCredentials({ username: usernameInput, email: user?.email || '', currentPassword: oldPasswordInput, newPassword: passwordInput });
     setMessage('Profil berhasil diperbarui!');
     setOldPasswordInput('');
     setPasswordInput('');

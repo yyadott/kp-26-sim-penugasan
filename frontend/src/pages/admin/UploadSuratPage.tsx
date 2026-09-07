@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { UploadCloud, FileText, X, CheckCircle, ArrowLeft, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { extractDocxContent } from '@/utils/documentScanner';
+import { extractDocxContent, extractSuratData, type ScannedSuratData } from '@/utils/documentScanner';
 import Swal from 'sweetalert2';
 import { dummyAjuanSuratTugas } from '@/data/dummyData';
 import { useAuth } from '@/hooks/useAuth';
@@ -12,6 +12,7 @@ export const UploadSuratPage = () => {
   const [dragActive, setDragActive] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [previewHtml, setPreviewHtml] = useState<string>('');
+  const [scannedData, setScannedData] = useState<ScannedSuratData | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [taskId, setTaskId] = useState('');
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
@@ -28,16 +29,28 @@ export const UploadSuratPage = () => {
   const processFile = async (selectedFile: File) => {
     setFile(selectedFile);
     setPreviewHtml('');
+    setScannedData(null);
     
     if (selectedFile.name.endsWith('.docx')) {
       setIsScanning(true);
       try {
         const html = await extractDocxContent(selectedFile);
+        const extractedData = await extractSuratData(selectedFile);
         setPreviewHtml(html);
+        setScannedData(extractedData);
+        const matchedTask = draftTasks.find((task: any) => {
+          const sameNumber = extractedData.nomorSurat && task.nomorSurat?.toLowerCase().includes(extractedData.nomorSurat.toLowerCase());
+          const sameEmployee = extractedData.namaPegawai && task.pegawaiDitugaskan?.some((pegawai: any) =>
+            pegawai.nama?.toLowerCase().includes(extractedData.namaPegawai.toLowerCase()),
+          );
+          return sameNumber || sameEmployee;
+        });
+        if (matchedTask) setTaskId(matchedTask.id);
         setPreviewModalOpen(true); // Otomatis buka preview setelah diekstrak
       } catch (error) {
         console.error('Gagal memproses dokumen:', error);
         setPreviewHtml('<p class="text-red-500">Gagal memproses preview dokumen.</p>');
+        setScannedData(null);
       } finally {
         setIsScanning(false);
       }
@@ -82,11 +95,21 @@ export const UploadSuratPage = () => {
       localStorage.setItem(`doc_html_${taskId}`, previewHtml);
       localStorage.setItem(`doc_name_${taskId}`, file.name);
     }
+    if (scannedData) {
+      localStorage.setItem(`doc_scan_${taskId}`, JSON.stringify(scannedData));
+    }
     
     // Update status di mock database (localStorage)
-    const updatedTasks = allTasks.map((t: any) => 
-      t.id === taskId ? { ...t, status: 'VERIFIKASI_SUBBAGIAN' } : t
-    );
+    const updatedTasks = allTasks.map((t: any) => {
+      if (t.id !== taskId) return t;
+      return {
+        ...t,
+        status: 'VERIFIKASI_SUBBAGIAN',
+        nomorSurat: scannedData?.nomorSurat || t.nomorSurat,
+        tempat: scannedData?.lokasi || t.tempat,
+        scanData: scannedData || undefined,
+      };
+    });
     localStorage.setItem('sim_penugasan_tugas', JSON.stringify(updatedTasks));
     
     Swal.fire({
@@ -99,6 +122,7 @@ export const UploadSuratPage = () => {
       if (result.isConfirmed) {
         setFile(null);
         setPreviewHtml('');
+        setScannedData(null);
         navigate(-1);
       }
     });
@@ -258,6 +282,16 @@ export const UploadSuratPage = () => {
                   <Eye className="w-4 h-4" />
                   Buka Preview Dokumen
                 </button>
+              </div>
+            )}
+            {scannedData && !isScanning && (
+              <div className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-4">
+                <h3 className="mb-3 text-sm font-bold text-blue-900">Hasil Scan Surat</h3>
+                <dl className="grid gap-2 text-sm sm:grid-cols-3">
+                  <div><dt className="text-xs text-blue-600">Nomor Surat</dt><dd className="font-semibold text-slate-800">{scannedData.nomorSurat || 'Tidak terbaca'}</dd></div>
+                  <div><dt className="text-xs text-blue-600">Nama Pegawai</dt><dd className="font-semibold text-slate-800">{scannedData.namaPegawai || 'Tidak terbaca'}</dd></div>
+                  <div><dt className="text-xs text-blue-600">Lokasi</dt><dd className="font-semibold text-slate-800">{scannedData.lokasi || 'Tidak terbaca'}</dd></div>
+                </dl>
               </div>
             )}
           </div>

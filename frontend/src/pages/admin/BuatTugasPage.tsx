@@ -15,6 +15,8 @@ import { dummyPegawaiList } from '@/data/dummyData';
 
 type Wilayah = { id: string; name: string };
 
+const normalizePegawaiId = (id: string) => id.replace(/^peg-0*/, '');
+
 export const BuatTugasPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -36,18 +38,25 @@ export const BuatTugasPage = () => {
   const [conflictAlert, setConflictAlert] = useState<{
     pegawai: { id: string; nama: string; unitKerja: string };
     conflicts: AjuanSuratTugas[];
+    isWarningOnly?: boolean;
   } | null>(null);
   
   const [finalSubmitAlert, setFinalSubmitAlert] = useState<{
     pegawai: { id: string; nama: string; unitKerja: string }[];
+    isWarningOnly?: boolean;
   } | null>(null);
+
+  const getTodayString = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
 
   const [formData, setFormData] = useState({
     uraianKegiatan: '',
     unitKerja: 'Kepeg' as UnitKerjaType,
     pegawaiIds: [] as string[],
-    tanggalMulai: '2026-01-01',
-    tanggalSelesai: '2026-01-02',
+    tanggalMulai: getTodayString(),
+    tanggalSelesai: getTodayString(),
     tempat: 'Kecamatan Bandung Tengah',
     lokasiSpesifik: '',
     provinsiId: '',
@@ -59,19 +68,49 @@ export const BuatTugasPage = () => {
     pangkatGolongan: {} as Record<string, string>,
   });
 
-  // Helper: cek apakah pegawai memiliki tugas yang bentrok dengan rentang tanggal yang dipilih
+  // Check if a task is a hard conflict
   const getConflictingTasks = (pegawaiId: string) => {
-    const { tanggalMulai, tanggalSelesai } = formData;
-    if (!tanggalMulai || !tanggalSelesai) return [];
-    const formStart = new Date(tanggalMulai);
-    const formEnd = new Date(tanggalSelesai);
-    return tugasList.filter((t: any) => {
+    const startN = formData.tanggalMulai;
+    const endN = formData.tanggalSelesai;
+    if (!startN || !endN) return [];
+    
+    return tugasList.filter((t) => {
       if (t.status === 'DITOLAK') return false;
-      const isPegawaiAssigned = t.pegawaiDitugaskan.some((p: any) => p.id === pegawaiId);
+      const isPegawaiAssigned = t.pegawaiDitugaskan.some((p) => normalizePegawaiId(p.id) === normalizePegawaiId(pegawaiId));
       if (!isPegawaiAssigned) return false;
-      const tStart = new Date(t.tanggalMulai);
-      const tEnd = new Date(t.tanggalSelesai);
-      return tStart <= formEnd && tEnd >= formStart;
+      
+      const startO = t.tanggalMulai;
+      const endO = t.tanggalSelesai;
+      
+      // Check for overlap: new task starts before or on old task's end, AND new task ends after or on old task's start
+      const isOverlapping = startN <= endO && endN >= startO;
+      if (!isOverlapping) return false;
+      
+      // It is a warning (not a hard conflict) ONLY IF:
+      // 1. New task starts EXACTLY on the last day of the old task (startN === endO)
+      // 2. Old task is multi-day (startO < endO)
+      // 3. Old task is SURAT_TERBIT
+      const isWarning = startN === endO && startO < endO && t.status === 'SURAT_TERBIT';
+      
+      return !isWarning;
+    });
+  };
+
+  // Check if a task is a warning (last day overlap)
+  const getLastDayIssuedTasks = (pegawaiId: string) => {
+    const startN = formData.tanggalMulai;
+    const endN = formData.tanggalSelesai;
+    if (!startN || !endN) return [];
+    
+    return tugasList.filter((t) => {
+      if (t.status === 'DITOLAK') return false;
+      const isPegawaiAssigned = t.pegawaiDitugaskan.some((p) => normalizePegawaiId(p.id) === normalizePegawaiId(pegawaiId));
+      if (!isPegawaiAssigned) return false;
+      
+      const startO = t.tanggalMulai;
+      const endO = t.tanggalSelesai;
+      
+      return startN === endO && startO < endO && t.status === 'SURAT_TERBIT';
     });
   };
 
@@ -156,7 +195,23 @@ export const BuatTugasPage = () => {
         iconAnchor: [15, 40]
       });
 
-      mapMarkerRef.current = L.marker([formData.koordinatLat, formData.koordinatLng], { icon }).addTo(mapInstanceRef.current);
+      mapMarkerRef.current = L.marker([formData.koordinatLat, formData.koordinatLng], { icon, draggable: true }).addTo(mapInstanceRef.current);
+      
+      mapMarkerRef.current.on('dragend', function (event) {
+        const marker = event.target;
+        const position = marker.getLatLng();
+        setFormData(prev => ({ ...prev, koordinatLat: position.lat, koordinatLng: position.lng }));
+        
+        // Reverse geocoding
+        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${position.lat}&lon=${position.lng}`)
+          .then(res => res.json())
+          .then(data => {
+            if (data && data.display_name) {
+              setFormData(prev => ({ ...prev, lokasiSpesifik: data.display_name }));
+            }
+          })
+          .catch(err => console.error("Reverse geocoding failed", err));
+      });
     } else {
       const latlng: [number, number] = [formData.koordinatLat, formData.koordinatLng];
       mapInstanceRef.current.setView(latlng, 12);
@@ -183,7 +238,6 @@ export const BuatTugasPage = () => {
       tanggalMulai: formData.tanggalMulai,
       tanggalSelesai: formData.tanggalSelesai,
       tempat: [kota, provinsi].filter(Boolean).join(', ') || formData.tempat,
-      lokasiSpesifik: formData.lokasiSpesifik,
       koordinatLat: formData.koordinatLat,
       koordinatLng: formData.koordinatLng,
       deskripsi: formData.deskripsi,
@@ -221,10 +275,23 @@ export const BuatTugasPage = () => {
     const conflictingSelected = pegawaiList
       .filter((p) => formData.pegawaiIds.includes(p.id))
       .filter((p) => getConflictingTasks(p.id).length > 0);
+      
+    const warningSelected = pegawaiList
+      .filter((p) => formData.pegawaiIds.includes(p.id))
+      .filter((p) => getLastDayIssuedTasks(p.id).length > 0 && getConflictingTasks(p.id).length === 0);
 
     if (conflictingSelected.length > 0) {
       setFinalSubmitAlert({
-        pegawai: conflictingSelected.map(p => ({ id: p.id, nama: p.nama, unitKerja: p.unitKerja }))
+        pegawai: conflictingSelected.map(p => ({ id: p.id, nama: p.nama, unitKerja: p.unitKerja })),
+        isWarningOnly: false
+      });
+      return;
+    }
+    
+    if (warningSelected.length > 0) {
+      setFinalSubmitAlert({
+        pegawai: warningSelected.map(p => ({ id: p.id, nama: p.nama, unitKerja: p.unitKerja })),
+        isWarningOnly: true
       });
       return;
     }
@@ -309,16 +376,14 @@ export const BuatTugasPage = () => {
                 <input
                   type="date"
                   required
+                  min={getTodayString()}
                   value={formData.tanggalMulai}
                   onChange={(e) => {
                     const newMulai = e.target.value;
                     let newSelesai = formData.tanggalSelesai;
                     if (newMulai) {
-                      const dMulai = new Date(newMulai);
-                      dMulai.setDate(dMulai.getDate() + 1);
-                      const minSel = `${dMulai.getFullYear()}-${String(dMulai.getMonth() + 1).padStart(2, '0')}-${String(dMulai.getDate()).padStart(2, '0')}`;
-                      if (!newSelesai || newSelesai < minSel) {
-                        newSelesai = minSel;
+                      if (!newSelesai || newSelesai < newMulai) {
+                        newSelesai = newMulai;
                       }
                     }
                     setFormData({ ...formData, tanggalMulai: newMulai, tanggalSelesai: newSelesai });
@@ -331,15 +396,7 @@ export const BuatTugasPage = () => {
                 <input
                   type="date"
                   required
-                  min={
-                    formData.tanggalMulai
-                      ? (() => {
-                          const d = new Date(formData.tanggalMulai);
-                          d.setDate(d.getDate() + 1);
-                          return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-                        })()
-                      : ''
-                  }
+                  min={formData.tanggalMulai || getTodayString()}
                   value={formData.tanggalSelesai}
                   onChange={(e) => setFormData({ ...formData, tanggalSelesai: e.target.value })}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50 hover:bg-white transition-colors"
@@ -353,7 +410,7 @@ export const BuatTugasPage = () => {
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="bg-slate-50 px-5 py-3 border-b border-slate-200">
             <h2 className="text-base font-bold text-slate-800">3. Pegawai yang Ditugaskan</h2>
-            <p className="text-xs text-slate-500">Pilih satu atau beberapa pegawai yang akan melaksanakan tugas.</p>
+            <p className="text-xs text-slate-500">Pilih pegawai yang akan melaksanakan tugas. Untuk dinas multi-hari, pegawai ditugaskan pada tanggal terakhir.</p>
           </div>
           <div className="p-5 space-y-4">
             <div>
@@ -382,36 +439,48 @@ export const BuatTugasPage = () => {
 
               <div className="w-full p-2 border border-slate-300 rounded-lg bg-slate-50 h-40 overflow-y-auto space-y-1 custom-scrollbar">
                 {pegawaiList
-                  .filter(p => p.nama.toLowerCase().includes(pegawaiSearch.toLowerCase()) && (unitFilter === '' || p.unitKerja === unitFilter))
+                  .filter(p =>
+                    p.nama.toLowerCase().includes(pegawaiSearch.toLowerCase()) &&
+                    (unitFilter === '' || p.unitKerja === unitFilter)
+                  )
+                  .sort((a, b) => a.nama.localeCompare(b.nama, 'id', { sensitivity: 'base' }))
                   .map((p) => {
                   const conflicts = getConflictingTasks(p.id);
+                  const lastDayIssuedTasks = getLastDayIssuedTasks(p.id);
                   const hasConflict = conflicts.length > 0;
+                  const hasWarning = lastDayIssuedTasks.length > 0;
+                  const isRed = hasConflict || hasWarning;
                   const isChecked = formData.pegawaiIds.includes(p.id);
                   return (
                   <label
                     key={p.id}
                     className={`flex items-start gap-2 cursor-pointer p-1.5 rounded-md border transition-colors ${
-                      hasConflict && isChecked
+                      isRed && isChecked
                         ? 'bg-red-50 border-red-200 hover:bg-red-100'
-                        : hasConflict
-                          ? 'bg-amber-50/50 border-amber-200/60 hover:bg-amber-50'
-                          : 'border-transparent hover:bg-white hover:border-slate-300'
+                        : isRed
+                          ? 'bg-red-50/50 border-red-200/60 hover:bg-red-50'
+                          : isChecked
+                            ? 'bg-blue-50 border-blue-200 hover:bg-blue-100'
+                            : 'border-transparent hover:bg-white hover:border-slate-300'
                     }`}
                   >
                     <input 
                       type="checkbox"
                       className={`w-4 h-4 rounded cursor-pointer mt-0.5 ${
-                        hasConflict && isChecked
+                        isRed && isChecked
                           ? 'border-red-400 text-red-600 focus:ring-red-500'
                           : 'border-slate-400 text-blue-600 focus:ring-blue-500'
                       }`}
                       checked={isChecked}
                       onChange={(e) => {
-                        if (e.target.checked && hasConflict) {
-                          setConflictAlert({ pegawai: p, conflicts });
-                          return;
-                        }
                         if (e.target.checked) {
+                          if (hasConflict) {
+                            setConflictAlert({ pegawai: p, conflicts, isWarningOnly: false });
+                            return;
+                          } else if (hasWarning) {
+                            setConflictAlert({ pegawai: p, conflicts: lastDayIssuedTasks, isWarningOnly: true });
+                            return;
+                          }
                           setFormData({ ...formData, pegawaiIds: [...formData.pegawaiIds, p.id] });
                         } else {
                           setFormData({ ...formData, pegawaiIds: formData.pegawaiIds.filter(id => id !== p.id) });
@@ -419,8 +488,8 @@ export const BuatTugasPage = () => {
                       }}
                     />
                     <div className="flex-1 min-w-0">
-                      <span className={`text-sm font-medium ${hasConflict ? 'text-red-600' : 'text-slate-700'}`}>
-                        {p.nama} <span className={`text-xs font-normal ${hasConflict ? 'text-red-400' : 'text-slate-500'}`}>({p.unitKerja})</span>
+                      <span className={`text-sm font-medium ${isRed ? 'text-red-600' : 'text-slate-700'}`}>
+                        {p.nama} <span className={`text-xs font-normal ${isRed ? 'text-red-400' : 'text-slate-500'}`}>({p.unitKerja})</span>
                       </span>
                       {hasConflict && (
                         <div className="flex items-start gap-1 mt-0.5">
@@ -430,12 +499,24 @@ export const BuatTugasPage = () => {
                           </span>
                         </div>
                       )}
+                      {hasWarning && !hasConflict && (
+                        <div className="flex items-start gap-1 mt-0.5">
+                          <AlertTriangle className="w-3 h-3 text-red-500 flex-shrink-0 mt-0.5" />
+                          <span className="text-[11px] text-red-500 leading-tight">
+                            Hari terakhir surat tugas sebelumnya
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </label>
                   );
                 })}
-                {pegawaiList.filter(p => p.nama.toLowerCase().includes(pegawaiSearch.toLowerCase()) && (unitFilter === '' || p.unitKerja === unitFilter)).length === 0 && (
-                  <div className="text-center text-xs text-slate-500 py-4">Pegawai tidak ditemukan</div>
+                {pegawaiList
+                  .filter(p =>
+                    p.nama.toLowerCase().includes(pegawaiSearch.toLowerCase()) &&
+                    (unitFilter === '' || p.unitKerja === unitFilter)
+                  ).length === 0 && (
+                  <div className="text-center text-xs text-slate-500 py-4">Pegawai tidak ditemukan dengan pencarian tersebut.</div>
                 )}
               </div>
               <p className="text-xs text-blue-600 mt-2 font-medium">💡 Centang kotak di samping nama pegawai untuk memilih.</p>
@@ -498,7 +579,49 @@ export const BuatTugasPage = () => {
 
             <div>
               <label className="block text-sm font-bold text-slate-700 mb-1.5">Tempat Spesifik <span className="text-red-500">*</span></label>
-              <input type="text" required placeholder="Contoh: SMKN 1 Bandung, Jl. Wastukencana No.3" value={formData.lokasiSpesifik} onChange={(e) => setFormData({ ...formData, lokasiSpesifik: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50 hover:bg-white transition-colors" />
+              <div className="flex gap-2">
+                <input type="text" required placeholder="Contoh: SMKN 1 Bandung, Jl. Wastukencana No.3" value={formData.lokasiSpesifik} onChange={(e) => setFormData({ ...formData, lokasiSpesifik: e.target.value })} className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50 hover:bg-white transition-colors" />
+                <button type="button" onClick={() => {
+                  if (formData.lokasiSpesifik) {
+                    const query = encodeURIComponent(formData.lokasiSpesifik);
+                    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}&countrycodes=id`)
+                      .then(res => res.json())
+                      .then(data => {
+                        if (data && data.length > 0) {
+                          setFormData(prev => ({
+                            ...prev,
+                            koordinatLat: parseFloat(data[0].lat),
+                            koordinatLng: parseFloat(data[0].lon)
+                          }));
+                        } else {
+                          const firstPart = formData.lokasiSpesifik.split(',')[0].trim();
+                          if (firstPart && firstPart !== formData.lokasiSpesifik) {
+                            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(firstPart)}&countrycodes=id`)
+                              .then(res => res.json())
+                              .then(data2 => {
+                                if (data2 && data2.length > 0) {
+                                  setFormData(prev => ({ ...prev, koordinatLat: parseFloat(data2[0].lat), koordinatLng: parseFloat(data2[0].lon) }));
+                                  alert(`Lokasi spesifik persis tidak ditemukan, namun berhasil menemukan "${firstPart}". Pin peta telah digeser.`);
+                                } else {
+                                  alert("Lokasi tidak ditemukan di peta. OpenStreetMap mungkin tidak mengenali alamat lengkap ini.\n\nTips: Coba gunakan kata kunci yang lebih pendek (contoh: 'Pasar Induk Caringin') atau geser pin merah di peta secara manual.");
+                                }
+                              });
+                          } else {
+                            alert("Lokasi tidak ditemukan di peta. OpenStreetMap mungkin tidak mengenali nama tempat ini.\n\nTips: Coba gunakan nama tempat yang lebih umum atau geser pin merah di peta secara manual.");
+                          }
+                        }
+                      })
+                      .catch(err => console.error("Geocoding failed", err));
+                  }
+                }} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 text-sm font-bold rounded-lg transition-colors flex items-center gap-2">
+                  <Search className="w-4 h-4" /> Cari di Peta
+                </button>
+              </div>
+              {formData.tanggalMulai && formData.tanggalSelesai && formData.tanggalMulai < formData.tanggalSelesai && (
+                <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700">
+                  Pegawai hanya ditugaskan pada tanggal {formData.tanggalSelesai}; tanggal {formData.tanggalMulai} tidak dapat digunakan untuk penugasan pegawai.
+                </p>
+              )}
             </div>
 
             <div>
@@ -506,7 +629,7 @@ export const BuatTugasPage = () => {
               <div className="w-full h-[250px] bg-slate-100 rounded-lg border border-slate-300 overflow-hidden relative z-0">
                 <div ref={mapContainerRef} className="w-full h-full" />
               </div>
-              <p className="text-xs text-slate-500 mt-1.5">💡 Titik lokasi di peta ini akan otomatis mengikuti Kota/Kabupaten yang Anda pilih.</p>
+              <p className="text-xs text-slate-500 mt-1.5">💡 Geser pin pada peta untuk menentukan lokasi spesifik secara otomatis, atau ketik lokasi lalu klik "Cari di Peta".</p>
             </div>
           </div>
         </div>
@@ -638,8 +761,8 @@ export const BuatTugasPage = () => {
                   <AlertTriangle className="w-5 h-5 text-red-600" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-red-800">Pegawai Tidak Tersedia</h3>
-                  <p className="text-sm text-red-600">Terjadi bentrokan jadwal penugasan</p>
+                  <h3 className="font-bold text-red-800">Peringatan Bentrok Jadwal</h3>
+                  <p className="text-sm text-red-600">Pegawai sudah memiliki tugas lain</p>
                 </div>
               </div>
               <button 
@@ -653,7 +776,16 @@ export const BuatTugasPage = () => {
             
             <div className="p-5 space-y-4">
               <p className="text-sm text-slate-700">
-                Pegawai <strong>{conflictAlert.pegawai.nama}</strong> sudah ditugaskan pada rentang tanggal tersebut.
+                {conflictAlert.isWarningOnly ? (
+                  <>
+                    Apakah Anda akan tetap memberi surat tugas untuk <strong>{conflictAlert.pegawai.nama}</strong>?
+                    Pegawai ini sudah memiliki surat tugas yang berjalan pada tanggal {tanggalPenugasanPegawai} (hari terakhir penugasannya).
+                  </>
+                ) : (
+                  <>
+                    Pegawai <strong>{conflictAlert.pegawai.nama}</strong> sudah memiliki surat tugas penuh pada tanggal {tanggalPenugasanPegawai}. Pegawai tidak dapat ditugaskan pada rentang tanggal ini.
+                  </>
+                )}
               </p>
               
               <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar pr-2">
@@ -675,16 +807,26 @@ export const BuatTugasPage = () => {
                 >
                   Batal
                 </button>
-                <button 
-                  type="button"
-                  onClick={() => {
-                    setFormData({ ...formData, pegawaiIds: [...formData.pegawaiIds, conflictAlert.pegawai.id] });
-                    setConflictAlert(null);
-                  }}
-                  className="flex-1 py-2.5 px-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition-colors text-sm cursor-pointer"
-                >
-                  Ya, Tetap Pilih
-                </button>
+                {conflictAlert.isWarningOnly ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormData(prev => ({ ...prev, pegawaiIds: [...prev.pegawaiIds, conflictAlert.pegawai.id] }));
+                      setConflictAlert(null);
+                    }}
+                    className="flex-1 py-2.5 px-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition-colors text-sm cursor-pointer"
+                  >
+                    Tetap Beri Tugas
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setConflictAlert(null)}
+                    className="flex-1 py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors text-sm cursor-pointer"
+                  >
+                    Mengerti
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -716,41 +858,41 @@ export const BuatTugasPage = () => {
             
             <div className="p-5 space-y-4">
               <p className="text-sm text-slate-700">
-                Anda memilih <strong>{finalSubmitAlert.pegawai.length} pegawai</strong> yang sudah memiliki jadwal penugasan pada rentang tanggal tersebut:
+                {finalSubmitAlert.isWarningOnly ? (
+                  <>Apakah Anda akan tetap memberi surat tugas untuk <strong>{finalSubmitAlert.pegawai.map(p => p.nama).join(', ')}</strong>?</>
+                ) : (
+                  <>Anda memilih <strong>{finalSubmitAlert.pegawai.length} pegawai</strong> yang sudah memiliki surat tugas penuh pada tanggal penugasan. Harap hapus pegawai tersebut dari daftar sebelum menyimpan.</>
+                )}
               </p>
               
-              <ul className="space-y-1.5 max-h-48 overflow-y-auto custom-scrollbar bg-slate-50 border border-slate-200 rounded-lg p-3">
+              <div className="space-y-1.5 max-h-40 overflow-y-auto custom-scrollbar">
                 {finalSubmitAlert.pegawai.map(p => (
-                  <li key={p.id} className="text-sm flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
-                    <span className="font-bold text-slate-800">{p.nama}</span>
-                    <span className="text-xs text-slate-500">({p.unitKerja})</span>
-                  </li>
+                  <div key={p.id} className="text-sm text-slate-700 font-medium px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg">
+                    {p.nama} <span className="text-xs text-slate-500 font-normal">({p.unitKerja})</span>
+                  </div>
                 ))}
-              </ul>
+              </div>
               
-              <p className="text-sm text-slate-700 font-medium">
-                Apakah Anda yakin ingin tetap menyimpan dan menugaskan mereka?
-              </p>
-
               <div className="pt-2 flex gap-2">
                 <button 
                   type="button"
                   onClick={() => setFinalSubmitAlert(null)}
                   className="flex-1 py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg transition-colors text-sm cursor-pointer"
                 >
-                  Batal Simpan
+                  Kembali
                 </button>
-                <button 
-                  type="button"
-                  onClick={() => {
-                    setFinalSubmitAlert(null);
-                    handleActualSubmit();
-                  }}
-                  className="flex-1 py-2.5 px-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition-colors text-sm cursor-pointer"
-                >
-                  Ya, Tetap Simpan
-                </button>
+                {finalSubmitAlert.isWarningOnly && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFinalSubmitAlert(null);
+                      handleActualSubmit();
+                    }}
+                    className="flex-1 py-2.5 px-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition-colors text-sm cursor-pointer"
+                  >
+                    Tetap Simpan
+                  </button>
+                )}
               </div>
             </div>
           </div>

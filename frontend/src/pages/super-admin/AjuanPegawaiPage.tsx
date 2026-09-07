@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { dummyAjuanSuratTugas } from '@/data/dummyData';
 import { Eye, Edit3, CheckCircle2, XCircle, X, FileText, Clock, CheckCheck, Search, MoreVertical } from 'lucide-react';
 import type { AjuanSuratTugas } from '@/types';
+import { useSuratTugas } from '@/hooks/useSuratTugas';
 
 type TabKey = 'baru' | 'proses' | 'selesai';
 
@@ -20,7 +20,12 @@ const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
 ];
 
 export const AjuanPegawaiPage = () => {
-  const [ajuanList, setAjuanList] = useState<AjuanSuratTugas[]>([...dummyAjuanSuratTugas]);
+  const { tugasList: ajuanList, refreshTugas, updateTugasStatus } = useSuratTugas();
+  
+  useEffect(() => {
+    refreshTugas();
+  }, []);
+
   const [activeTab, setActiveTab] = useState<TabKey>('baru');
   const [searchQuery, setSearchQuery] = useState('');
   const [openActionId, setOpenActionId] = useState<string | null>(null);
@@ -67,36 +72,41 @@ export const AjuanPegawaiPage = () => {
   };
 
   // Handlers
-  const handleApprove = (id: string) => {
-    setAjuanList(prev => prev.map(a => {
-      if (a.id !== id) return a;
-      const nextStatusMap: Record<string, AjuanSuratTugas['status']> = {
-        DRAFT: 'VERIFIKASI_SUBBAGIAN',
-        VERIFIKASI_SUBBAGIAN: 'PERSETUJUAN_PIMPINAN',
-        PERSETUJUAN_PIMPINAN: 'SURAT_TERBIT',
-      };
-      const nextStatus = nextStatusMap[a.status];
-      if (!nextStatus) return a;
-      return { ...a, status: nextStatus };
-    }));
+  const handleApprove = async (id: string) => {
+    const ajuan = ajuanList.find(a => a.id === id);
+    if (!ajuan) return;
+    
+    const nextStatusMap: Record<string, AjuanSuratTugas['status']> = {
+      DRAFT: 'VERIFIKASI_SUBBAGIAN',
+      VERIFIKASI_SUBBAGIAN: 'PERSETUJUAN_PIMPINAN',
+      PERSETUJUAN_PIMPINAN: 'SURAT_TERBIT',
+    };
+    const nextStatus = nextStatusMap[ajuan.status];
+    if (!nextStatus) return;
+    
+    await updateTugasStatus(id, nextStatus);
   };
 
-  const handleReject = (id: string) => {
-    setAjuanList(prev => prev.map(a =>
-      a.id === id ? { ...a, status: 'DITOLAK' as const } : a
-    ));
+  const handleReject = async (id: string) => {
+    await updateTugasStatus(id, 'DITOLAK');
   };
 
   const openEdit = (ajuan: AjuanSuratTugas) => {
-    setEditForm({ uraianKegiatan: ajuan.uraianKegiatan, deskripsi: ajuan.deskripsi });
+    setEditForm({ uraianKegiatan: ajuan.uraianKegiatan, deskripsi: ajuan.deskripsi || '' });
     setEditModal(ajuan);
   };
 
-  const handleEditSave = () => {
+  const handleEditSave = async () => {
     if (!editModal) return;
-    setAjuanList(prev => prev.map(a =>
-      a.id === editModal.id ? { ...a, uraianKegiatan: editForm.uraianKegiatan, deskripsi: editForm.deskripsi } : a
-    ));
+    // Call API for edit here if needed, but for now we just refresh or handle locally if backend supports it.
+    // Assuming backend edit is not fully supported for just these 2 fields yet, but we'll try to use a patch if it existed.
+    // For now, this is a placeholder since edit API is in TugasService update.
+    try {
+      // await apiClient.patch(`/tugas/${editModal.id}`, editForm);
+      await refreshTugas(); // Refresh to ensure sync
+    } catch (err) {
+      console.error(err);
+    }
     setEditModal(null);
   };
 

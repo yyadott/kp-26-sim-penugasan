@@ -14,7 +14,7 @@ export const ProfilePage = () => {
   const submit = (event: FormEvent) => {
     event.preventDefault();
     setMessage(null);
-    const result = updateCredentials({ username, currentPassword, newPassword });
+    const result = updateCredentials({ username, email: user?.email || '', currentPassword, newPassword });
     setMessage({ type: result.success ? 'success' : 'error', text: result.message || 'Perubahan tidak dapat disimpan.' });
     if (result.success) {
       setCurrentPassword('');

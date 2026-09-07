@@ -11,6 +11,7 @@ export const ProfilePage = () => {
   const [showOldPassword, setShowOldPassword] = useState(false);
   const [oldPasswordInput, setOldPasswordInput] = useState('');
   const [usernameInput, setUsernameInput] = useState(username);
+  const [emailInput, setEmailInput] = useState(user?.email || '');
   const [passwordInput, setPasswordInput] = useState('');
   const [message, setMessage] = useState('');
 
@@ -18,15 +19,15 @@ export const ProfilePage = () => {
 
   const handleSave = (event: React.FormEvent) => {
     event.preventDefault();
-    if (!usernameInput.trim() || !oldPasswordInput.trim() || !passwordInput.trim()) {
-      setMessage('Username, password lama, dan password baru wajib diisi.');
+    if (!usernameInput.trim() || !emailInput.trim() || !oldPasswordInput.trim() || !passwordInput.trim()) {
+      setMessage('Username, email, password lama, dan password baru wajib diisi.');
       return;
     }
     if (oldPasswordInput !== currentPassword) {
       setMessage('Password lama tidak sesuai.');
       return;
     }
-    updateCredentials({ username: usernameInput, currentPassword: oldPasswordInput, newPassword: passwordInput });
+    updateCredentials({ username: usernameInput, email: emailInput, currentPassword: oldPasswordInput, newPassword: passwordInput });
     setMessage('Profil berhasil diperbarui!');
     setOldPasswordInput('');
     setPasswordInput('');
@@ -73,6 +74,13 @@ export const ProfilePage = () => {
             <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-700">
               <UserRound className="h-4 w-4 text-slate-400" />
               <input value={usernameInput} onChange={(event) => setUsernameInput(event.target.value)} className="w-full bg-transparent outline-none" />
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-xs font-bold text-slate-600">Email</label>
+            <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-700">
+              <input type="email" value={emailInput} onChange={(event) => setEmailInput(event.target.value)} className="w-full bg-transparent outline-none" placeholder="Alamat Email" />
             </div>
           </div>
 

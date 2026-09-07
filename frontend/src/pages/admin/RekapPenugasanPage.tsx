@@ -74,6 +74,7 @@ export const RekapPenugasanPage = () => {
     // Each surat tugas -> for each pegawai assigned -> one entry
     const entries = tugasList
       .filter(st => {
+        if (st.status !== 'SURAT_TERBIT') return false;
         if (!st.tanggalMulai) return false;
         const date = new Date(st.tanggalMulai);
         if (isNaN(date.getTime())) return false;

@@ -182,7 +182,7 @@ function signatureParagraphs(): Paragraph[] {
 // ─────────────────────────────────────────────
 function generateSuratPerorangan(data: SuratTugasData, kopBuffer: ArrayBuffer | null): Document {
   const p = data.pegawaiList[0];
-  const tanggalMulaiFormatted = formatTanggal(data.tanggalMulai);
+  const tanggalPenugasanFormatted = formatTanggal(data.tanggalSelesai || data.tanggalMulai);
   const lokasiText = [data.lokasiSpesifik, data.lokasi].filter(Boolean).join(', ');
 
   const bodyParagraphs: Paragraph[] = [
@@ -224,7 +224,7 @@ function generateSuratPerorangan(data: SuratTugasData, kopBuffer: ArrayBuffer | 
     alignment: AlignmentType.JUSTIFIED,
     spacing: { after: 120 },
     children: [
-      textRun(`sebagai ${data.deskripsi || data.uraianKegiatan}. Kegiatan akan diselenggarakan pada tanggal ${tanggalMulaiFormatted} di ${lokasiText}.`),
+      textRun(`sebagai ${data.deskripsi || data.uraianKegiatan}. Kegiatan akan diselenggarakan pada tanggal ${tanggalPenugasanFormatted} di ${lokasiText}.`),
     ],
   });
 

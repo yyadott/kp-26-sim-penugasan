@@ -1,5 +1,11 @@
 import mammoth from 'mammoth';
 
+export interface ScannedSuratData {
+  nomorSurat: string;
+  namaPegawai: string;
+  lokasi: string;
+}
+
 export const extractDocxContent = async (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -25,4 +31,26 @@ export const extractDocxContent = async (file: File): Promise<string> => {
     
     reader.readAsArrayBuffer(file);
   });
+};
+
+export const extractSuratData = async (file: File): Promise<ScannedSuratData> => {
+  const arrayBuffer = await file.arrayBuffer();
+  const result = await mammoth.extractRawText({ arrayBuffer });
+  const text = result.value.replace(/\r/g, '').replace(/[ \t]+/g, ' ');
+  const lines = text.split('\n').map((line) => line.trim()).filter(Boolean);
+
+  const valueAfterLabel = (label: string) => {
+    const line = lines.find((item) => new RegExp(`^${label}\\b`, 'i').test(item));
+    return line?.replace(new RegExp(`^${label}\\s*:?\\s*`, 'i'), '').trim() || '';
+  };
+
+  const nomorSurat = valueAfterLabel('Nomor');
+  const namaPegawai = valueAfterLabel('nama');
+  const locationMatch = text.match(/diselenggarakan pada tanggal\\s+[^\\n]+?\\s+di\\s+(.+?)(?:\\.\\s*Tugas ini diberikan|\\.\\s*Seluruh biaya|\\n|$)/i);
+
+  return {
+    nomorSurat,
+    namaPegawai,
+    lokasi: locationMatch?.[1]?.trim().replace(/[. ]+$/, '') || '',
+  };
 };

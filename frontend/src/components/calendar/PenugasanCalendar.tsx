@@ -49,6 +49,7 @@ type ModalData = { entries: CalendarEntry[]; day: number; bulan: number; tahun: 
 interface PenugasanCalendarProps {
   locations: LokasiPenugasanPegawai[];
   height?: string;
+  onDateSelect?: (date: string) => void;
 }
 
 // Helper: get number of days in a month
@@ -62,8 +63,9 @@ const getMondayBasedDay = (year: number, month: number, day: number) => {
 
 // Helper: check if a date falls within a range
 const isDateInRange = (dateStr: string, startStr: string, endStr: string): boolean => {
-  const d = new Date(dateStr).getTime();
-  return d >= new Date(startStr).getTime() && d <= new Date(endStr).getTime();
+  const toDateKey = (value: string) => value.slice(0, 10);
+  const dateKey = toDateKey(dateStr);
+  return dateKey >= toDateKey(startStr) && dateKey <= toDateKey(endStr);
 };
 
 // Detail Modal
@@ -74,7 +76,9 @@ const DetailModal = ({ data, onClose }: { data: ModalData; onClose: () => void }
   const [filterJenis, setFilterJenis] = useState('ALL');
 
   const getBasePath = () => {
-    return location.pathname.startsWith('/super-admin') ? '/super-admin' : '/admin';
+    if (location.pathname.startsWith('/super-admin')) return '/super-admin/tugas';
+    if (location.pathname.startsWith('/admin')) return '/admin/tugas';
+    return '/pegawai/tugas/pengajuan';
   };
 
   if (!data) return null;
@@ -157,7 +161,7 @@ const DetailModal = ({ data, onClose }: { data: ModalData; onClose: () => void }
               const color = JENIS_DINAS_COLORS[e.jenisDinas];
               const unitColor = UNIT_COLORS[e.unitKerja];
               return (
-                <div key={i} onClick={() => { onClose(); navigate(`${getBasePath()}/tugas?tab=berlangsung&taskId=${e.id}`); }} className="rounded-xl border border-slate-200 p-4 bg-white hover:shadow-md transition-shadow space-y-3 cursor-pointer">
+                  <div key={i} onClick={() => { onClose(); navigate(`${getBasePath()}?taskId=${e.id}`); }} className="rounded-xl border border-slate-200 p-4 bg-white hover:shadow-md transition-shadow space-y-3 cursor-pointer">
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-mono text-xs font-bold text-blue-700">{e.nomorSurat}</span>
                     <div className="flex items-center gap-1.5">
@@ -208,10 +212,10 @@ const DetailModal = ({ data, onClose }: { data: ModalData; onClose: () => void }
   );
 };
 
-export const PenugasanCalendar = ({ locations, height = 'h-[500px]' }: PenugasanCalendarProps) => {
+export const PenugasanCalendar = ({ locations, height = 'h-[500px]', onDateSelect }: PenugasanCalendarProps) => {
   const now = new Date();
-  const [tahun, setTahun] = useState(2026);
-  const [bulan, setBulan] = useState(0); // 0 = Januari
+  const [tahun, setTahun] = useState(now.getFullYear());
+  const [bulan, setBulan] = useState(now.getMonth());
   const [modalData, setModalData] = useState<ModalData>(null);
   const [tooltipData, setTooltipData] = useState<{ entries: CalendarEntry[]; day: number; rect: DOMRect } | null>(null);
   const tooltipTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -332,8 +336,9 @@ export const PenugasanCalendar = ({ locations, height = 'h-[500px]' }: Penugasan
 
   const handleClick = useCallback((entries: CalendarEntry[], day: number) => {
     setTooltipData(null);
+    onDateSelect?.(`${tahun}-${String(bulan + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`);
     setModalData({ entries, day, bulan, tahun });
-  }, [bulan, tahun]);
+  }, [bulan, tahun, onDateSelect]);
 
 
 

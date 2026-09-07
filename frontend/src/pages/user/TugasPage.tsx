@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { dummyPegawaiList, getUnitColor } from '@/data/dummyData';
 import type { AjuanSuratTugas, UnitKerjaType } from '@/types';
 import {
@@ -25,6 +25,7 @@ export const TugasPage = () => {
   const { user } = useAuth();
   type Wilayah = { id: string; name: string };
   const { tugasList, refreshTugas, addTugas } = useSuratTugas();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab] = useState<'DAFTAR' | 'WORKFLOW'>('DAFTAR');
   const [selectedUnits] = useState<UnitKerjaType[]>([]);
   const [selectedStatuses] = useState<string[]>([]);
@@ -43,6 +44,10 @@ export const TugasPage = () => {
   const [provinces, setProvinces] = useState<Wilayah[]>([]);
   const [cities, setCities] = useState<Wilayah[]>([]);
   const [isWilayahLoading, setIsWilayahLoading] = useState(false);
+
+  const taskIdFromUrl = searchParams.get('taskId');
+  const previewFromUrl = tugasList.find((item) => item.id === taskIdFromUrl) || null;
+  const activePreviewAjuan = previewAjuan || previewFromUrl;
 
   // Modal Form Ajuan Baru
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
@@ -234,7 +239,7 @@ export const TugasPage = () => {
   const getStatusBadge = (status: AjuanSuratTugas['status']) => {
     const statusIsApproved = status === ('SURAT_TERBIT' as any);
     const statusIsRejected = status === 'DITOLAK';
-    const label = statusIsApproved ? 'Diapprove' : statusIsRejected ? 'Dibatalkan' : 'Diproses';
+    const label = statusIsApproved ? 'Telah Dilaksanakan' : statusIsRejected ? 'Dibatalkan' : 'Diproses';
     const classes = statusIsApproved
       ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
       : statusIsRejected
@@ -382,7 +387,7 @@ export const TugasPage = () => {
                             </td>
                             <td className="px-6 py-4 flex flex-col gap-2 min-w-[130px]">
                               <a
-                                href={`http://localhost:3001/api/download-surat/${item.id}`}
+                                href={`http://localhost:3001/api/tugas/${item.id}/download-word`}
                                 download
                                 className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white transition-all hover:bg-blue-700 hover:shadow-md hover:shadow-blue-500/20"
                               >
@@ -569,7 +574,7 @@ export const TugasPage = () => {
           )}
 
           {/* MODAL PREVIEW SURAT TUGAS A4 */}
-          {previewAjuan && (
+          {activePreviewAjuan && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
               <div className="w-full max-w-4xl space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl max-h-[90vh] flex flex-col">
                 <div className="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -579,7 +584,10 @@ export const TugasPage = () => {
                   </h3>
                   <button
                     type="button"
-                    onClick={() => setPreviewAjuan(null)}
+                    onClick={() => {
+                      setPreviewAjuan(null);
+                      setSearchParams({});
+                    }}
                     className="rounded-lg p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
                   >
                     <X className="h-5 w-5" />
@@ -599,16 +607,16 @@ export const TugasPage = () => {
                     {/* Judul Surat */}
                     <div className="text-center mb-10">
                       <h3 className="font-bold text-lg underline underline-offset-4">SURAT TUGAS</h3>
-                      <p className="mt-1">Nomor: {previewAjuan.nomorSurat}</p>
+                      <p className="mt-1">Nomor: {activePreviewAjuan.nomorSurat}</p>
                     </div>
 
                     {/* Isi */}
                     <div className="space-y-4 text-justify leading-relaxed">
-                      <p>Berdasarkan kebutuhan dinas dalam rangka pelaksanaan tugas pada Unit Kerja <strong>{previewAjuan.unitKerja}</strong>, maka Kepala Dinas Komunikasi dan Informatika Provinsi Jawa Barat memberikan tugas kepada:</p>
+                      <p>Berdasarkan kebutuhan dinas dalam rangka pelaksanaan tugas pada Unit Kerja <strong>{activePreviewAjuan.unitKerja}</strong>, maka Kepala Dinas Komunikasi dan Informatika Provinsi Jawa Barat memberikan tugas kepada:</p>
 
                       <table className="w-full text-left border-collapse mt-4 mb-4">
                         <tbody>
-                          {previewAjuan.pegawaiDitugaskan.map((p, i) => (
+                          {activePreviewAjuan.pegawaiDitugaskan.map((p, i) => (
                             <tr key={p.id} className="align-top">
                               <td className="w-8 py-1">{i + 1}.</td>
                               <td className="w-24 font-semibold py-1">Nama</td>
@@ -626,22 +634,22 @@ export const TugasPage = () => {
                           <tr className="align-top">
                             <td className="w-40 py-1.5 font-medium">Perihal</td>
                             <td className="w-4 py-1.5">:</td>
-                            <td className="py-1.5 font-bold">{previewAjuan.uraianKegiatan}</td>
+                            <td className="py-1.5 font-bold">{activePreviewAjuan.uraianKegiatan}</td>
                           </tr>
                           <tr className="align-top">
                             <td className="w-40 py-1.5 font-medium">Tanggal Pelaksanaan</td>
                             <td className="w-4 py-1.5">:</td>
-                            <td className="py-1.5">{formatRentangTanggal(previewAjuan.tanggalMulai, previewAjuan.tanggalSelesai)}</td>
+                            <td className="py-1.5">{formatRentangTanggal(activePreviewAjuan.tanggalMulai, activePreviewAjuan.tanggalSelesai)}</td>
                           </tr>
                           <tr className="align-top">
                             <td className="w-40 py-1.5 font-medium">Lokasi Penugasan</td>
                             <td className="w-4 py-1.5">:</td>
-                            <td className="py-1.5">{previewAjuan.lokasiSpesifik}, {previewAjuan.tempat}</td>
+                            <td className="py-1.5">{activePreviewAjuan.lokasiSpesifik}, {activePreviewAjuan.tempat}</td>
                           </tr>
                           <tr className="align-top">
                             <td className="w-40 py-1.5 font-medium">Agenda / Deskripsi</td>
                             <td className="w-4 py-1.5">:</td>
-                            <td className="py-1.5 italic">{previewAjuan.deskripsi}</td>
+                            <td className="py-1.5 italic">{activePreviewAjuan.deskripsi}</td>
                           </tr>
                         </tbody>
                       </table>
@@ -653,7 +661,7 @@ export const TugasPage = () => {
                     <div className="flex justify-end mt-16 pr-8">
                       <div className="text-center">
                         <p>Ditetapkan di Bandung</p>
-                        <p className="mb-24">Pada Tanggal, {formatTanggal(previewAjuan.tanggalMulai)}</p>
+                        <p className="mb-24">Pada Tanggal, {formatTanggal(activePreviewAjuan.tanggalMulai)}</p>
                         <p className="font-bold underline">KEPALA DINAS</p>
                         <p>NIP. 19700101 199803 1 001</p>
                       </div>
@@ -663,7 +671,7 @@ export const TugasPage = () => {
 
                 <div className="flex justify-end pt-3">
                   <a
-                    href={`http://localhost:3001/api/tugas/${previewAjuan.id}/download-word`}
+                    href={`http://localhost:3001/api/tugas/${activePreviewAjuan.id}/download-word`}
                     download
                     className="mr-3 flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-5 py-2 text-xs font-bold text-blue-700 transition-colors hover:bg-blue-100"
                   >
@@ -672,7 +680,10 @@ export const TugasPage = () => {
                   </a>
                   <button
                     type="button"
-                    onClick={() => setPreviewAjuan(null)}
+                    onClick={() => {
+                      setPreviewAjuan(null);
+                      setSearchParams({});
+                    }}
                     className="rounded-xl bg-slate-800 px-5 py-2 text-xs font-bold text-white transition-colors hover:bg-slate-900"
                   >
                     Tutup Preview

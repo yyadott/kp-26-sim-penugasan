@@ -248,3 +248,18 @@ export const getUnitColor = (unit: string) => {
   // Fallback color for dynamic departments
   return { bg: 'bg-slate-100', text: 'text-slate-800', border: 'border-slate-500', hex: '#64748b' };
 };
+
+export const dummyLaporanList = [
+  {
+    id: 'LAP-001',
+    taskId: 'AJ-003',
+    nomorSurat: '094/03/AJ-KEPEG/2026',
+    uraianKegiatan: 'Pelatihan Administrator Jaringan',
+    tanggalUpload: '2026-08-26',
+    fileName: 'Laporan_Pelatihan_Arnest.pdf',
+    status: 'TERKIRIM',
+    pegawaiId: '7',
+    pegawaiNama: 'Arnest, S.Kom.',
+    catatan: 'Pelatihan berjalan lancar, sertifikat terlampir.'
+  }
+];

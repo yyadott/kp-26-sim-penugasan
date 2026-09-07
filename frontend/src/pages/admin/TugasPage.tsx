@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { dummyAjuanSuratTugas, dummyPegawaiList } from '@/data/dummyData';
+import { dummyAjuanSuratTugas, dummyPegawaiList, dummyLaporanList } from '@/data/dummyData';
 import { FileText, Calendar, Activity, ChevronDown, FileCheck, X, Info } from 'lucide-react';
 import { format, isToday, isThisWeek, isThisMonth } from 'date-fns';
 import { id } from 'date-fns/locale';
@@ -7,7 +7,7 @@ import SuratTugasTemplate from '@/components/SuratTugasTemplate';
 import { usePokja } from '@/hooks/usePokja';
 import { useSuratTugas } from '@/hooks/useSuratTugas';
 import { useSearchParams } from 'react-router-dom';
-
+import { useAuth } from '@/hooks/useAuth';
 
 // Utility for formatting date
 const formatDate = (dateStr: string) => format(new Date(dateStr), 'dd MMMM yyyy', { locale: id });
@@ -155,7 +155,7 @@ const PegawaiTooltip = ({ pegawaiList }: { pegawaiList: typeof dummyPegawaiList 
 };
 
 // Generic Table Component for tasks
-const GenericTaskTable = ({ tasks, emptyMsg, onRowClick }: { tasks: typeof dummyAjuanSuratTugas, emptyMsg: string, onRowClick?: (id: string) => void }) => (
+const GenericTaskTable = ({ tasks, emptyMsg, onRowClick }: { tasks: typeof dummyAjuanSuratTugas, emptyMsg: string, onRowClick?: (task: typeof dummyAjuanSuratTugas[number]) => void }) => (
   <div className="overflow-x-auto">
     <table className="w-full text-left text-sm">
       <thead className="bg-slate-50 text-slate-600 border-b border-slate-200">
@@ -174,9 +174,20 @@ const GenericTaskTable = ({ tasks, emptyMsg, onRowClick }: { tasks: typeof dummy
           <tr 
             key={t.id} 
             className={`hover:bg-slate-50 transition ${onRowClick ? 'cursor-pointer' : ''}`}
-            onClick={() => onRowClick && onRowClick(t.id)}
+            onClick={() => onRowClick && onRowClick(t)}
           >
-            <td className="px-6 py-4 font-medium text-slate-800">{t.nomorSurat}</td>
+            <td className="px-6 py-4 font-medium text-slate-800">
+              {onRowClick ? (
+                <button
+                  type="button"
+                  onClick={() => onRowClick(t)}
+                  className="text-left text-blue-700 underline decoration-blue-200 underline-offset-2 hover:text-blue-900 hover:decoration-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 rounded-sm"
+                  aria-label={`Buka surat tugas ${t.nomorSurat}`}
+                >
+                  {t.nomorSurat}
+                </button>
+              ) : t.nomorSurat}
+            </td>
             <td className="px-6 py-4 text-slate-600 max-w-xs truncate" title={t.uraianKegiatan}>{t.uraianKegiatan}</td>
             <td className="px-6 py-4">
               <div className="flex flex-col items-start gap-1.5">
@@ -239,12 +250,18 @@ const GenericReportTable = ({ reports, emptyMsg }: { reports: any[], emptyMsg: s
 
 // 2. Laporan Penugasan (SURAT_TERBIT)
 const LaporanPenugasanTab = () => {
+  const { user } = useAuth();
+
   const [expandedPegawaiId, setExpandedPegawaiId] = useState<string | null>(null);
   const [allReports, setAllReports] = useState<any[]>([]);
 
   useEffect(() => {
     const saved = localStorage.getItem('sim_penugasan_laporan');
-    if (saved) setAllReports(JSON.parse(saved));
+    if (saved) {
+      setAllReports(JSON.parse(saved));
+    } else {
+      setAllReports(dummyLaporanList);
+    }
   }, []);
 
   const pegawaiWithReports = dummyPegawaiList.map(pegawai => {
@@ -322,7 +339,7 @@ const LaporanPenugasanTab = () => {
 };
 
 // 3. Periode Penugasan (Timeline/Date view)
-const PeriodePenugasanTab = () => {
+const PeriodePenugasanTab = ({ onRowClick }: { onRowClick: (task: typeof dummyAjuanSuratTugas[number]) => void }) => {
   const { tugasList } = useSuratTugas();
   const currentDate = new Date();
   const [selectedMonth, setSelectedMonth] = useState<string>('ALL');
@@ -380,7 +397,7 @@ const PeriodePenugasanTab = () => {
           </select>
         </div>
       </div>
-      <GenericTaskTable tasks={sortedTasks} emptyMsg="Tidak ada data penugasan pada periode ini." />
+      <GenericTaskTable tasks={sortedTasks} emptyMsg="Tidak ada data penugasan pada periode ini." onRowClick={onRowClick} />
     </div>
   );
 };
@@ -494,9 +511,9 @@ const PenugasanBerlangsungTab = () => {
       <GenericTaskTable 
         tasks={filteredTasks} 
         emptyMsg="Tidak ada penugasan berlangsung pada kategori ini." 
-        onRowClick={(id) => {
+        onRowClick={(task) => {
           const newParams = new URLSearchParams(searchParams);
-          newParams.set('taskId', id);
+          newParams.set('taskId', task.id);
           setSearchParams(newParams);
         }}
       />
@@ -505,38 +522,48 @@ const PenugasanBerlangsungTab = () => {
 };
 
 // 6. Draft Penugasan (Juga menampilkan yang sedang proses Approval)
-const DraftPenugasanTab = () => {
+const DraftPenugasanTab = ({ onRowClick }: { onRowClick: (task: typeof dummyAjuanSuratTugas[number]) => void }) => {
   const { tugasList } = useSuratTugas();
   return (
     <GenericTaskTable
       tasks={tugasList.filter((t: any) => ['DRAFT', 'VERIFIKASI_SUBBAGIAN', 'PERSETUJUAN_PIMPINAN'].includes(t.status))}
       emptyMsg="Tidak ada draft atau surat penugasan yang sedang dalam proses approval."
+      onRowClick={onRowClick}
     />
   );
 };
 
 // 6. Blokir Penugasan (Ditolak)
-const BlokirPenugasanTab = () => {
+const BlokirPenugasanTab = ({ onRowClick }: { onRowClick: (task: typeof dummyAjuanSuratTugas[number]) => void }) => {
   const { tugasList } = useSuratTugas();
   return (
-    <GenericTaskTable tasks={tugasList.filter((t: any) => t.status === 'DITOLAK')} emptyMsg="Tidak ada penugasan yang diblokir atau ditolak." />
+    <GenericTaskTable tasks={tugasList.filter((t: any) => t.status === 'DITOLAK')} emptyMsg="Tidak ada penugasan yang diblokir atau ditolak." onRowClick={onRowClick} />
   );
 };
 
 // Removed JPPenugasanTab
 
 // 8. Rekap Penugasan (Dashboard)
-const RekapPenugasanTab = () => {
+const RekapPenugasanTab = ({ onRowClick }: { onRowClick: (task: typeof dummyAjuanSuratTugas[number]) => void }) => {
   const { tugasList } = useSuratTugas();
   const currentDate = new Date();
   const [selectedMonth, setSelectedMonth] = useState<string>('ALL');
   const [selectedYear, setSelectedYear] = useState<string>('ALL');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'SURAT_TERBIT' | 'PROSES' | 'DRAFT'>('ALL');
 
   const filteredTasks = tugasList.filter(t => {
     const taskDate = new Date(t.tanggalMulai);
     const matchMonth = selectedMonth === 'ALL' || String(taskDate.getMonth() + 1) === selectedMonth;
     const matchYear = selectedYear === 'ALL' || String(taskDate.getFullYear()) === selectedYear;
     return matchMonth && matchYear;
+  });
+
+  const tableTasks = filteredTasks.filter(t => {
+    if (statusFilter === 'ALL') return true;
+    if (statusFilter === 'SURAT_TERBIT') return t.status === 'SURAT_TERBIT';
+    if (statusFilter === 'PROSES') return t.status === 'VERIFIKASI_SUBBAGIAN' || t.status === 'PERSETUJUAN_PIMPINAN';
+    if (statusFilter === 'DRAFT') return t.status === 'DRAFT';
+    return true;
   });
 
   const counts = {
@@ -593,12 +620,20 @@ const RekapPenugasanTab = () => {
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
-          { label: 'Total Penugasan', value: counts.total, icon: FileText, color: 'text-blue-600', bg: 'bg-blue-100' },
-          { label: 'Selesai / Terbit', value: counts.selesai, icon: Calendar, color: 'text-emerald-600', bg: 'bg-emerald-100' },
-          { label: 'Dalam Proses', value: counts.proses, icon: Activity, color: 'text-amber-600', bg: 'bg-amber-100' },
-          { label: 'Draft', value: counts.draft, icon: FileText, color: 'text-slate-600', bg: 'bg-slate-100' },
+          { label: 'Total Penugasan', value: counts.total, icon: FileText, color: 'text-blue-600', bg: 'bg-blue-100', filter: 'ALL' },
+          { label: 'Selesai / Terbit', value: counts.selesai, icon: Calendar, color: 'text-emerald-600', bg: 'bg-emerald-100', filter: 'SURAT_TERBIT' },
+          { label: 'Dalam Proses', value: counts.proses, icon: Activity, color: 'text-amber-600', bg: 'bg-amber-100', filter: 'PROSES' },
+          { label: 'Draft', value: counts.draft, icon: FileText, color: 'text-slate-600', bg: 'bg-slate-100', filter: 'DRAFT' },
         ].map(stat => (
-          <div key={stat.label} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-md transition-shadow">
+          <button 
+            key={stat.label} 
+            onClick={() => setStatusFilter(stat.filter as any)}
+            className={`rounded-xl border p-5 shadow-sm hover:shadow-md transition-all text-left w-full cursor-pointer ${
+              statusFilter === stat.filter 
+                ? 'border-blue-500 ring-1 ring-blue-500 bg-blue-50/20' 
+                : 'border-slate-200 bg-white hover:border-slate-300'
+            }`}
+          >
             <div className="flex items-center gap-4">
               <div className={`rounded-lg p-3 ${stat.bg} ${stat.color}`}>
                 <stat.icon className="h-6 w-6" />
@@ -608,16 +643,16 @@ const RekapPenugasanTab = () => {
                 <p className="text-2xl font-bold text-slate-800">{stat.value}</p>
               </div>
             </div>
-          </div>
+          </button>
         ))}
       </div>
 
       <div className="rounded-2xl border border-slate-200 overflow-hidden bg-white">
         <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
-          <h3 className="text-base font-bold text-slate-800">Daftar Penugasan</h3>
-          <span className="text-xs font-semibold bg-blue-100 text-blue-700 px-2.5 py-1 rounded-full">{filteredTasks.length} Data</span>
+          <h3 className="text-base font-bold text-slate-800">Daftar Penugasan {statusFilter !== 'ALL' ? `(${statusFilter === 'SURAT_TERBIT' ? 'Selesai / Terbit' : statusFilter === 'PROSES' ? 'Dalam Proses' : 'Draft'})` : ''}</h3>
+          <span className="text-xs font-semibold bg-blue-100 text-blue-700 px-2.5 py-1 rounded-full">{tableTasks.length} Data</span>
         </div>
-        <GenericTaskTable tasks={filteredTasks} emptyMsg="Tidak ada data penugasan pada periode ini." />
+        <GenericTaskTable tasks={tableTasks} emptyMsg="Tidak ada data penugasan pada kategori ini." onRowClick={onRowClick} />
       </div>
     </div>
   );
@@ -649,6 +684,13 @@ export const TugasPage = () => {
     setSearchParams(newParams);
   };
 
+  const openTaskDetail = (task: typeof dummyAjuanSuratTugas[number]) => {
+    setSelectedAjuan(task);
+    const newParams = new URLSearchParams(searchParams);
+    newParams.set('taskId', task.id);
+    setSearchParams(newParams);
+  };
+
   const getPageTitle = () => {
     switch (activeTab) {
       case 'data-tugas': return 'Data Tugas';
@@ -665,14 +707,14 @@ export const TugasPage = () => {
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'data-tugas': return <RekapPenugasanTab />;
+      case 'data-tugas': return <RekapPenugasanTab onRowClick={openTaskDetail} />;
       case 'pegawai': return <PegawaiPenugasanTab />;
       case 'laporan': return <LaporanPenugasanTab />;
-      case 'periode': return <PeriodePenugasanTab />;
+      case 'periode': return <PeriodePenugasanTab onRowClick={openTaskDetail} />;
       case 'pivot': return <PivotPenugasanTab />;
       case 'berlangsung': return <PenugasanBerlangsungTab />;
-      case 'draft': return <DraftPenugasanTab />;
-      case 'blokir': return <BlokirPenugasanTab />;
+      case 'draft': return <DraftPenugasanTab onRowClick={openTaskDetail} />;
+      case 'blokir': return <BlokirPenugasanTab onRowClick={openTaskDetail} />;
       default: return null;
     }
   };

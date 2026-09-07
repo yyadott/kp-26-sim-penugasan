@@ -6,6 +6,7 @@ export const ProfilePage = () => {
   const { user, updateCredentials, updateProfilePicture } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [username, setUsername] = useState(user?.username || 'yadiyudi');
+  const [email, setEmail] = useState(user?.email || '');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
@@ -15,7 +16,7 @@ export const ProfilePage = () => {
   const submit = (event: FormEvent) => {
     event.preventDefault();
     setMessage(null);
-    const result = updateCredentials({ username, currentPassword, newPassword });
+    const result = updateCredentials({ username, email, currentPassword, newPassword });
     setMessage({ type: result.success ? 'success' : 'error', text: result.message || 'Perubahan tidak dapat disimpan.' });
     if (result.success) {
       setCurrentPassword('');
@@ -106,11 +107,16 @@ export const ProfilePage = () => {
               <input readOnly value={user?.jabatan || ''} className="w-full rounded-2xl border border-[#d9e2f0] bg-[#f7f9fc] px-4 py-3.5 text-base text-slate-800 outline-none" />
             </div>
             <div>
+              <label className="mb-2 block text-sm font-bold text-slate-700">Email</label>
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full rounded-2xl border border-[#d9e2f0] bg-[#f7f9fc] px-4 py-3.5 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100" />
+            </div>
+          </div>
+
+          <div>
               <label className="mb-2 block text-sm font-bold text-slate-700">Username</label>
               <div className="relative">
                 <input value={username} onChange={(event) => setUsername(event.target.value)} className="w-full rounded-2xl border border-[#d9e2f0] bg-[#f7f9fc] px-4 py-3.5 text-base text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100" />
               </div>
-            </div>
           </div>
 
           {passwordInput('Password Lama', currentPassword, setCurrentPassword, showCurrentPassword, setShowCurrentPassword, 'Masukkan password lama')}

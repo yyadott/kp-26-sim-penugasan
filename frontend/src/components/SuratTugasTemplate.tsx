@@ -16,6 +16,9 @@ const SuratTugasTemplate: React.FC<Props> = ({ ajuan }) => {
     }
   };
 
+  const tanggalPenugasan = ajuan.tanggalSelesai || ajuan.tanggalMulai;
+  const lokasiText = [ajuan.lokasiSpesifik, ajuan.tempat].filter(Boolean).join('. ');
+
   return (
     <div className="bg-slate-100 p-4 sm:p-8 rounded-b-2xl w-full flex justify-center">
       {/* Kertas A4 Container */}
@@ -33,7 +36,7 @@ const SuratTugasTemplate: React.FC<Props> = ({ ajuan }) => {
         {/* JUDUL SURAT */}
         <div className="text-center mb-8 font-serif text-slate-900">
           <h2 className="text-xl font-bold uppercase tracking-wider mb-1">SURAT TUGAS</h2>
-          <p className="text-[15px]">Nomor: {ajuan.nomorSurat}</p>
+          <p className="text-[15px]">Nomor&nbsp;&nbsp;&nbsp;: {ajuan.nomorSurat}</p>
         </div>
 
         {/* ISI SURAT */}
@@ -74,11 +77,11 @@ const SuratTugasTemplate: React.FC<Props> = ({ ajuan }) => {
           </div>
 
           <p className="text-justify mt-6">
-            sebagai {ajuan.uraianKegiatan}. Kegiatan akan diselenggarakan pada tanggal {formatDateFull(ajuan.tanggalMulai)} di {ajuan.tempat}.
+            sebagai {ajuan.deskripsi || ajuan.uraianKegiatan}. Kegiatan akan diselenggarakan pada tanggal {formatDateFull(tanggalPenugasan)} di {lokasiText}.
           </p>
 
           <p className="text-justify">
-            Seluruh biaya perjalanan dinas yang berkaitan dengan kegiatan tersebut dibebankan pada DIPA BBPPMPV BMTI Tahun Anggaran sesuai dengan ketentuan yang berlaku.
+            Seluruh biaya perjalanan dinas yang berkaitan dengan kegiatan tersebut dibebankan pada pihak penyelenggara sesuai dengan ketentuan yang berlaku.
           </p>
 
           <p className="text-justify">

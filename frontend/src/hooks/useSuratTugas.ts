@@ -1,7 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { AjuanSuratTugas } from '@/types';
 import apiClient from '@/api/client';
-import { dummyAjuanSuratTugas } from '@/data/dummyData';
 import { useAuth } from '@/hooks/useAuth';
 
 export const useSuratTugas = () => {
@@ -9,11 +8,11 @@ export const useSuratTugas = () => {
   const [tugasList, setTugasList] = useState<AjuanSuratTugas[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  const fetchTugas = async () => {
+  const fetchTugas = useCallback(async () => {
     setIsLoading(true);
     try {
       const res = await apiClient.get('/tugas');
-      let data = res.data && res.data.length > 0 ? res.data : dummyAjuanSuratTugas;
+      let data = res.data || [];
       
       // Filter data jika user adalah PEGAWAI
       if (user?.role === 'PEGAWAI') {
@@ -26,24 +25,15 @@ export const useSuratTugas = () => {
       setTugasList(data);
     } catch (error) {
       console.error('Gagal mengambil data tugas dari server', error);
-      
-      // Fallback dummy data juga harus difilter
-      let fallbackData = dummyAjuanSuratTugas;
-      if (user?.role === 'PEGAWAI') {
-        fallbackData = fallbackData.filter((item: AjuanSuratTugas) => 
-          item.pengaju?.id === user.id || 
-          item.pegawaiDitugaskan.some(p => p.id === user.id)
-        );
-      }
-      setTugasList(fallbackData);
+      setTugasList([]);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user?.id, user?.role]);
 
   useEffect(() => {
     fetchTugas();
-  }, []);
+  }, [fetchTugas]);
 
   const addTugas = async (tugas: any) => {
     try {

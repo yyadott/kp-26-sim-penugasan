@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useSuratTugas } from '@/hooks/useSuratTugas';
 import { ChartNoAxesCombined, UploadCloud, FileText, CheckCircle2, FileUp, Send } from 'lucide-react';
+import { dummyLaporanList } from '@/data/dummyData';
 
 export const LaporanPage = () => {
   const location = useLocation();
@@ -18,7 +19,7 @@ export const LaporanPage = () => {
   // List of uploaded reports for this session/system
   const [reports, setReports] = useState<any[]>(() => {
     const saved = localStorage.getItem('sim_penugasan_laporan');
-    return saved ? JSON.parse(saved) : [];
+    return saved ? JSON.parse(saved) : dummyLaporanList;
   });
 
   useEffect(() => {

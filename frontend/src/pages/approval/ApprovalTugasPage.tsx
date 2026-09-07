@@ -8,6 +8,7 @@ import {
   MapPin, Calendar as CalendarIcon, Users, Upload, X, Search
 } from 'lucide-react';
 import Swal from 'sweetalert2';
+import apiClient from '@/api/client';
 
 // Simulasi pengiriman notifikasi eksternal
 const sendTelegramNotification = async (_message: string) => {
@@ -229,10 +230,11 @@ export const ApprovalTugasPage = () => {
     });
 
     try {
-      const response = await fetch(`http://localhost:3000/api/tugas/${_id}/download-word`);
-      if (!response.ok) throw new Error('Gagal mengunduh');
-
-      const blob = await response.blob();
+      const response = await apiClient.get(`/tugas/${_id}/download-word`, {
+        responseType: 'blob',
+        timeout: 30000,
+      });
+      const blob = response.data as Blob;
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;

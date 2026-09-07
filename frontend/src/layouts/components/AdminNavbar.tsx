@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Menu, Bell, FileText, UserCircle2, ChevronDown, LogOut } from 'lucide-react';
+import { Menu, Bell, UserCircle2, ChevronDown, LogOut } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
 interface AdminNavbarProps {
@@ -17,6 +17,8 @@ export function AdminNavbar({ isSidebarCollapsed, setIsSidebarCollapsed, prefix 
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
+
+  const [unreadCount, setUnreadCount] = useState(3);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -56,30 +58,20 @@ export function AdminNavbar({ isSidebarCollapsed, setIsSidebarCollapsed, prefix 
               className="relative p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors cursor-pointer"
             >
               <Bell className="w-5 h-5" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full border-2 border-white"></span>
+              {unreadCount > 0 && <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full border-2 border-white"></span>}
             </button>
 
             {isNotifOpen && (
               <div className="absolute right-0 mt-2 w-72 sm:w-80 bg-white rounded-xl shadow-lg border border-slate-200 z-50 overflow-hidden">
                 <div className="px-4 py-3 border-b border-slate-100 flex justify-between items-center bg-slate-50">
                   <h3 className="font-bold text-slate-800 text-sm">Notifikasi</h3>
-                  <span className="text-xs text-blue-600 hover:underline cursor-pointer font-medium">Tandai semua dibaca</span>
+                  <span onClick={() => setUnreadCount(0)} className="text-xs text-blue-600 hover:underline cursor-pointer font-medium">Tandai semua dibaca</span>
                 </div>
                 <div className="max-h-[300px] overflow-y-auto">
-                  {[1, 2, 3].map((_, i) => (
-                    <div key={i} className={`p-4 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors ${i === 0 ? 'bg-blue-50/30' : ''}`}>
-                      <div className="flex gap-3">
-                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 shrink-0">
-                          <FileText className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <p className="text-sm text-slate-800 font-medium">Tugas Baru Ditambahkan</p>
-                          <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">Admin telah menambahkan tugas baru terkait penyusunan laporan bulanan.</p>
-                          <p className="text-[10px] font-semibold text-blue-600 mt-1">2 jam yang lalu</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                  <div className="py-12 text-center text-slate-500">
+                    <Bell className="w-10 h-10 mx-auto text-slate-300 mb-3" />
+                    <p className="text-sm">Belum ada notifikasi baru.</p>
+                  </div>
                 </div>
                 <div className="p-2 text-center bg-slate-50 border-t border-slate-100">
                   <button className="text-xs font-semibold text-slate-600 hover:text-blue-600">Lihat Semua Notifikasi</button>
