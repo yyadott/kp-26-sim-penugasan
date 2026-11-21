@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import type { MouseEvent as ReactMouseEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { UNIT_COLORS } from '@/data/dummyData';
-import type { AjuanSuratTugas, UnitKerjaType } from '@/types';
+import type { AjuanSuratTugas, UnitKerjaType, WorkflowStep } from '@/types';
 import { DraftAjuanModal } from '@/components/penugasan/DraftAjuanModal';
 import SuratTugasTemplate from '@/components/SuratTugasTemplate';
 import { useSuratTugas } from '@/hooks/useSuratTugas';
@@ -19,6 +19,10 @@ import {
   Users,
   Hourglass,
   ChevronDown,
+  GitBranch,
+  Calendar,
+  Building2,
+  UserCheck,
 } from 'lucide-react';
 
 type CheckboxDropdownProps = {
@@ -57,6 +61,89 @@ const CheckboxDropdown = ({ label, options, selected, isOpen, onToggle, onChange
   </div>
 );
 
+// Helper untuk membangun tahapan workflow secara otomatis jika data dari API memiliki workflow kosong
+const getWorkflowSteps = (ajuan: AjuanSuratTugas): WorkflowStep[] => {
+  if (ajuan.workflow && ajuan.workflow.length > 0) {
+    return ajuan.workflow;
+  }
+
+  const status = ajuan.status;
+  const pengajuNama = ajuan.pengaju?.nama || 'Pegawai Pengaju';
+  const unit = ajuan.unitKerja || 'Unit Kerja';
+  const tgl = ajuan.tanggalMulai || '-';
+
+  return [
+    {
+      stage: 'DRAFT',
+      label: '1. Penyusunan & Pengajuan Draft Surat Tugas',
+      actor: `${pengajuNama} (${unit})`,
+      tanggal: tgl,
+      catatan: `Draft surat tugas untuk kegiatan "${ajuan.uraianKegiatan}" telah dibuat dan diajukan ke sistem.`,
+      status: 'COMPLETED',
+    },
+    {
+      stage: 'VERIFIKASI_SUBBAGIAN',
+      label: '2. Verifikasi Administrasi Subbagian / Admin Unit',
+      actor: `Admin Penugasan (${unit})`,
+      tanggal: status !== 'DRAFT' ? tgl : undefined,
+      catatan:
+        status === 'DRAFT'
+          ? 'Menunggu pemeriksaan kelengkapan dokumen dan jadwal pegawai oleh Admin Unit Kerja.'
+          : status === 'DITOLAK'
+            ? 'Pengajuan surat tugas ditolak / dibatalkan pada tahap verifikasi.'
+            : 'Dokumen draft surat tugas dan ketersediaan jadwal pegawai telah diverifikasi.',
+      status:
+        status === 'PERSETUJUAN_PIMPINAN' || status === 'SURAT_TERBIT'
+          ? 'COMPLETED'
+          : status === 'VERIFIKASI_SUBBAGIAN'
+            ? 'IN_PROGRESS'
+            : status === 'DITOLAK'
+              ? 'REJECTED'
+              : 'PENDING',
+    },
+    {
+      stage: 'PERSETUJUAN_PIMPINAN',
+      label: '3. Evaluasi & Persetujuan Pimpinan (Approval)',
+      actor: `Pejabat Approval / Ketua Pokja (${unit})`,
+      tanggal: status === 'PERSETUJUAN_PIMPINAN' || status === 'SURAT_TERBIT' ? tgl : undefined,
+      catatan:
+        status === 'SURAT_TERBIT'
+          ? 'Surat tugas telah dievaluasi dan disetujui oleh Pejabat Approval.'
+          : status === 'PERSETUJUAN_PIMPINAN'
+            ? 'Sedang menunggu peninjauan dan tanda tangan persetujuan dari Pimpinan.'
+            : status === 'DITOLAK'
+              ? 'Pengajuan surat tugas tidak disetujui / dibatalkan.'
+              : 'Menunggu tahapan verifikasi subbagian selesai.',
+      status:
+        status === 'SURAT_TERBIT'
+          ? 'COMPLETED'
+          : status === 'PERSETUJUAN_PIMPINAN'
+            ? 'IN_PROGRESS'
+            : status === 'DITOLAK'
+              ? 'REJECTED'
+              : 'PENDING',
+    },
+    {
+      stage: 'SURAT_TERBIT',
+      label: '4. Penerbitan Surat Tugas Resmi',
+      actor: `Sistem SIM-PENUGASAN (${unit})`,
+      tanggal: status === 'SURAT_TERBIT' ? tgl : undefined,
+      catatan:
+        status === 'SURAT_TERBIT'
+          ? `Surat Tugas nomor ${ajuan.nomorSurat} resmi diterbitkan dan siap dilaksanakan oleh ${ajuan.pegawaiDitugaskan.length} pegawai.`
+          : status === 'DITOLAK'
+            ? 'Surat Tugas batal diterbitkan karena pengajuan ditolak.'
+            : 'Surat Tugas akan diterbitkan secara otomatis setelah disetujui pimpinan.',
+      status:
+        status === 'SURAT_TERBIT'
+          ? 'COMPLETED'
+          : status === 'DITOLAK'
+            ? 'REJECTED'
+            : 'PENDING',
+    },
+  ];
+};
+
 export const TugasPage = () => {
   const { tugasList: ajuanList, refreshTugas, updateTugasStatus, addTugas } = useSuratTugas();
   useEffect(() => { refreshTugas(); }, []);
@@ -72,9 +159,10 @@ export const TugasPage = () => {
   const [selectedSpecificLocations, setSelectedSpecificLocations] = useState<string[]>([]);
   const [dataLimit, setDataLimit] = useState<number>(0);
 
-  // Modal Detail Workflow / Timeline
+  // Modal Detail Preview Dokumen & Modal Workflow Alur Draft
   const [selectedAjuan, setSelectedAjuan] = useState<AjuanSuratTugas | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedWorkflowAjuan, setSelectedWorkflowAjuan] = useState<AjuanSuratTugas | null>(null);
   const [selectedPegawaiAjuan, setSelectedPegawaiAjuan] = useState<AjuanSuratTugas | null>(null);
   const [openStatusId, setOpenStatusId] = useState<string | null>(null);
   const [openActionId, setOpenActionId] = useState<string | null>(null);
@@ -109,8 +197,7 @@ export const TugasPage = () => {
     if (urlTaskId) {
       const task = ajuanList.find((t: any) => t.id === urlTaskId);
       if (task) {
-        setSelectedAjuan(task);
-        setIsModalOpen(true);
+        setSelectedWorkflowAjuan(task);
       }
     }
   }, [urlTaskId, ajuanList]);
@@ -118,6 +205,14 @@ export const TugasPage = () => {
   const closeModal = () => {
     setIsModalOpen(false);
     setSelectedAjuan(null);
+    const newParams = new URLSearchParams(searchParams);
+    newParams.delete('taskId');
+    newParams.delete('tab');
+    setSearchParams(newParams);
+  };
+
+  const closeWorkflowModal = () => {
+    setSelectedWorkflowAjuan(null);
     const newParams = new URLSearchParams(searchParams);
     newParams.delete('taskId');
     newParams.delete('tab');
@@ -200,12 +295,11 @@ export const TugasPage = () => {
     }
   };
 
-
-
   const updateStatusAjuan = async (id: string, status: AjuanSuratTugas['status']) => {
     try {
       await updateTugasStatus(id, status);
       setSelectedAjuan((current) => current?.id === id ? { ...current, status } : current);
+      setSelectedWorkflowAjuan((current) => current?.id === id ? { ...current, status } : current);
       setOpenStatusId(null);
     } catch (e) { console.error(e); }
   };
@@ -568,16 +662,15 @@ export const TugasPage = () => {
                           <MoreHorizontal className="w-4 h-4" />
                         </button>
                         {openActionId === item.id && (
-                          <div className="absolute right-6 top-14 z-20 w-36 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg text-left">
+                          <div className="absolute right-6 top-14 z-20 w-40 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg text-left">
                             <button
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setSelectedAjuan(item);
-                                setIsModalOpen(true);
+                                setSelectedWorkflowAjuan(item);
                                 setOpenActionId(null);
                               }}
-                              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-700"
+                              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold text-blue-700 bg-blue-50/70 hover:bg-blue-100 transition-colors"
                             >
                               <Eye className="w-3.5 h-3.5" />
                               Lihat Alur Draft
@@ -647,9 +740,10 @@ export const TugasPage = () => {
                 <div>
                   <h4 className="font-bold text-sm text-slate-800 mb-4">Tahapan Alur Persetujuan Draft ST:</h4>
                   <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
-                    {selectedAjuan.workflow.map((step, idx) => {
+                    {getWorkflowSteps(selectedAjuan).map((step, idx) => {
                       const isDone = step.status === 'COMPLETED';
                       const isInProgress = step.status === 'IN_PROGRESS';
+                      const isRejected = step.status === 'REJECTED';
 
                       return (
                         <div key={idx} className="relative flex items-start gap-4">
@@ -659,13 +753,17 @@ export const TugasPage = () => {
                               ? 'border-emerald-500 text-emerald-600'
                               : isInProgress
                                 ? 'border-blue-500 text-blue-600 animate-pulse'
-                                : 'border-slate-300 text-slate-400'
+                                : isRejected
+                                  ? 'border-rose-500 text-rose-600'
+                                  : 'border-slate-300 text-slate-400'
                               }`}
                           >
                             {isDone ? (
                               <CheckCircle2 className="w-4 h-4 fill-emerald-500 text-white" />
                             ) : isInProgress ? (
                               <Clock className="w-4 h-4 text-blue-600" />
+                            ) : isRejected ? (
+                              <X className="w-3.5 h-3.5 text-rose-600" />
                             ) : (
                               <div className="w-1.5 h-1.5 bg-slate-300 rounded-full" />
                             )}
@@ -689,9 +787,9 @@ export const TugasPage = () => {
                         </div>
                       );
                     })}
+                  </div>
+                </div>
               </div>
-            </div>
-            </div>
             ) : (
               <div className="text-center py-16 text-slate-400 space-y-2">
                 <FileText className="w-12 h-12 mx-auto stroke-1 text-slate-300" />
@@ -701,6 +799,7 @@ export const TugasPage = () => {
           </div>
         </div>
       )}
+
       {/* MODAL DAFTAR PEGAWAI YANG DITUGASKAN */}
       {selectedPegawaiAjuan && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm">
@@ -744,6 +843,186 @@ export const TugasPage = () => {
                 type="button"
                 onClick={() => setSelectedPegawaiAjuan(null)}
                 className="rounded-xl bg-slate-800 px-5 py-2 text-xs font-bold text-white transition-colors hover:bg-slate-900"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL WORKFLOW ALUR DRAFT PENUGASAN */}
+      {selectedWorkflowAjuan && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 space-y-5 shadow-2xl border border-slate-200 max-h-[90vh] flex flex-col animate-in fade-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="flex items-start justify-between pb-4 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-blue-50 text-blue-600 border border-blue-100">
+                  <GitBranch className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg text-slate-800">
+                    Workflow Alur Draft Penugasan
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Pelacakan tahapan proses pengajuan hingga penerbitan surat tugas
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={closeWorkflowModal}
+                className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"
+                aria-label="Tutup modal alur draft"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex-1 overflow-y-auto pr-1 space-y-6">
+              {/* Ringkasan Informasi Surat Tugas */}
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-xs font-mono font-bold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-md border border-blue-200">
+                    {selectedWorkflowAjuan.nomorSurat}
+                  </span>
+                  {getStatusBadge(selectedWorkflowAjuan.status)}
+                </div>
+
+                <h4 className="font-bold text-base text-slate-800 leading-snug">
+                  {selectedWorkflowAjuan.uraianKegiatan}
+                </h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2 border-t border-slate-200/70 text-xs text-slate-600">
+                  <div className="flex items-center gap-2">
+                    <UserCheck className="w-4 h-4 text-blue-500 shrink-0" />
+                    <span>
+                      Pengaju: <strong className="text-slate-800">{selectedWorkflowAjuan.pengaju.nama}</strong>
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Building2 className="w-4 h-4 text-indigo-500 shrink-0" />
+                    <span>
+                      Unit Kerja: <strong className="text-slate-800">{selectedWorkflowAjuan.unitKerja}</strong>
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-emerald-500 shrink-0" />
+                    <span>
+                      Jadwal: <strong className="text-slate-800">{formatTanggal(selectedWorkflowAjuan.tanggalMulai)} - {formatTanggal(selectedWorkflowAjuan.tanggalSelesai)}</strong>
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-rose-500 shrink-0" />
+                    <span className="truncate" title={selectedWorkflowAjuan.tempat}>
+                      Lokasi: <strong className="text-slate-800">{formatLokasiKhusus(selectedWorkflowAjuan.tempat)}</strong>
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Vertical Stepper Timeline */}
+              <div>
+                <h4 className="font-bold text-sm text-slate-800 mb-4 flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-blue-600" />
+                  Tahapan Alur Persetujuan Draft Surat Tugas:
+                </h4>
+                <div className="relative pl-7 space-y-5 before:absolute before:left-3 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
+                  {getWorkflowSteps(selectedWorkflowAjuan).map((step, idx) => {
+                    const isDone = step.status === 'COMPLETED';
+                    const isInProgress = step.status === 'IN_PROGRESS';
+                    const isRejected = step.status === 'REJECTED';
+
+                    const stepBadgeClass = isDone
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      : isInProgress
+                        ? 'bg-blue-50 text-blue-700 border-blue-200'
+                        : isRejected
+                          ? 'bg-rose-50 text-rose-700 border-rose-200'
+                          : 'bg-slate-100 text-slate-500 border-slate-200';
+
+                    const stepStatusText = isDone
+                      ? 'Selesai'
+                      : isInProgress
+                        ? 'Sedang Diproses'
+                        : isRejected
+                          ? 'Ditolak / Dibatalkan'
+                          : 'Menunggu';
+
+                    return (
+                      <div key={idx} className="relative flex items-start gap-4">
+                        {/* Stepper Circle Indicator */}
+                        <div
+                          className={`absolute -left-7 top-1 w-6 h-6 rounded-full flex items-center justify-center border-2 bg-white shadow-2xs ${
+                            isDone
+                              ? 'border-emerald-500 text-emerald-600'
+                              : isInProgress
+                                ? 'border-blue-500 text-blue-600 animate-pulse'
+                                : isRejected
+                                  ? 'border-rose-500 text-rose-600'
+                                  : 'border-slate-300 text-slate-400'
+                          }`}
+                        >
+                          {isDone ? (
+                            <CheckCircle2 className="w-4 h-4 fill-emerald-500 text-white" />
+                          ) : isInProgress ? (
+                            <Clock className="w-3.5 h-3.5 text-blue-600" />
+                          ) : isRejected ? (
+                            <X className="w-3.5 h-3.5 text-rose-600" />
+                          ) : (
+                            <div className="w-2 h-2 bg-slate-300 rounded-full" />
+                          )}
+                        </div>
+
+                        {/* Stepper Card Content */}
+                        <div
+                          className={`p-4 rounded-xl border w-full space-y-1.5 transition-colors ${
+                            isDone
+                              ? 'bg-emerald-50/30 border-emerald-200/80'
+                              : isInProgress
+                                ? 'bg-blue-50/40 border-blue-200'
+                                : isRejected
+                                  ? 'bg-rose-50/30 border-rose-200'
+                                  : 'bg-slate-50 border-slate-200'
+                          }`}
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <h5 className="font-bold text-sm text-slate-800">{step.label}</h5>
+                            <div className="flex items-center gap-2">
+                              {step.tanggal && (
+                                <span className="text-[11px] text-slate-500 font-mono">
+                                  {formatTanggal(step.tanggal)}
+                                </span>
+                              )}
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${stepBadgeClass}`}>
+                                {stepStatusText}
+                              </span>
+                            </div>
+                          </div>
+                          <p className="text-xs text-slate-600">
+                            Pelaksana: <span className="font-semibold text-slate-800">{step.actor}</span>
+                          </p>
+                          {step.catatan && (
+                            <p className="text-xs text-slate-600 bg-white p-2.5 rounded-lg border border-slate-200/80 mt-2 italic">
+                              &quot;{step.catatan}&quot;
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={closeWorkflowModal}
+                className="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer"
               >
                 Tutup
               </button>

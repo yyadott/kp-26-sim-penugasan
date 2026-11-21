@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSuratTugas } from '@/hooks/useSuratTugas';
 
 import { useAuth } from '@/hooks/useAuth';
 import { extractDocxContent } from '@/utils/documentScanner';
 import {
   FileText, CheckCircle2, XCircle, Clock, Download,
-  MapPin, Calendar as CalendarIcon, Users, Upload, X, Search
+  MapPin, Calendar as CalendarIcon, Users, Upload, X, Search, AlertCircle
 } from 'lucide-react';
 import Swal from 'sweetalert2';
 
@@ -18,6 +18,8 @@ const sendEmailNotification = async (_to_name: string, _message: string) => {
   return new Promise(resolve => setTimeout(resolve, 800)); // Simulasi delay
 };
 
+const ALLOWED_EXTENSIONS = ['.pdf', '.doc', '.docx'];
+
 export const ApprovalTugasPage = () => {
   const { user } = useAuth();
   const { tugasList, refreshTugas, updateTugasStatus } = useSuratTugas();
@@ -27,6 +29,79 @@ export const ApprovalTugasPage = () => {
   const [selectedSurat, setSelectedSurat] = useState<any | null>(null);
 
   const [confirmApproveId, setConfirmApproveId] = useState<string | null>(null);
+
+  // States for Upload Modal & Validation
+  const [uploadModalTugas, setUploadModalTugas] = useState<any | null>(null);
+  const [uploadAndApproveMode, setUploadAndApproveMode] = useState(false);
+  const [selectedUploadFile, setSelectedUploadFile] = useState<File | null>(null);
+  const [uploadErrorMsg, setUploadErrorMsg] = useState<string | null>(null);
+  const uploadInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Fungsi validasi keberadaan file dan ekstensi (.pdf, .doc, .docx)
+  const validateSuratFile = (file: File | null): { valid: boolean; title: string; message: string } => {
+    if (!file) {
+      return {
+        valid: false,
+        title: 'File Belum Dipilih!',
+        message: 'Silakan pilih file surat tugas terlebih dahulu sebelum mengunggah.',
+      };
+    }
+
+    const lastDotIndex = file.name.lastIndexOf('.');
+    const ext = lastDotIndex !== -1 ? file.name.substring(lastDotIndex).toLowerCase() : '';
+
+    if (!ALLOWED_EXTENSIONS.includes(ext)) {
+      return {
+        valid: false,
+        title: 'Format File Tidak Sesuai!',
+        message: `File "${file.name}" memiliki format yang tidak didukung. Sistem hanya menerima file surat tugas dengan ekstensi .pdf, .doc, atau .docx.`,
+      };
+    }
+
+    return { valid: true, title: '', message: '' };
+  };
+
+  const openUploadModal = (tugas: any, approveAfterUpload = false) => {
+    setUploadModalTugas(tugas);
+    setUploadAndApproveMode(approveAfterUpload);
+    setSelectedUploadFile(null);
+    setUploadErrorMsg(null);
+    if (uploadInputRef.current) {
+      uploadInputRef.current.value = '';
+    }
+  };
+
+  const closeUploadModal = () => {
+    setUploadModalTugas(null);
+    setUploadAndApproveMode(false);
+    setSelectedUploadFile(null);
+    setUploadErrorMsg(null);
+  };
+
+  const handleUploadFileSelection = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) {
+      setSelectedUploadFile(null);
+      setUploadErrorMsg('File surat tugas belum dipilih! Silakan pilih file terlebih dahulu.');
+      return;
+    }
+
+    const file = files[0];
+    setSelectedUploadFile(file);
+
+    const validation = validateSuratFile(file);
+    if (!validation.valid) {
+      setUploadErrorMsg(validation.message);
+      Swal.fire({
+        title: validation.title,
+        text: validation.message,
+        icon: 'error',
+        confirmButtonColor: '#ef4444',
+      });
+    } else {
+      setUploadErrorMsg(null);
+    }
+  };
 
   // refresh on mount
   useEffect(() => {
@@ -65,17 +140,38 @@ export const ApprovalTugasPage = () => {
   };
 
   const handlePreviewSimulation = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setIsScanning(true);
-      setPreviewHtml('');
-      try {
-        const html = await extractDocxContent(e.target.files[0]);
-        setPreviewHtml(html);
-      } catch (_error) {
-        setPreviewHtml('<p class="text-red-500">Gagal mengekstrak dokumen.</p>');
-      } finally {
-        setIsScanning(false);
-      }
+    if (!e.target.files || e.target.files.length === 0) {
+      Swal.fire({
+        title: 'File Belum Dipilih!',
+        text: 'Silakan pilih file dokumen terlebih dahulu.',
+        icon: 'warning',
+        confirmButtonColor: '#3b82f6',
+      });
+      return;
+    }
+
+    const file = e.target.files[0];
+    const validation = validateSuratFile(file);
+    if (!validation.valid) {
+      Swal.fire({
+        title: validation.title,
+        text: validation.message,
+        icon: 'error',
+        confirmButtonColor: '#ef4444',
+      });
+      e.target.value = '';
+      return;
+    }
+
+    setIsScanning(true);
+    setPreviewHtml('');
+    try {
+      const html = await extractDocxContent(file);
+      setPreviewHtml(html);
+    } catch (_error) {
+      setPreviewHtml('<p class="text-red-500">Gagal mengekstrak dokumen.</p>');
+    } finally {
+      setIsScanning(false);
     }
   };
 
@@ -104,7 +200,6 @@ export const ApprovalTugasPage = () => {
   }, {} as Record<string, typeof displayData>);
 
   const sortedGroups = Object.keys(groupedData).sort((a, b) => {
-    // Sort descending by date (parse "Agustus 2026" back or just rely on original date if possible, but for simplicity string sort might not work for months. Let's create a date from 1st of month to sort properly)
     const [monthA, yearA] = a.split(' ');
     const [monthB, yearB] = b.split(' ');
     const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
@@ -144,30 +239,66 @@ export const ApprovalTugasPage = () => {
     }
   };
 
+  const executeWithNotifications = async (tugas: any) => {
+    Swal.fire({
+      title: 'Memproses Persetujuan...',
+      html: 'Mengirim notifikasi via <b>Email</b> dan <b>Telegram</b>...',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
+
+    handleApprove(tugas.id);
+
+    const msg = `Surat Tugas ${tugas.nomorSurat} telah disetujui.`;
+    await sendTelegramNotification(msg);
+    await Promise.all(tugas.pegawaiDitugaskan.map((peg: any) => sendEmailNotification(peg.nama, msg)));
+
+    Swal.fire(
+      'Berhasil!',
+      `Surat disetujui! Notifikasi Email dan Telegram telah berhasil dikirim ke Admin Tugas dan Pegawai (${tugas.pegawaiDitugaskan.length} orang).`,
+      'success'
+    );
+  };
+
+  const handleSubmitUploadModal = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!uploadModalTugas) return;
+
+    const validation = validateSuratFile(selectedUploadFile);
+    if (!validation.valid || !selectedUploadFile) {
+      setUploadErrorMsg(validation.message);
+      Swal.fire({
+        title: validation.title,
+        text: validation.message,
+        icon: !selectedUploadFile ? 'warning' : 'error',
+        confirmButtonColor: '#ef4444',
+      });
+      return;
+    }
+
+    const targetTugas = uploadModalTugas;
+    const isApproveMode = uploadAndApproveMode;
+    const fileToSave = selectedUploadFile;
+
+    setUploadedFiles(prev => ({ ...prev, [targetTugas.id]: fileToSave }));
+    closeUploadModal();
+
+    if (isApproveMode) {
+      await executeWithNotifications(targetTugas);
+    } else {
+      Swal.fire({
+        title: 'Berhasil!',
+        text: `Dokumen ${fileToSave.name} berhasil diunggah.`,
+        icon: 'success',
+        timer: 2000,
+        showConfirmButton: false,
+      });
+    }
+  };
+
   const handleConfirmApprove = (id: string) => {
     const tugas = tugasList.find((t: any) => t.id === id);
     if (!tugas) return;
-
-    const executeWithNotifications = async () => {
-      Swal.fire({
-        title: 'Memproses Persetujuan...',
-        html: 'Mengirim notifikasi via <b>Email</b> dan <b>Telegram</b>...',
-        allowOutsideClick: false,
-        didOpen: () => Swal.showLoading()
-      });
-
-      handleApprove(id);
-
-      const msg = `Surat Tugas ${tugas.nomorSurat} telah disetujui.`;
-      await sendTelegramNotification(msg);
-      await Promise.all(tugas.pegawaiDitugaskan.map((peg: any) => sendEmailNotification(peg.nama, msg)));
-
-      Swal.fire(
-        'Berhasil!', 
-        `Surat disetujui! Notifikasi Email dan Telegram telah berhasil dikirim ke Admin Tugas dan Pegawai (${tugas.pegawaiDitugaskan.length} orang).`, 
-        'success'
-      );
-    };
 
     Swal.fire({
       title: 'Konfirmasi Persetujuan',
@@ -183,13 +314,9 @@ export const ApprovalTugasPage = () => {
       cancelButtonColor: '#94a3b8',
     }).then((result) => {
       if (result.isConfirmed) {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = '.pdf,.doc,.docx';
-        input.onchange = () => executeWithNotifications();
-        input.click();
+        openUploadModal(tugas, true);
       } else if (result.isDenied) {
-        executeWithNotifications();
+        executeWithNotifications(tugas);
       }
     });
   };
@@ -244,7 +371,7 @@ export const ApprovalTugasPage = () => {
 
       Swal.fire({
         title: 'Berhasil!',
-        text: `Surat ${nomorSurat} berhasil diunduh.`,
+        text: `Surat ${nomorSurat} berhasil diunggah.`,
         icon: 'success',
         timer: 2000,
         showConfirmButton: false,
@@ -409,26 +536,7 @@ export const ApprovalTugasPage = () => {
                             </button>
 
                             <button
-                              onClick={() => {
-                                const input = document.createElement('input');
-                                input.type = 'file';
-                                input.accept = '.pdf,.doc,.docx';
-                                input.onchange = (e) => {
-                                  const target = e.target as HTMLInputElement;
-                                  if (target.files && target.files.length > 0) {
-                                    const file = target.files[0];
-                                    setUploadedFiles(prev => ({ ...prev, [tugas.id]: file }));
-                                    Swal.fire({
-                                      title: 'Berhasil!',
-                                      text: `Dokumen ${file.name} berhasil diunggah.`,
-                                      icon: 'success',
-                                      timer: 2000,
-                                      showConfirmButton: false,
-                                    });
-                                  }
-                                };
-                                input.click();
-                              }}
+                              onClick={() => openUploadModal(tugas, false)}
                               className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
                               title="Upload Surat (Sudah TTD / Revisi)"
                             >
@@ -467,6 +575,87 @@ export const ApprovalTugasPage = () => {
         </div>
       </div>
 
+      {/* Modal Upload & Validasi Surat Tugas */}
+      {uploadModalTugas && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-5 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-blue-50 text-blue-600">
+                  <Upload className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-slate-800">
+                    {uploadAndApproveMode ? 'Unggah Revisi & Setujui Surat' : 'Unggah Dokumen Surat Tugas'}
+                  </h3>
+                  <p className="text-xs text-slate-500">{uploadModalTugas.nomorSurat}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={closeUploadModal}
+                className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmitUploadModal} className="space-y-4">
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-xs space-y-1">
+                <div className="font-semibold text-slate-700">{uploadModalTugas.uraianKegiatan}</div>
+                <div className="text-slate-500">Pengaju: {uploadModalTugas.pengaju?.nama} ({uploadModalTugas.unitKerja})</div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Pilih File Surat Tugas <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  ref={uploadInputRef}
+                  type="file"
+                  onChange={handleUploadFileSelection}
+                  className="block w-full text-xs text-slate-600 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 border border-slate-200 rounded-xl p-1.5 bg-white cursor-pointer"
+                />
+                <p className="text-[11px] text-slate-500 mt-1.5">
+                  Format yang didukung: <strong>.pdf, .doc, .docx</strong>
+                </p>
+              </div>
+
+              {selectedUploadFile && !uploadErrorMsg && (
+                <div className="flex items-center gap-2 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs">
+                  <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+                  <span className="truncate font-medium">File siap diunggah: {selectedUploadFile.name}</span>
+                </div>
+              )}
+
+              {uploadErrorMsg && (
+                <div className="flex items-start gap-2 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 mt-0.5" />
+                  <span>{uploadErrorMsg}</span>
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={closeUploadModal}
+                  className="px-4 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-colors flex items-center gap-1.5 shadow-sm"
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  {uploadAndApproveMode ? 'Unggah & Setujui' : 'Unggah Dokumen'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Confirmation Modal */}
       {confirmApproveId && (
         <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
@@ -491,21 +680,11 @@ export const ApprovalTugasPage = () => {
             <div className="flex flex-col gap-3 pt-2">
               <button
                 onClick={() => {
-                  const input = document.createElement('input');
-                  input.type = 'file';
-                  input.accept = '.pdf'; // HANYA PDF
-                  input.onchange = () => {
-                    handleApprove(confirmApproveId);
-                    setConfirmApproveId(null);
-                    Swal.fire({
-                      title: 'Berhasil!',
-                      text: 'File PDF yang ditandatangani berhasil diunggah. Surat telah disetujui!',
-                      icon: 'success',
-                      confirmButtonText: 'Selesai',
-                      confirmButtonColor: '#10b981'
-                    });
-                  };
-                  input.click();
+                  const target = tugasList.find((t: any) => t.id === confirmApproveId);
+                  setConfirmApproveId(null);
+                  if (target) {
+                    openUploadModal(target, true);
+                  }
                 }}
                 className="w-full py-2.5 px-4 bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold rounded-xl transition-colors border border-blue-200 flex items-center justify-center gap-2 text-sm"
               >
@@ -550,7 +729,6 @@ export const ApprovalTugasPage = () => {
                 <label className="block text-sm font-semibold text-blue-800 mb-2">Simulasi File (Upload .docx lokal):</label>
                 <input
                   type="file"
-                  accept=".docx"
                   onChange={handlePreviewSimulation}
                   className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition-all"
                 />

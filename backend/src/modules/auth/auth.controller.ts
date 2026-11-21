@@ -6,34 +6,50 @@ export class AuthController {
   constructor(private prisma: PrismaService) {}
 
   @Post('login')
-  async login(@Body() body: { email: string; password?: string; nip?: string }) {
-    // Determine search criteria based on body (can be email or nip)
-    const searchParam = body.email || body.nip || '';
-    
-    // Find user by email or NIP (Assuming email stores something identifiable or we have NIP in future)
-    // For now we check email
+  async login(@Body() body: { email?: string; password?: string; nip?: string }) {
+    const searchParam = (body.email || body.nip || '').trim().toLowerCase();
+    const password = body.password || '';
+
+    if (!searchParam || !password) {
+      throw new UnauthorizedException('Username/NIP dan Password wajib diisi!');
+    }
+
+    // Cari pengguna secara spesifik berdasarkan Email lengkap, NIP, atau prefix Email sebelum '@'
     const user = await this.prisma.user.findFirst({
       where: {
-        email: { contains: searchParam }
+        OR: [
+          { email: searchParam },
+          { nip: searchParam },
+          { email: { startsWith: `${searchParam}@` } },
+        ],
       },
       include: {
         role: true,
         unitKerja: true,
-      }
+      },
     });
 
-    if (!user) {
-      throw new UnauthorizedException('Kredensial tidak valid');
+    // Validasi kecocokan akun dan password
+    if (!user || user.password !== password) {
+      throw new UnauthorizedException('Username/NIP atau Password yang Anda masukkan salah!');
     }
 
-    // In a real app we'd verify passwords with bcrypt. For this prototype, we bypass it.
-    
+    // Validasi apakah akun aktif
+    if (user.is_active === false) {
+      throw new UnauthorizedException('Akun Anda sedang dinonaktifkan. Silakan hubungi Administrator.');
+    }
+
     return {
       message: 'Login berhasil',
       token: 'dummy-jwt-token',
       user: {
+        db_id: user.id,
         id: `peg-${user.id < 10 ? '0' + user.id : user.id}`,
         nama: user.nama,
+        nip: user.nip || '-',
+        jabatan: user.jabatan || '-',
+        golongan: user.golongan || '-',
+        pangkat: user.pangkat || '-',
         email: user.email,
         role: user.role.name,
         unitKerja: user.unitKerja.name,

@@ -63,7 +63,7 @@ export const ProfilePage = () => {
     <div className="min-h-full bg-white">
       <section className="bg-gradient-to-r from-[#1e42e8] to-[#3932d8] px-7 py-6 text-white sm:px-10">
         <h1 className="text-[28px] font-extrabold tracking-tight">Profil Saya</h1>
-        <p className="mt-1 text-base font-medium text-blue-50">Informasi akun pengguna Super Admin.</p>
+        <p className="mt-1 text-base font-medium text-blue-50">Informasi akun pengguna Pegawai.</p>
       </section>
 
       <main className="mx-auto max-w-4xl px-7 py-7 sm:px-10">
@@ -73,8 +73,8 @@ export const ProfilePage = () => {
             <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
               <Camera className="h-6 w-6 text-white drop-shadow-md" />
             </div>
-            <input 
-              type="file" 
+            <input
+              type="file"
               ref={fileInputRef}
               onChange={handlePhotoChange}
               accept="image/*"
