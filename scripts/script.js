@@ -1,0 +1,1 @@
+const { PrismaClient } = require('@prisma/client'); const prisma = new PrismaClient(); async function main() { const users = await prisma.user.findMany({ include: { unitKerja: true, role: true } }); console.log(users.filter(u => u.email.includes('approval'))); } main().catch(console.error).finally(() => prisma.$disconnect());

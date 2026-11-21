@@ -1,7 +1,11 @@
-import { useState } from 'react';
-import { dummyAjuanSuratTugas, UNIT_COLORS } from '@/data/dummyData';
-import type { AjuanSuratTugas, UnitKerjaType } from '@/types';
+import { useState, useEffect, useRef } from 'react';
+import type { MouseEvent as ReactMouseEvent } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { UNIT_COLORS } from '@/data/dummyData';
+import type { AjuanSuratTugas, UnitKerjaType, WorkflowStep } from '@/types';
 import { DraftAjuanModal } from '@/components/penugasan/DraftAjuanModal';
+import SuratTugasTemplate from '@/components/SuratTugasTemplate';
+import { useSuratTugas } from '@/hooks/useSuratTugas';
 import {
   FileText,
   CheckCircle2,
@@ -15,6 +19,10 @@ import {
   Users,
   Hourglass,
   ChevronDown,
+  GitBranch,
+  Calendar,
+  Building2,
+  UserCheck,
 } from 'lucide-react';
 
 type CheckboxDropdownProps = {
@@ -53,8 +61,93 @@ const CheckboxDropdown = ({ label, options, selected, isOpen, onToggle, onChange
   </div>
 );
 
+// Helper untuk membangun tahapan workflow secara otomatis jika data dari API memiliki workflow kosong
+const getWorkflowSteps = (ajuan: AjuanSuratTugas): WorkflowStep[] => {
+  if (ajuan.workflow && ajuan.workflow.length > 0) {
+    return ajuan.workflow;
+  }
+
+  const status = ajuan.status;
+  const pengajuNama = ajuan.pengaju?.nama || 'Pegawai Pengaju';
+  const unit = ajuan.unitKerja || 'Unit Kerja';
+  const tgl = ajuan.tanggalMulai || '-';
+
+  return [
+    {
+      stage: 'DRAFT',
+      label: '1. Penyusunan & Pengajuan Draft Surat Tugas',
+      actor: `${pengajuNama} (${unit})`,
+      tanggal: tgl,
+      catatan: `Draft surat tugas untuk kegiatan "${ajuan.uraianKegiatan}" telah dibuat dan diajukan ke sistem.`,
+      status: 'COMPLETED',
+    },
+    {
+      stage: 'VERIFIKASI_SUBBAGIAN',
+      label: '2. Verifikasi Administrasi Subbagian / Admin Unit',
+      actor: `Admin Penugasan (${unit})`,
+      tanggal: status !== 'DRAFT' ? tgl : undefined,
+      catatan:
+        status === 'DRAFT'
+          ? 'Menunggu pemeriksaan kelengkapan dokumen dan jadwal pegawai oleh Admin Unit Kerja.'
+          : status === 'DITOLAK'
+            ? 'Pengajuan surat tugas ditolak / dibatalkan pada tahap verifikasi.'
+            : 'Dokumen draft surat tugas dan ketersediaan jadwal pegawai telah diverifikasi.',
+      status:
+        status === 'PERSETUJUAN_PIMPINAN' || status === 'SURAT_TERBIT'
+          ? 'COMPLETED'
+          : status === 'VERIFIKASI_SUBBAGIAN'
+            ? 'IN_PROGRESS'
+            : status === 'DITOLAK'
+              ? 'REJECTED'
+              : 'PENDING',
+    },
+    {
+      stage: 'PERSETUJUAN_PIMPINAN',
+      label: '3. Evaluasi & Persetujuan Pimpinan (Approval)',
+      actor: `Pejabat Approval / Ketua Pokja (${unit})`,
+      tanggal: status === 'PERSETUJUAN_PIMPINAN' || status === 'SURAT_TERBIT' ? tgl : undefined,
+      catatan:
+        status === 'SURAT_TERBIT'
+          ? 'Surat tugas telah dievaluasi dan disetujui oleh Pejabat Approval.'
+          : status === 'PERSETUJUAN_PIMPINAN'
+            ? 'Sedang menunggu peninjauan dan tanda tangan persetujuan dari Pimpinan.'
+            : status === 'DITOLAK'
+              ? 'Pengajuan surat tugas tidak disetujui / dibatalkan.'
+              : 'Menunggu tahapan verifikasi subbagian selesai.',
+      status:
+        status === 'SURAT_TERBIT'
+          ? 'COMPLETED'
+          : status === 'PERSETUJUAN_PIMPINAN'
+            ? 'IN_PROGRESS'
+            : status === 'DITOLAK'
+              ? 'REJECTED'
+              : 'PENDING',
+    },
+    {
+      stage: 'SURAT_TERBIT',
+      label: '4. Penerbitan Surat Tugas Resmi',
+      actor: `Sistem SIM-PENUGASAN (${unit})`,
+      tanggal: status === 'SURAT_TERBIT' ? tgl : undefined,
+      catatan:
+        status === 'SURAT_TERBIT'
+          ? `Surat Tugas nomor ${ajuan.nomorSurat} resmi diterbitkan dan siap dilaksanakan oleh ${ajuan.pegawaiDitugaskan.length} pegawai.`
+          : status === 'DITOLAK'
+            ? 'Surat Tugas batal diterbitkan karena pengajuan ditolak.'
+            : 'Surat Tugas akan diterbitkan secara otomatis setelah disetujui pimpinan.',
+      status:
+        status === 'SURAT_TERBIT'
+          ? 'COMPLETED'
+          : status === 'DITOLAK'
+            ? 'REJECTED'
+            : 'PENDING',
+    },
+  ];
+};
+
 export const TugasPage = () => {
-  const [ajuanList, setAjuanList] = useState<AjuanSuratTugas[]>(dummyAjuanSuratTugas);
+  const { tugasList: ajuanList, refreshTugas, updateTugasStatus, addTugas } = useSuratTugas();
+  useEffect(() => { refreshTugas(); }, []);
+
   const [activeTab, setActiveTab] = useState<'DAFTAR' | 'WORKFLOW'>('DAFTAR');
   const [selectedUnits, setSelectedUnits] = useState<UnitKerjaType[]>([]);
   const [isUnitFilterOpen, setIsUnitFilterOpen] = useState(false);
@@ -64,29 +157,84 @@ export const TugasPage = () => {
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
   const [selectedSpecificLocations, setSelectedSpecificLocations] = useState<string[]>([]);
+  const [dataLimit, setDataLimit] = useState<number>(0);
 
-  // Modal Detail Workflow / Timeline
+  // Modal Detail Preview Dokumen & Modal Workflow Alur Draft
   const [selectedAjuan, setSelectedAjuan] = useState<AjuanSuratTugas | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedWorkflowAjuan, setSelectedWorkflowAjuan] = useState<AjuanSuratTugas | null>(null);
   const [selectedPegawaiAjuan, setSelectedPegawaiAjuan] = useState<AjuanSuratTugas | null>(null);
   const [openStatusId, setOpenStatusId] = useState<string | null>(null);
   const [openActionId, setOpenActionId] = useState<string | null>(null);
   const [isDraftModalOpen, setIsDraftModalOpen] = useState(false);
-
   
+  // Drag to scroll table logic
+  const tableWrapperRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeft, setScrollLeft] = useState(0);
+
+  const onMouseDown = (e: ReactMouseEvent) => {
+    if (!tableWrapperRef.current) return;
+    setIsDragging(true);
+    setStartX(e.pageX - tableWrapperRef.current.offsetLeft);
+    setScrollLeft(tableWrapperRef.current.scrollLeft);
+  };
+  const onMouseLeave = () => setIsDragging(false);
+  const onMouseUp = () => setIsDragging(false);
+  const onMouseMove = (e: ReactMouseEvent) => {
+    if (!isDragging || !tableWrapperRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - tableWrapperRef.current.offsetLeft;
+    const walk = (x - startX) * 2;
+    tableWrapperRef.current.scrollLeft = scrollLeft - walk;
+  };
+
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlTaskId = searchParams.get('taskId');
+
+  useEffect(() => {
+    if (urlTaskId) {
+      const task = ajuanList.find((t: any) => t.id === urlTaskId);
+      if (task) {
+        setSelectedWorkflowAjuan(task);
+      }
+    }
+  }, [urlTaskId, ajuanList]);
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setSelectedAjuan(null);
+    const newParams = new URLSearchParams(searchParams);
+    newParams.delete('taskId');
+    newParams.delete('tab');
+    setSearchParams(newParams);
+  };
+
+  const closeWorkflowModal = () => {
+    setSelectedWorkflowAjuan(null);
+    const newParams = new URLSearchParams(searchParams);
+    newParams.delete('taskId');
+    newParams.delete('tab');
+    setSearchParams(newParams);
+  };
 
   // Filter list
-  const filteredAjuan = ajuanList.filter((item) => {
+  let filteredAjuan = ajuanList.filter((item) => {
     const matchesUnit = selectedUnits.length === 0 || selectedUnits.includes(item.unitKerja);
     const matchesStatus = selectedStatuses.length === 0 || selectedStatuses.includes(item.status);
     const matchesApplicant = selectedApplicants.length === 0 || selectedApplicants.includes(item.pengaju.nama);
     const matchesAssignee = selectedAssignees.length === 0 || item.pegawaiDitugaskan.some((pegawai) => selectedAssignees.includes(pegawai.nama));
-    const matchesLocation = selectedLocations.length === 0 || selectedLocations.includes(item.lokasiPenugasan);
+    const matchesLocation = selectedLocations.length === 0 || selectedLocations.includes(item.tempat);
     const matchesSpecificLocation = selectedSpecificLocations.length === 0 || selectedSpecificLocations.includes(item.lokasiSpesifik || '');
     return matchesUnit && matchesStatus && matchesApplicant && matchesAssignee && matchesLocation && matchesSpecificLocation;
   });
 
-  const unitOptions: UnitKerjaType[] = ['RBI', 'Fastingkom', 'Kepeg', 'PM'];
+  if (dataLimit > 0) {
+    filteredAjuan = filteredAjuan.slice(0, dataLimit);
+  }
+
+  const unitOptions: UnitKerjaType[] = ['Kepeg', 'Fastingkom', 'PM'];
   const statusOptions = [
     { value: 'SURAT_TERBIT', label: 'Diapprove' },
     { value: 'VERIFIKASI_SUBBAGIAN', label: 'Diproses' },
@@ -96,7 +244,7 @@ export const TugasPage = () => {
   ];
   const applicantOptions = Array.from(new Map(ajuanList.map((item) => [item.pengaju.nama, item.pengaju.nama]))).map(([value, label]) => ({ value, label }));
   const assigneeOptions = Array.from(new Map(ajuanList.flatMap((item) => item.pegawaiDitugaskan).map((pegawai) => [pegawai.nama, pegawai.nama]))).map(([value, label]) => ({ value, label }));
-  const locationOptions = Array.from(new Set(ajuanList.map((item) => item.lokasiPenugasan))).map((value) => ({ value, label: value }));
+  const locationOptions = Array.from(new Set(ajuanList.map((item) => item.tempat))).map((value) => ({ value, label: value }));
   const specificLocationOptions = Array.from(new Set(ajuanList.map((item) => item.lokasiSpesifik).filter(Boolean) as string[])).map((value) => ({ value, label: value }));
 
   const toggleUnitFilter = (unit: UnitKerjaType) => {
@@ -118,9 +266,11 @@ export const TugasPage = () => {
     setSelectedSpecificLocations([]);
     setIsUnitFilterOpen(false);
     setOpenFilter(null);
+    setDataLimit(0);
   };
 
-  const formatLokasiKhusus = (lokasi: string) => {
+  const formatLokasiKhusus = (lokasi?: string) => {
+    if (!lokasi) return '';
     const cleaned = lokasi.trim();
     if (!cleaned) return '';
     let result = cleaned.replace(/,?\s*jawa barat$/i, '').trim();
@@ -133,26 +283,46 @@ export const TugasPage = () => {
   };
 
   const formatTanggal = (tanggal: string) => {
-    const [tahun, bulan, hari] = tanggal.split('-');
-    return `${hari}/${bulan}/${tahun}`;
+    try {
+      const date = new Date(tanggal);
+      if (isNaN(date.getTime())) return tanggal;
+      const d = String(date.getDate()).padStart(2, '0');
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const y = date.getFullYear();
+      return `${d}/${m}/${y}`;
+    } catch {
+      return tanggal;
+    }
   };
 
-  const formatRentangTanggal = (tanggalMulai: string, tanggalSelesai: string) => {
-    const mulai = formatTanggal(tanggalMulai);
-    return tanggalMulai === tanggalSelesai ? mulai : `${mulai} s/d ${formatTanggal(tanggalSelesai)}`;
+  const updateStatusAjuan = async (id: string, status: AjuanSuratTugas['status']) => {
+    try {
+      await updateTugasStatus(id, status);
+      setSelectedAjuan((current) => current?.id === id ? { ...current, status } : current);
+      setSelectedWorkflowAjuan((current) => current?.id === id ? { ...current, status } : current);
+      setOpenStatusId(null);
+    } catch (e) { console.error(e); }
   };
 
-  const updateStatusAjuan = (id: string, status: AjuanSuratTugas['status']) => {
-    setAjuanList((currentList) => currentList.map((item) => (
-      item.id === id ? { ...item, status } : item
-    )));
-    setSelectedAjuan((current) => current?.id === id ? { ...current, status } : current);
-    setOpenStatusId(null);
-  };
-
-  const addDraftAjuan = (newAjuan: AjuanSuratTugas) => {
-    setAjuanList((currentList) => [newAjuan, ...currentList]);
-    setIsDraftModalOpen(false);
+  const addDraftAjuan = async (newAjuan: any) => {
+    try {
+      const payload = {
+        nomorSurat: newAjuan.nomorSurat,
+        uraianKegiatan: newAjuan.uraianKegiatan,
+        pengaju_id: Number(newAjuan.pengaju.id) || 1,
+        pegawaiDitugaskan: newAjuan.pegawaiDitugaskan.map((p: any) => Number(p.id) || 1),
+        unitKerja: newAjuan.unitKerja,
+        tanggalMulai: newAjuan.tanggalMulai,
+        tanggalSelesai: newAjuan.tanggalSelesai,
+        tempat: newAjuan.lokasiSpesifik ? `${newAjuan.lokasiSpesifik}, ${newAjuan.tempat}` : newAjuan.tempat,
+        koordinatLat: newAjuan.koordinat[0],
+        koordinatLng: newAjuan.koordinat[1],
+        deskripsi: newAjuan.deskripsi,
+        status: newAjuan.status,
+      };
+      await addTugas(payload);
+      setIsDraftModalOpen(false);
+    } catch (e) { console.error(e); }
   };
 
   const getStatusBadge = (status: AjuanSuratTugas['status']) => {
@@ -328,31 +498,71 @@ export const TugasPage = () => {
 
       {/* TAB 1: DAFTAR PROSES AJUAN SURAT TUGAS */}
       {activeTab === 'DAFTAR' && (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-          <div className="overflow-x-auto">
+        <div className="space-y-4">
+          <div className="flex justify-end">
+            <div className="relative flex items-center gap-3">
+              <p className="text-sm font-medium text-slate-700">Tampilkan:</p>
+              <select
+                value={dataLimit}
+                onChange={(e) => setDataLimit(Number(e.target.value))}
+                className="appearance-none px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer min-w-[140px]"
+              >
+                <option value={0}>Semua Data</option>
+                <option value={10}>10 Data</option>
+                <option value={20}>20 Data</option>
+                <option value={50}>50 Data</option>
+                <option value={100}>100 Data</option>
+              </select>
+            </div>
+          </div>
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+          <div 
+            ref={tableWrapperRef}
+            className={`overflow-x-auto ${isDragging ? 'cursor-grabbing select-none' : 'cursor-grab'}`}
+            onMouseDown={onMouseDown}
+            onMouseLeave={onMouseLeave}
+            onMouseUp={onMouseUp}
+            onMouseMove={onMouseMove}
+          >
             <table className="w-full text-left text-sm text-slate-600">
               <thead className="bg-slate-50 text-slate-700 text-xs font-bold uppercase tracking-wider border-b border-slate-200">
                 <tr>
+                  <th className="px-6 py-4 w-16 text-center">No</th>
                   <th className="px-6 py-4">Nomor & Perihal Surat</th>
                   <th className="px-6 py-4">Unit Kerja & Pengaju</th>
                   <th className="px-6 py-4">Pegawai Ditugaskan</th>
-                  <th className="px-6 py-4">Tanggal & Domisili</th>
+                  <th className="px-6 py-4">Tanggal Mulai</th>
+                  <th className="px-6 py-4">Tanggal Selesai</th>
                   <th className="px-6 py-4">Lokasi</th>
                   <th className="px-6 py-4">Status</th>
                   <th className="px-6 py-4 text-right">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredAjuan.map((item) => {
+                {filteredAjuan.map((item, index) => {
                   const unitColor = UNIT_COLORS[item.unitKerja] || { bg: 'bg-slate-100', text: 'text-slate-800' };
 
                   return (
-                    <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
+                    <tr
+                      key={item.id}
+                      className="hover:bg-slate-50/80 transition-colors"
+                    >
+                      <td className="px-6 py-4 text-sm text-slate-500 text-center font-medium">
+                        {index + 1}
+                      </td>
                       <td className="px-6 py-4 min-w-[430px]">
                         <span className="font-mono text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 block w-fit mb-1">
                           {item.nomorSurat}
                         </span>
-                        <p className="font-semibold text-slate-800 whitespace-nowrap">{item.perihal}</p>
+                        <p 
+                          className="font-semibold text-slate-800 leading-relaxed cursor-pointer hover:text-blue-600 hover:underline"
+                          onClick={() => {
+                            setSelectedAjuan(item);
+                            setIsModalOpen(true);
+                          }}
+                        >
+                          {item.uraianKegiatan}
+                        </p>
                       </td>
                       <td className="px-6 py-4">
                         <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold ${unitColor.bg} ${unitColor.text} mb-1`}>
@@ -363,13 +573,19 @@ export const TugasPage = () => {
                       </td>
                       <td className="px-6 py-4 min-w-[170px] align-top">
                         {item.pegawaiDitugaskan.length === 1 ? (
-                          <p className="text-xs font-semibold text-slate-800 whitespace-nowrap">
-                            {item.pegawaiDitugaskan[0].nama}
-                          </p>
+                          <div>
+                            <p className="text-xs font-semibold text-slate-800 whitespace-nowrap">
+                              {item.pegawaiDitugaskan[0].nama}
+                            </p>
+                            <p className="text-[11px] text-slate-500 mt-0.5">NIP: {item.pegawaiDitugaskan[0].nip || '-'}</p>
+                          </div>
                         ) : (
                           <button
                             type="button"
-                            onClick={() => setSelectedPegawaiAjuan(item)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedPegawaiAjuan(item);
+                            }}
                             className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-xs font-bold text-blue-700 transition-colors hover:bg-blue-100"
                             aria-label={`Lihat ${item.pegawaiDitugaskan.length} pegawai yang ditugaskan`}
                           >
@@ -380,15 +596,22 @@ export const TugasPage = () => {
                       </td>
                       <td className="px-6 py-4">
                         <p className="text-xs font-semibold text-slate-800">
-                          {formatRentangTanggal(item.tanggalMulai, item.tanggalSelesai)}
+                          {formatTanggal(item.tanggalMulai)}
                         </p>
-                        <div className="flex items-center gap-1 text-slate-500 text-xs mt-0.5">
-                          <MapPin className="w-3.5 h-3.5 text-rose-500" />
-                          <span>{formatLokasiKhusus(item.lokasiPenugasan)}</span>
-                        </div>
                       </td>
-                      <td className="px-6 py-4 min-w-[190px] align-top">
-                        <p className="text-xs font-semibold text-slate-800 whitespace-nowrap">{item.lokasiSpesifik || '-'}</p>
+                      <td className="px-6 py-4">
+                        <p className="text-xs font-semibold text-slate-800">
+                          {formatTanggal(item.tanggalSelesai)}
+                        </p>
+                      </td>
+                      <td className="px-6 py-4 min-w-[200px] align-top">
+                        <div className="flex items-start gap-1.5 text-slate-700 text-xs">
+                          <MapPin className="w-3.5 h-3.5 text-rose-500 mt-0.5 shrink-0" />
+                          <div>
+                            <p className="font-semibold">{formatLokasiKhusus(item.tempat)}</p>
+                            {item.lokasiSpesifik && <p className="text-slate-500 mt-0.5">{item.lokasiSpesifik}</p>}
+                          </div>
+                        </div>
                       </td>
                       <td
                         className="relative px-6 py-4"
@@ -396,7 +619,8 @@ export const TugasPage = () => {
                       >
                         <button
                           type="button"
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             setOpenStatusId(openStatusId === item.id ? null : item.id);
                             setOpenActionId(null);
                           }}
@@ -408,13 +632,13 @@ export const TugasPage = () => {
                         </button>
                         {openStatusId === item.id && (
                           <div className="absolute left-6 top-14 z-20 w-40 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg">
-                            <button type="button" onClick={() => updateStatusAjuan(item.id, 'SURAT_TERBIT')} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-semibold text-emerald-700 hover:bg-emerald-50">
+                            <button type="button" onClick={(e) => { e.stopPropagation(); updateStatusAjuan(item.id, 'SURAT_TERBIT'); }} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-semibold text-emerald-700 hover:bg-emerald-50">
                               <CheckCircle2 className="w-4 h-4" /> Diapprove
                             </button>
-                            <button type="button" onClick={() => updateStatusAjuan(item.id, 'VERIFIKASI_SUBBAGIAN')} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-semibold text-slate-600 hover:bg-slate-100">
+                            <button type="button" onClick={(e) => { e.stopPropagation(); updateStatusAjuan(item.id, 'VERIFIKASI_SUBBAGIAN'); }} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-semibold text-slate-600 hover:bg-slate-100">
                               <Hourglass className="w-4 h-4" /> Diproses
                             </button>
-                            <button type="button" onClick={() => updateStatusAjuan(item.id, 'DITOLAK')} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-semibold text-rose-700 hover:bg-rose-50">
+                            <button type="button" onClick={(e) => { e.stopPropagation(); updateStatusAjuan(item.id, 'DITOLAK'); }} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-semibold text-rose-700 hover:bg-rose-50">
                               <X className="w-4 h-4" /> Dibatalkan
                             </button>
                           </div>
@@ -426,7 +650,8 @@ export const TugasPage = () => {
                       >
                         <button
                           type="button"
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             setOpenActionId(openActionId === item.id ? null : item.id);
                             setOpenStatusId(null);
                           }}
@@ -437,15 +662,15 @@ export const TugasPage = () => {
                           <MoreHorizontal className="w-4 h-4" />
                         </button>
                         {openActionId === item.id && (
-                          <div className="absolute right-6 top-14 z-20 w-36 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg text-left">
+                          <div className="absolute right-6 top-14 z-20 w-40 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg text-left">
                             <button
                               type="button"
-                              onClick={() => {
-                                setSelectedAjuan(item);
-                                setIsModalOpen(true);
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedWorkflowAjuan(item);
                                 setOpenActionId(null);
                               }}
-                              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-700"
+                              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold text-blue-700 bg-blue-50/70 hover:bg-blue-100 transition-colors"
                             >
                               <Eye className="w-3.5 h-3.5" />
                               Lihat Alur Draft
@@ -459,6 +684,7 @@ export const TugasPage = () => {
               </tbody>
             </table>
           </div>
+        </div>
         </div>
       )}
 
@@ -486,8 +712,8 @@ export const TugasPage = () => {
                     <span className="text-[11px] font-mono font-bold text-blue-700">{item.nomorSurat}</span>
                     {getStatusBadge(item.status)}
                   </div>
-                  <h4 className="font-semibold text-slate-800 text-xs line-clamp-1">{item.perihal}</h4>
-                  <p className="text-[11px] text-slate-500 mt-1">{item.unitKerja} • {item.lokasiPenugasan}</p>
+                  <h4 className="font-semibold text-slate-800 text-xs line-clamp-1">{item.uraianKegiatan}</h4>
+                  <p className="text-[11px] text-slate-500 mt-1">{item.unitKerja} • {item.tempat}</p>
                 </div>
               ))}
             </div>
@@ -502,7 +728,7 @@ export const TugasPage = () => {
                     <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded border border-blue-200">
                       {selectedAjuan.nomorSurat}
                     </span>
-                    <h3 className="text-lg font-bold text-slate-800 mt-2">{selectedAjuan.perihal}</h3>
+                    <h3 className="text-lg font-bold text-slate-800 mt-2">{selectedAjuan.uraianKegiatan}</h3>
                     <p className="text-xs text-slate-500 mt-1">
                       Pengaju: <span className="font-semibold text-slate-700">{selectedAjuan.pengaju.nama}</span> ({selectedAjuan.unitKerja})
                     </p>
@@ -514,9 +740,10 @@ export const TugasPage = () => {
                 <div>
                   <h4 className="font-bold text-sm text-slate-800 mb-4">Tahapan Alur Persetujuan Draft ST:</h4>
                   <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
-                    {selectedAjuan.workflow.map((step, idx) => {
+                    {getWorkflowSteps(selectedAjuan).map((step, idx) => {
                       const isDone = step.status === 'COMPLETED';
                       const isInProgress = step.status === 'IN_PROGRESS';
+                      const isRejected = step.status === 'REJECTED';
 
                       return (
                         <div key={idx} className="relative flex items-start gap-4">
@@ -526,13 +753,17 @@ export const TugasPage = () => {
                               ? 'border-emerald-500 text-emerald-600'
                               : isInProgress
                                 ? 'border-blue-500 text-blue-600 animate-pulse'
-                                : 'border-slate-300 text-slate-400'
+                                : isRejected
+                                  ? 'border-rose-500 text-rose-600'
+                                  : 'border-slate-300 text-slate-400'
                               }`}
                           >
                             {isDone ? (
                               <CheckCircle2 className="w-4 h-4 fill-emerald-500 text-white" />
                             ) : isInProgress ? (
                               <Clock className="w-4 h-4 text-blue-600" />
+                            ) : isRejected ? (
+                              <X className="w-3.5 h-3.5 text-rose-600" />
                             ) : (
                               <div className="w-1.5 h-1.5 bg-slate-300 rounded-full" />
                             )}
@@ -556,9 +787,9 @@ export const TugasPage = () => {
                         </div>
                       );
                     })}
+                  </div>
+                </div>
               </div>
-            </div>
-            </div>
             ) : (
               <div className="text-center py-16 text-slate-400 space-y-2">
                 <FileText className="w-12 h-12 mx-auto stroke-1 text-slate-300" />
@@ -568,6 +799,7 @@ export const TugasPage = () => {
           </div>
         </div>
       )}
+
       {/* MODAL DAFTAR PEGAWAI YANG DITUGASKAN */}
       {selectedPegawaiAjuan && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm">
@@ -600,7 +832,6 @@ export const TugasPage = () => {
                     <div className="min-w-0 space-y-1 text-sm">
                       <p className="font-bold text-slate-800">{pegawai.nama}</p>
                       <p className="text-xs text-slate-600">NIP: {pegawai.nip}</p>
-                      <p className="text-xs font-semibold text-blue-700">Unit Kerja: {pegawai.unitKerja}</p>
                     </div>
                   </div>
                 </div>
@@ -620,60 +851,210 @@ export const TugasPage = () => {
         </div>
       )}
 
-      {/* MODAL DETAIL ALUR WORKFLOW */}
+      {/* MODAL WORKFLOW ALUR DRAFT PENUGASAN */}
+      {selectedWorkflowAjuan && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 space-y-5 shadow-2xl border border-slate-200 max-h-[90vh] flex flex-col animate-in fade-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="flex items-start justify-between pb-4 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-blue-50 text-blue-600 border border-blue-100">
+                  <GitBranch className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg text-slate-800">
+                    Workflow Alur Draft Penugasan
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Pelacakan tahapan proses pengajuan hingga penerbitan surat tugas
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={closeWorkflowModal}
+                className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"
+                aria-label="Tutup modal alur draft"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex-1 overflow-y-auto pr-1 space-y-6">
+              {/* Ringkasan Informasi Surat Tugas */}
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-xs font-mono font-bold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-md border border-blue-200">
+                    {selectedWorkflowAjuan.nomorSurat}
+                  </span>
+                  {getStatusBadge(selectedWorkflowAjuan.status)}
+                </div>
+
+                <h4 className="font-bold text-base text-slate-800 leading-snug">
+                  {selectedWorkflowAjuan.uraianKegiatan}
+                </h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2 border-t border-slate-200/70 text-xs text-slate-600">
+                  <div className="flex items-center gap-2">
+                    <UserCheck className="w-4 h-4 text-blue-500 shrink-0" />
+                    <span>
+                      Pengaju: <strong className="text-slate-800">{selectedWorkflowAjuan.pengaju.nama}</strong>
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Building2 className="w-4 h-4 text-indigo-500 shrink-0" />
+                    <span>
+                      Unit Kerja: <strong className="text-slate-800">{selectedWorkflowAjuan.unitKerja}</strong>
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-emerald-500 shrink-0" />
+                    <span>
+                      Jadwal: <strong className="text-slate-800">{formatTanggal(selectedWorkflowAjuan.tanggalMulai)} - {formatTanggal(selectedWorkflowAjuan.tanggalSelesai)}</strong>
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-rose-500 shrink-0" />
+                    <span className="truncate" title={selectedWorkflowAjuan.tempat}>
+                      Lokasi: <strong className="text-slate-800">{formatLokasiKhusus(selectedWorkflowAjuan.tempat)}</strong>
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Vertical Stepper Timeline */}
+              <div>
+                <h4 className="font-bold text-sm text-slate-800 mb-4 flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-blue-600" />
+                  Tahapan Alur Persetujuan Draft Surat Tugas:
+                </h4>
+                <div className="relative pl-7 space-y-5 before:absolute before:left-3 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
+                  {getWorkflowSteps(selectedWorkflowAjuan).map((step, idx) => {
+                    const isDone = step.status === 'COMPLETED';
+                    const isInProgress = step.status === 'IN_PROGRESS';
+                    const isRejected = step.status === 'REJECTED';
+
+                    const stepBadgeClass = isDone
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      : isInProgress
+                        ? 'bg-blue-50 text-blue-700 border-blue-200'
+                        : isRejected
+                          ? 'bg-rose-50 text-rose-700 border-rose-200'
+                          : 'bg-slate-100 text-slate-500 border-slate-200';
+
+                    const stepStatusText = isDone
+                      ? 'Selesai'
+                      : isInProgress
+                        ? 'Sedang Diproses'
+                        : isRejected
+                          ? 'Ditolak / Dibatalkan'
+                          : 'Menunggu';
+
+                    return (
+                      <div key={idx} className="relative flex items-start gap-4">
+                        {/* Stepper Circle Indicator */}
+                        <div
+                          className={`absolute -left-7 top-1 w-6 h-6 rounded-full flex items-center justify-center border-2 bg-white shadow-2xs ${
+                            isDone
+                              ? 'border-emerald-500 text-emerald-600'
+                              : isInProgress
+                                ? 'border-blue-500 text-blue-600 animate-pulse'
+                                : isRejected
+                                  ? 'border-rose-500 text-rose-600'
+                                  : 'border-slate-300 text-slate-400'
+                          }`}
+                        >
+                          {isDone ? (
+                            <CheckCircle2 className="w-4 h-4 fill-emerald-500 text-white" />
+                          ) : isInProgress ? (
+                            <Clock className="w-3.5 h-3.5 text-blue-600" />
+                          ) : isRejected ? (
+                            <X className="w-3.5 h-3.5 text-rose-600" />
+                          ) : (
+                            <div className="w-2 h-2 bg-slate-300 rounded-full" />
+                          )}
+                        </div>
+
+                        {/* Stepper Card Content */}
+                        <div
+                          className={`p-4 rounded-xl border w-full space-y-1.5 transition-colors ${
+                            isDone
+                              ? 'bg-emerald-50/30 border-emerald-200/80'
+                              : isInProgress
+                                ? 'bg-blue-50/40 border-blue-200'
+                                : isRejected
+                                  ? 'bg-rose-50/30 border-rose-200'
+                                  : 'bg-slate-50 border-slate-200'
+                          }`}
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <h5 className="font-bold text-sm text-slate-800">{step.label}</h5>
+                            <div className="flex items-center gap-2">
+                              {step.tanggal && (
+                                <span className="text-[11px] text-slate-500 font-mono">
+                                  {formatTanggal(step.tanggal)}
+                                </span>
+                              )}
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${stepBadgeClass}`}>
+                                {stepStatusText}
+                              </span>
+                            </div>
+                          </div>
+                          <p className="text-xs text-slate-600">
+                            Pelaksana: <span className="font-semibold text-slate-800">{step.actor}</span>
+                          </p>
+                          {step.catatan && (
+                            <p className="text-xs text-slate-600 bg-white p-2.5 rounded-lg border border-slate-200/80 mt-2 italic">
+                              &quot;{step.catatan}&quot;
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={closeWorkflowModal}
+                className="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DETAIL TUGAS & PREVIEW WORD */}
       {isModalOpen && selectedAjuan && (
         <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 space-y-5 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-4xl w-full p-6 space-y-5 shadow-2xl border border-slate-200 max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2">
                 <FileCheck className="w-5 h-5 text-blue-600" />
-                Alur Draft & Track Record Persetujuan
+                Detail Tugas & Preview Dokumen
               </h3>
               <button
-                onClick={() => setIsModalOpen(false)}
+                onClick={closeModal}
                 className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="bg-blue-50/70 p-4 rounded-xl border border-blue-200 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="font-mono text-xs font-bold text-blue-700">{selectedAjuan.nomorSurat}</span>
-                {getStatusBadge(selectedAjuan.status)}
-              </div>
-              <h4 className="font-bold text-slate-900 text-sm">{selectedAjuan.perihal}</h4>
-              <p className="text-xs text-slate-600">{selectedAjuan.deskripsi}</p>
-            </div>
-
-            <div className="space-y-4">
-              <h4 className="font-bold text-sm text-slate-800">Riwayat Tahapan Persetujuan:</h4>
-              <div className="space-y-3">
-                {selectedAjuan.workflow.map((w, idx) => (
-                  <div key={idx} className="flex items-start gap-3 p-3 rounded-xl border border-slate-200 bg-slate-50/50">
-                    {w.status === 'COMPLETED' ? (
-                      <CheckCircle2 className="w-5 h-5 text-emerald-600 mt-0.5 shrink-0" />
-                    ) : w.status === 'IN_PROGRESS' ? (
-                      <Clock className="w-5 h-5 text-blue-600 mt-0.5 shrink-0 animate-pulse" />
-                    ) : (
-                      <div className="w-5 h-5 rounded-full border-2 border-slate-300 mt-0.5 shrink-0" />
-                    )}
-                    <div className="w-full space-y-1">
-                      <div className="flex items-center justify-between text-xs font-bold text-slate-800">
-                        <span>{w.label}</span>
-                        <span className="text-slate-400 font-normal">{w.tanggal || 'Menunggu'}</span>
-                      </div>
-                      <p className="text-xs text-slate-600">Aktor: {w.actor}</p>
-                      {w.catatan && <p className="text-xs text-slate-500 bg-white p-2 rounded border border-slate-200">{w.catatan}</p>}
-                    </div>
-                  </div>
-                ))}
-              </div>
+            <div className="flex-1 -mx-6 -mb-6 mt-0 border-t border-slate-100 overflow-y-auto">
+              <SuratTugasTemplate ajuan={selectedAjuan} />
             </div>
 
             <div className="pt-2 flex justify-end">
               <button
-                onClick={() => setIsModalOpen(false)}
+                onClick={closeModal}
                 className="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer"
               >
                 Tutup

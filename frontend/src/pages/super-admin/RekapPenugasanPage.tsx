@@ -1,21 +1,22 @@
-import { useState, useMemo } from 'react';
-import { dummyPegawaiList, dummyAjuanSuratTugas, UNIT_COLORS } from '@/data/dummyData';
+import { useState, useMemo, useEffect } from 'react';
+import { getUnitColor } from '@/data/dummyData';
 import { Trophy, ChevronDown, Briefcase, Building2, Table2, Filter } from 'lucide-react';
+import { useSuratTugas } from '@/hooks/useSuratTugas';
+import { usePegawai } from '@/hooks/usePegawai';
+import apiClient from '@/api/client';
 
 type SubTab = 'jabatan' | 'unitkerja' | 'tabelrekap';
-type JenisDinas = 'Semua' | 'Luar' | 'Dalam' | 'Daring' | 'Izin';
+type JenisDinas = 'Semua' | 'Luar' | 'Dalam';
 
 // Simulated "jenis dinas" for each surat tugas based on location
 const getJenisDinas = (lokasi: string): string => {
-  if (lokasi.includes('Cimahi') || lokasi.includes('Bandung')) return 'Luar';
-  if (lokasi.includes('Bogor')) return 'Dalam';
-  if (lokasi.includes('Depok')) return 'Daring';
+  if (!lokasi) return 'Luar';
+  if (lokasi.toLowerCase().includes('bogor') || lokasi.toLowerCase().includes('dalam kota') || lokasi.toLowerCase().includes('cibinong')) return 'Dalam';
   return 'Luar';
 };
 
-// Get unique jabatan list from pegawai
-const JABATAN_LIST = [...new Set(dummyPegawaiList.map(p => p.jabatan))];
-const UNIT_LIST: string[] = ['RBI', 'Fastingkom', 'Kepeg', 'PM'];
+// Unique jabatan list will be fetched from API
+const UNIT_LIST: string[] = ['Kepeg', 'Fastingkom', 'PM'];
 
 const SUB_TABS: { key: SubTab; label: string; icon: React.ReactNode }[] = [
   { key: 'jabatan', label: 'Kelompok Jabatan', icon: <Briefcase className="w-4 h-4" /> },
@@ -23,7 +24,7 @@ const SUB_TABS: { key: SubTab; label: string; icon: React.ReactNode }[] = [
   { key: 'tabelrekap', label: 'Tabel Rekap', icon: <Table2 className="w-4 h-4" /> },
 ];
 
-const JENIS_DINAS_OPTIONS: JenisDinas[] = ['Semua', 'Luar', 'Dalam', 'Daring', 'Izin'];
+const JENIS_DINAS_OPTIONS: JenisDinas[] = ['Semua', 'Luar', 'Dalam'];
 
 // CSS bar chart component
 const BarChart = ({ data, maxValue, colorFn }: { data: { label: string; value: number }[]; maxValue: number; colorFn: (label: string) => string }) => (
@@ -48,33 +49,55 @@ const BarChart = ({ data, maxValue, colorFn }: { data: { label: string; value: n
 );
 
 export const RekapPenugasanPage = () => {
-  const [tahun, setTahun] = useState(2026);
+  const [tahun, setTahun] = useState<number | 'Semua'>('Semua');
   const [bulan, setBulan] = useState<number | 'Semua'>('Semua');
   const [subTab, setSubTab] = useState<SubTab>('jabatan');
   const [jenisDinasFilter, setJenisDinasFilter] = useState<JenisDinas>('Semua');
   const [jabatanFilter, setJabatanFilter] = useState<string>('Semua');
   const [unitKerjaFilter, setUnitKerjaFilter] = useState<string>('Semua');
+  const [JABATAN_LIST, setJABATAN_LIST] = useState<string[]>([]);
+  
+  const { tugasList, refreshTugas } = useSuratTugas();
+  const { pegawaiList } = usePegawai();
+  useEffect(() => {
+    apiClient.get('/users').then(res => {
+      if (res.data) {
+        const uniqueJabatans = [...new Set(res.data.map((p: any) => p.jabatan))];
+        setJABATAN_LIST(uniqueJabatans as string[]);
+      }
+    });
+    refreshTugas();
+  }, []);
 
   // Compute penugasan data
   const penugasanData = useMemo(() => {
     // Each surat tugas -> for each pegawai assigned -> one entry
-    const entries = dummyAjuanSuratTugas
-      .filter(st => {
-        const matchTahun = st.tanggalMulai.startsWith(String(tahun));
-        if (!matchTahun) return false;
+    const entries = tugasList
+      .filter((st: any) => {
+        if (!st.tanggalMulai) return false;
+        const date = new Date(st.tanggalMulai);
+        if (isNaN(date.getTime())) return false;
+        
+        if (tahun !== 'Semua') {
+          const matchTahun = date.getFullYear() === tahun;
+          if (!matchTahun) return false;
+        }
+        
         if (bulan === 'Semua') return true;
-        const monthStr = st.tanggalMulai.split('-')[1];
-        return Number(monthStr) === bulan;
+        return (date.getMonth() + 1) === bulan;
       })
       .flatMap(st =>
-        st.pegawaiDitugaskan.map(peg => ({
-          pegawai: peg,
-          jenisDinas: getJenisDinas(st.lokasiPenugasan),
-          suratTugas: st,
-        }))
+        st.pegawaiDitugaskan.map(peg => {
+          const matched = pegawaiList.find((p) => p.nama === peg.nama) || peg;
+          return {
+            pegawai: matched,
+            jenisDinas: getJenisDinas(st.tempat),
+            suratTugas: st,
+          };
+        })
       );
     return entries;
-  }, [tahun, bulan]);
+  }, [tahun, bulan, tugasList, pegawaiList]);
 
   // Filter entries by jenis dinas
   const filteredEntries = useMemo(() => {
@@ -193,9 +216,10 @@ export const RekapPenugasanPage = () => {
             <div className="relative">
               <select
                 value={tahun}
-                onChange={e => setTahun(Number(e.target.value))}
+                onChange={e => setTahun(e.target.value === 'Semua' ? 'Semua' : Number(e.target.value))}
                 className="appearance-none bg-white border border-slate-300 rounded-xl px-4 py-2 pr-8 text-sm font-semibold text-slate-800 focus:ring-2 focus:ring-blue-500 focus:outline-none shadow-sm cursor-pointer"
               >
+                <option value="Semua">Semua Tahun</option>
                 {[2024, 2025, 2026, 2027].map(y => (
                   <option key={y} value={y}>{y}</option>
                 ))}
@@ -214,7 +238,7 @@ export const RekapPenugasanPage = () => {
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           {top6.length === 0 ? (
-            <p className="col-span-full text-center text-sm text-slate-400 py-4">Belum ada data penugasan luar pada tahun {tahun}.</p>
+            <p className="col-span-full text-center text-sm text-slate-400 py-4">Belum ada data penugasan luar pada {tahun === 'Semua' ? 'semua tahun' : `tahun ${tahun}`}.</p>
           ) : (
             top6.map((peg, i) => (
               <div
@@ -332,7 +356,7 @@ export const RekapPenugasanPage = () => {
             <BarChart
               data={unitKerjaChartData}
               maxValue={maxUnit}
-              colorFn={(label) => UNIT_COLORS[label]?.hex || '#6366f1'}
+              colorFn={(label) => getUnitColor(label).hex}
             />
             {unitKerjaChartData.every(d => d.value === 0) && (
               <p className="text-center text-sm text-slate-400 py-4">Tidak ada data penugasan untuk filter ini.</p>
@@ -369,10 +393,7 @@ export const RekapPenugasanPage = () => {
                         <td className="px-5 py-3.5 font-mono text-[13px] text-slate-600">{row.nip}</td>
                         <td className="px-5 py-3.5 font-medium text-slate-800">{row.nama}</td>
                         <td className="px-5 py-3.5">
-                          <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider border ${UNIT_COLORS[row.unitKerja]
-                              ? `${UNIT_COLORS[row.unitKerja].bg} ${UNIT_COLORS[row.unitKerja].text} ${UNIT_COLORS[row.unitKerja].border}`
-                              : 'bg-slate-100 text-slate-700 border-slate-200'
-                            }`}>
+                          <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider border ${getUnitColor(row.unitKerja).bg} ${getUnitColor(row.unitKerja).text} ${getUnitColor(row.unitKerja).border}`}>
                             {row.unitKerja}
                           </span>
                         </td>

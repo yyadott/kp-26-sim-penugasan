@@ -1,11 +1,9 @@
 import { useState } from 'react';
 import { formatDate } from '@/utils/formatter';
 import { useAuth } from '@/hooks/useAuth';
+import { useSuratTugas } from '@/hooks/useSuratTugas';
 import { CalendarWidget } from '@/components/ui/CalendarWidget';
-import {
-  dummyAjuanSuratTugas,
-  UNIT_COLORS,
-} from '@/data/dummyData';
+import { UNIT_COLORS } from '@/data/dummyData';
 import type { AjuanSuratTugas } from '@/types';
 import { Link } from 'react-router-dom';
 import {
@@ -20,13 +18,14 @@ import {
 
 export const DashboardPage = () => {
   const { user } = useAuth();
+  const { tugasList } = useSuratTugas();
   const todayFormatted = formatDate(new Date().toISOString());
 
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedAjuan, setSelectedAjuan] = useState<AjuanSuratTugas | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [tableFilter, setTableFilter] = useState<'ALL' | 'APPROVED' | 'PENDING'>('ALL');
-  const myUnitData = dummyAjuanSuratTugas.filter(t => t.unitKerja === user?.unitKerja);
+  const myUnitData = tugasList.filter((t: any) => t.unitKerja === user?.unitKerja);
 
   const recentAjuan = myUnitData.filter((item) => {
     if (tableFilter === 'APPROVED' && item.status !== 'SURAT_TERBIT') return false;
@@ -38,7 +37,8 @@ export const DashboardPage = () => {
   const approvedLettersCount = myUnitData.filter(item => item.status === 'SURAT_TERBIT').length;
   const pendingLettersCount = myUnitData.filter(item => item.status === 'VERIFIKASI_SUBBAGIAN' || item.status === 'PERSETUJUAN_PIMPINAN').length;
 
-  const formatLokasiDisplay = (lokasi: string) => {
+  const formatLokasiDisplay = (lokasi?: string) => {
+    if (!lokasi) return '';
     const cleaned = lokasi.trim();
     if (!cleaned) return '';
     if (cleaned.toLowerCase().includes('jawa barat')) return cleaned;
@@ -84,7 +84,7 @@ export const DashboardPage = () => {
         <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-5">
           <button
             onClick={() => setTableFilter(prev => prev === 'APPROVED' ? 'ALL' : 'APPROVED')}
-            className={`text-left p-5 rounded-2xl border shadow-xs transition-all flex flex-col justify-between focus:outline-none ${
+            className={`text-left p-5 rounded-2xl border shadow-xs transition-all flex flex-col focus:outline-none min-h-[200px] ${
               tableFilter === 'APPROVED' 
                 ? 'bg-blue-50 border-blue-400 ring-2 ring-blue-400 ring-offset-2' 
                 : 'bg-white border-slate-200 hover:border-blue-300'
@@ -96,15 +96,15 @@ export const DashboardPage = () => {
                 <CheckCircle2 className="w-5 h-5" />
               </div>
             </div>
-            <div className="mt-4">
-              <span className="text-3xl font-black text-slate-800">{approvedLettersCount}</span>
-              <span className="text-xs text-slate-500 block mt-0.5">Surat Tugas yang telah diterbitkan</span>
+            <div className="flex-1 flex flex-col items-center justify-center w-full mt-4">
+              <span className="text-5xl font-black text-slate-800">{approvedLettersCount}</span>
+              <span className="text-xs text-slate-500 block mt-2 text-center">Surat Tugas yang telah diterbitkan</span>
             </div>
           </button>
 
           <button
             onClick={() => setTableFilter(prev => prev === 'PENDING' ? 'ALL' : 'PENDING')}
-            className={`text-left p-5 rounded-2xl border shadow-xs transition-all flex flex-col justify-between focus:outline-none ${
+            className={`text-left p-5 rounded-2xl border shadow-xs transition-all flex flex-col focus:outline-none min-h-[200px] ${
               tableFilter === 'PENDING' 
                 ? 'bg-amber-50 border-amber-400 ring-2 ring-amber-400 ring-offset-2' 
                 : 'bg-white border-slate-200 hover:border-amber-300'
@@ -116,9 +116,9 @@ export const DashboardPage = () => {
                 <Clock className="w-5 h-5" />
               </div>
             </div>
-            <div className="mt-4">
-              <span className="text-3xl font-black text-amber-800">{pendingLettersCount}</span>
-              <span className="text-xs text-slate-500 block mt-0.5">Ajuan menunggu persetujuan Anda</span>
+            <div className="flex-1 flex flex-col items-center justify-center w-full mt-4">
+              <span className="text-5xl font-black text-amber-800">{pendingLettersCount}</span>
+              <span className="text-xs text-slate-500 block mt-2 text-center">Ajuan menunggu persetujuan Anda</span>
             </div>
           </button>
         </div>
@@ -146,7 +146,7 @@ export const DashboardPage = () => {
             <table className="w-full text-left text-sm border-collapse">
               <thead>
                 <tr className="border-b border-slate-200 text-slate-500 font-semibold bg-slate-50/50">
-                  <th className="py-3 px-4 font-medium">No. Surat / Perihal</th>
+                  <th className="py-3 px-4 font-medium">No. Surat / Uraian Kegiatan</th>
                   <th className="py-3 px-4 font-medium">Status</th>
                   <th className="py-3 px-4 font-medium">Unit & Lokasi</th>
                 </tr>
@@ -174,7 +174,7 @@ export const DashboardPage = () => {
                     >
                       <td className="py-3 px-4">
                         <div className="font-mono text-xs font-bold text-blue-700 mb-1">{item.nomorSurat}</div>
-                        <div className="font-medium text-slate-800 line-clamp-1">{item.perihal}</div>
+                        <div className="font-medium text-slate-800 line-clamp-1">{item.uraianKegiatan}</div>
                       </td>
                       <td className="py-3 px-4">
                         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border ${statusBadgeClass}`}>
@@ -195,7 +195,7 @@ export const DashboardPage = () => {
                           </span>
                           <span className="flex items-center gap-1 text-xs text-slate-500">
                             <MapPin className="w-3 h-3 shrink-0" />
-                            <span className="line-clamp-1">{formatLokasiDisplay(item.lokasiPenugasan)}</span>
+                            <span className="line-clamp-1">{formatLokasiDisplay(item.tempat)}</span>
                           </span>
                         </div>
                       </td>
@@ -229,7 +229,7 @@ export const DashboardPage = () => {
                 <span className="font-mono text-xs font-bold text-blue-700">{selectedAjuan.nomorSurat}</span>
                 <span className="text-xs text-slate-500">{selectedAjuan.unitKerja}</span>
               </div>
-              <h4 className="font-bold text-slate-900 text-sm">{selectedAjuan.perihal}</h4>
+              <h4 className="font-bold text-slate-900 text-sm">{selectedAjuan.uraianKegiatan}</h4>
               <p className="text-xs text-slate-600">{selectedAjuan.deskripsi}</p>
             </div>
 
@@ -240,7 +240,7 @@ export const DashboardPage = () => {
               </div>
               <div className="rounded-2xl border border-slate-200 p-4 bg-slate-50">
                 <div className="text-[11px] font-semibold uppercase text-slate-500 mb-2">Lokasi</div>
-                <div className="text-sm font-semibold text-slate-800">{formatLokasiDisplay(selectedAjuan.lokasiPenugasan)}</div>
+                <div className="text-sm font-semibold text-slate-800">{formatLokasiDisplay(selectedAjuan.tempat)}</div>
               </div>
             </div>
 

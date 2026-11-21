@@ -356,7 +356,7 @@ export const AbsensiPage = () => {
                       )}
                     </div>
                     <div className="space-y-1 pt-2">
-                      {['RBI', 'Fastingkom', 'Kepeg', 'PM'].map((unit) => (
+                      {['Kepeg', 'Fastingkom', 'PM'].map((unit) => (
                         <label key={unit} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-xs text-slate-700 hover:bg-slate-50">
                           <input
                             type="checkbox"

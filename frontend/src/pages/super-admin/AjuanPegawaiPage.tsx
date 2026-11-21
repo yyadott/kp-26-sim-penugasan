@@ -39,7 +39,7 @@ export const AjuanPegawaiPage = () => {
   // Modal States
   const [detailModal, setDetailModal] = useState<AjuanSuratTugas | null>(null);
   const [editModal, setEditModal] = useState<AjuanSuratTugas | null>(null);
-  const [editForm, setEditForm] = useState({ perihal: '', deskripsi: '' });
+  const [editForm, setEditForm] = useState({ uraianKegiatan: '', deskripsi: '' });
 
   // Filter ajuan by tab
   const filterByTab = (tab: TabKey): AjuanSuratTugas[] => {
@@ -60,7 +60,7 @@ export const AjuanPegawaiPage = () => {
       filtered = filtered.filter(a =>
         a.pengaju.nama.toLowerCase().includes(q) ||
         a.pengaju.nip.toLowerCase().includes(q) ||
-        a.perihal.toLowerCase().includes(q)
+        (a.uraianKegiatan || '').toLowerCase().includes(q)
       );
     }
     return filtered;
@@ -88,14 +88,14 @@ export const AjuanPegawaiPage = () => {
   };
 
   const openEdit = (ajuan: AjuanSuratTugas) => {
-    setEditForm({ perihal: ajuan.perihal, deskripsi: ajuan.deskripsi });
+    setEditForm({ uraianKegiatan: ajuan.uraianKegiatan, deskripsi: ajuan.deskripsi });
     setEditModal(ajuan);
   };
 
   const handleEditSave = () => {
     if (!editModal) return;
     setAjuanList(prev => prev.map(a =>
-      a.id === editModal.id ? { ...a, perihal: editForm.perihal, deskripsi: editForm.deskripsi } : a
+      a.id === editModal.id ? { ...a, uraianKegiatan: editForm.uraianKegiatan, deskripsi: editForm.deskripsi } : a
     ));
     setEditModal(null);
   };
@@ -179,7 +179,7 @@ export const AjuanPegawaiPage = () => {
                     <tr key={ajuan.id} className="hover:bg-slate-50/80 transition-colors">
                       <td className="px-5 py-3.5 font-mono text-[13px] text-slate-600">{ajuan.pengaju.nip}</td>
                       <td className="px-5 py-3.5 font-medium text-slate-800">{ajuan.pengaju.nama}</td>
-                      <td className="px-5 py-3.5 text-slate-600 max-w-xs truncate">{ajuan.perihal}</td>
+                      <td className="px-5 py-3.5 text-slate-600 max-w-xs truncate">{ajuan.uraianKegiatan}</td>
                       <td className="px-5 py-3.5 text-slate-600 whitespace-nowrap">{ajuan.tanggalMulai}</td>
                       <td className="px-5 py-3.5">
                         <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider border ${statusInfo.color}`}>
@@ -277,8 +277,8 @@ export const AjuanPegawaiPage = () => {
               {/* Info Ajuan */}
               <div className="space-y-3">
                 <div>
-                  <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Perihal / Nama Ajuan</p>
-                  <p className="text-sm text-slate-800 font-medium">{detailModal.perihal}</p>
+                  <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Uraian Kegiatan / Nama Ajuan</p>
+                  <p className="text-sm text-slate-800 font-medium">{detailModal.uraianKegiatan}</p>
                 </div>
                 <div>
                   <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Keterangan</p>
@@ -304,8 +304,8 @@ export const AjuanPegawaiPage = () => {
                     <p className="text-sm text-slate-800">{detailModal.tanggalSelesai}</p>
                   </div>
                   <div className="col-span-2">
-                    <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Lokasi Penugasan</p>
-                    <p className="text-sm text-slate-800">{detailModal.lokasiPenugasan} — {detailModal.lokasiSpesifik}</p>
+                    <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Tempat</p>
+                    <p className="text-sm text-slate-800">{detailModal.tempat} — {detailModal.lokasiSpesifik}</p>
                   </div>
                 </div>
               </div>
@@ -360,11 +360,11 @@ export const AjuanPegawaiPage = () => {
             </div>
             <div className="p-4 space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Perihal / Nama Ajuan</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Uraian Kegiatan / Nama Ajuan</label>
                 <input
                   type="text"
-                  value={editForm.perihal}
-                  onChange={e => setEditForm({ ...editForm, perihal: e.target.value })}
+                  value={editForm.uraianKegiatan}
+                  onChange={e => setEditForm({ ...editForm, uraianKegiatan: e.target.value })}
                   className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 />
               </div>

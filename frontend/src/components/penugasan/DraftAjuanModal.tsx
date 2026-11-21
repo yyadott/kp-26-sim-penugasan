@@ -25,8 +25,8 @@ export const DraftAjuanModal = ({ isOpen, onClose, onSubmit, nextNumber }: Draft
   const [cities, setCities] = useState<Wilayah[]>([]);
   const [regionError, setRegionError] = useState('');
   const [formData, setFormData] = useState({
-    perihal: '',
-    unitKerja: 'RBI' as UnitKerjaType,
+    uraianKegiatan: '',
+    unitKerja: 'Kepeg' as UnitKerjaType,
     pegawaiId: dummyPegawaiList[0].id,
     provinceId: '',
     cityId: '',
@@ -87,13 +87,13 @@ export const DraftAjuanModal = ({ isOpen, onClose, onSubmit, nextNumber }: Draft
     onSubmit({
       id: `draft-${Date.now()}`,
       nomorSurat: `DRAFT-ST/${formData.unitKerja}/2026/${nextNumber}`,
-      perihal: formData.perihal,
+      uraianKegiatan: formData.uraianKegiatan,
       pengaju: dummyPegawaiList[0],
       pegawaiDitugaskan: [assignedPegawai],
       unitKerja: formData.unitKerja,
       tanggalMulai: formData.tanggalMulai,
       tanggalSelesai: formData.tanggalSelesai,
-      lokasiPenugasan: `${city.name}, ${province.name}`,
+      tempat: `${city.name}, ${province.name}`,
       lokasiSpesifik: formData.lokasiSpesifik,
       koordinat: [-6.9147, 107.6098],
       deskripsi: formData.deskripsi,
@@ -116,8 +116,8 @@ export const DraftAjuanModal = ({ isOpen, onClose, onSubmit, nextNumber }: Draft
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <label className="space-y-2 text-sm text-slate-700"><span>Perihal Ajuan</span><input required value={formData.perihal} onChange={(event) => setFormData({ ...formData, perihal: event.target.value })} className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-200" /></label>
-          <label className="space-y-2 text-sm text-slate-700"><span>Unit Kerja</span><select value={formData.unitKerja} onChange={(event) => setFormData({ ...formData, unitKerja: event.target.value as UnitKerjaType })} className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-200">{(['RBI', 'Fastingkom', 'Kepeg', 'PM'] as UnitKerjaType[]).map((unit) => <option key={unit}>{unit}</option>)}</select></label>
+          <label className="space-y-2 text-sm text-slate-700"><span>Uraian Kegiatan Ajuan</span><input required value={formData.uraianKegiatan} onChange={(event) => setFormData({ ...formData, uraianKegiatan: event.target.value })} className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-200" /></label>
+          <label className="space-y-2 text-sm text-slate-700"><span>Unit Kerja</span><select value={formData.unitKerja} onChange={(event) => setFormData({ ...formData, unitKerja: event.target.value as UnitKerjaType })} className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-200">{(['Kepeg', 'Fastingkom', 'PM'] as UnitKerjaType[]).map((unit) => <option key={unit}>{unit}</option>)}</select></label>
           <label className="space-y-2 text-sm text-slate-700"><span>Pegawai Ditugaskan</span><select value={formData.pegawaiId} onChange={(event) => setFormData({ ...formData, pegawaiId: event.target.value })} className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-200">{dummyPegawaiList.map((pegawai) => <option key={pegawai.id} value={pegawai.id}>{pegawai.nama}</option>)}</select></label>
           <label className="space-y-2 text-sm text-slate-700"><span>Lokasi/Tempat Penugasan</span><input required placeholder="Contoh: Kantor Kecamatan Bandung Tengah" value={formData.lokasiSpesifik} onChange={(event) => setFormData({ ...formData, lokasiSpesifik: event.target.value })} className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-200" /></label>
         </div>

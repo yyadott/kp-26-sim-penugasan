@@ -14,12 +14,12 @@ export const PemetaanPage = () => {
         id: `approved-${item.id}`,
         suratTugasId: item.id,
         nomorSurat: item.nomorSurat,
-        perihal: item.perihal,
+        uraianKegiatan: item.uraianKegiatan,
         pegawai: item.pegawaiDitugaskan[0] || item.pengaju,
         unitKerja: item.unitKerja,
-        lokasi: item.lokasiPenugasan,
-        namaLokasi: item.lokasiSpesifik || item.lokasiPenugasan,
-        alamatLengkap: [item.lokasiSpesifik, item.lokasiPenugasan].filter(Boolean).join(', '),
+        lokasi: item.tempat,
+        namaLokasi: item.lokasiSpesifik || item.tempat,
+        alamatLengkap: [item.lokasiSpesifik, item.tempat].filter(Boolean).join(', '),
         koordinat: item.koordinat,
         tanggalMulai: item.tanggalMulai,
         tanggalSelesai: item.tanggalSelesai,
@@ -33,7 +33,7 @@ export const PemetaanPage = () => {
       loc.pegawai.nama.toLowerCase().includes(searchQuery.toLowerCase()) ||
       loc.lokasi.toLowerCase().includes(searchQuery.toLowerCase()) ||
       loc.nomorSurat.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      loc.perihal.toLowerCase().includes(searchQuery.toLowerCase());
+      (loc.uraianKegiatan || '').toLowerCase().includes(searchQuery.toLowerCase());
     return matchesUnit && matchesSearch;
   });
 
@@ -53,7 +53,7 @@ export const PemetaanPage = () => {
         <div>
           <div className="flex items-center gap-2">
             <MapPin className="w-7 h-7 text-blue-600" />
-            <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Visualisasi Pemetaan Lokasi Penugasan Pegawai</h2>
+            <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Visualisasi Pemetaan Tempat Pegawai</h2>
           </div>
           <p className="text-slate-500 text-sm mt-1">
             Pemantauan lokasi penugasan tiap-tiap pegawai dari unit kerja yang berbeda-beda secara realtime berbasis peta interaktif.
@@ -194,7 +194,7 @@ export const PemetaanPage = () => {
                   </div>
 
                   <div>
-                    <h4 className="font-bold text-slate-900 text-xs">{loc.perihal}</h4>
+                    <h4 className="font-bold text-slate-900 text-xs">{loc.uraianKegiatan}</h4>
                     <p className="text-[11px] text-slate-500 font-mono mt-0.5">{loc.nomorSurat}</p>
                   </div>
 

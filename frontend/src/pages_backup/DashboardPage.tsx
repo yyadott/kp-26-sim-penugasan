@@ -35,12 +35,12 @@ export const DashboardPage = () => {
     id: `ajuan-${item.id}`,
     suratTugasId: item.id,
     nomorSurat: item.nomorSurat,
-    perihal: item.perihal,
+    uraianKegiatan: item.uraianKegiatan,
     pegawai: item.pegawaiDitugaskan[0] || item.pengaju,
     unitKerja: item.unitKerja,
-    lokasi: item.lokasiPenugasan,
-    namaLokasi: item.lokasiSpesifik || item.lokasiPenugasan,
-    alamatLengkap: [item.lokasiSpesifik, item.lokasiPenugasan].filter(Boolean).join(', '),
+    lokasi: item.tempat,
+    namaLokasi: item.lokasiSpesifik || item.tempat,
+    alamatLengkap: [item.lokasiSpesifik, item.tempat].filter(Boolean).join(', '),
     koordinat: item.koordinat,
     tanggalMulai: item.tanggalMulai,
     tanggalSelesai: item.tanggalSelesai,
@@ -56,7 +56,8 @@ export const DashboardPage = () => {
   const recentPresensi = dummyPresensiPegawaiLain.slice(0, 8);
 
 
-  const formatLokasiDisplay = (lokasi: string) => {
+  const formatLokasiDisplay = (lokasi?: string) => {
+    if (!lokasi) return '';
     const cleaned = lokasi.trim();
     if (!cleaned) return '';
     if (cleaned.toLowerCase().includes('jawa barat')) return cleaned;
@@ -145,7 +146,7 @@ export const DashboardPage = () => {
           <div>
             <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2">
               <MapPin className="w-5 h-5 text-blue-600" />
-              Visualisasi Pemetaan Lokasi Penugasan Pegawai
+              Visualisasi Pemetaan Tempat Pegawai
             </h3>
             <p className="text-xs text-slate-500">Peta sebaran penugasan pegawai dari unit yang berbeda-beda secara realtime.</p>
           </div>
@@ -220,7 +221,7 @@ export const DashboardPage = () => {
                     </div>
 
                     <div className="mt-4">
-                      <h4 className="text-base font-semibold text-slate-900 whitespace-nowrap overflow-x-auto">{item.perihal}</h4>
+                      <h4 className="text-base font-semibold text-slate-900 whitespace-nowrap overflow-x-auto">{item.uraianKegiatan}</h4>
                     </div>
 
                     <div className="mt-4 flex flex-wrap gap-3 items-center">
@@ -229,7 +230,7 @@ export const DashboardPage = () => {
                       </span>
                       <span className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 whitespace-nowrap">
                         <MapPin className="w-4 h-4 text-rose-500 shrink-0" />
-                        {formatLokasiDisplay(item.lokasiPenugasan)}
+                        {formatLokasiDisplay(item.tempat)}
                       </span>
                     </div>
                   </button>
@@ -315,7 +316,7 @@ export const DashboardPage = () => {
                 <span className="font-mono text-xs font-bold text-blue-700">{selectedAjuan.nomorSurat}</span>
                 <span className="text-xs text-slate-500">{selectedAjuan.unitKerja}</span>
               </div>
-              <h4 className="font-bold text-slate-900 text-sm">{selectedAjuan.perihal}</h4>
+              <h4 className="font-bold text-slate-900 text-sm">{selectedAjuan.uraianKegiatan}</h4>
               <p className="text-xs text-slate-600">{selectedAjuan.deskripsi}</p>
             </div>
 
@@ -326,7 +327,7 @@ export const DashboardPage = () => {
               </div>
               <div className="rounded-2xl border border-slate-200 p-4 bg-slate-50">
                 <div className="text-[11px] font-semibold uppercase text-slate-500 mb-2">Lokasi</div>
-                <div className="text-sm font-semibold text-slate-800">{formatLokasiDisplay(selectedAjuan.lokasiPenugasan)}</div>
+                <div className="text-sm font-semibold text-slate-800">{formatLokasiDisplay(selectedAjuan.tempat)}</div>
               </div>
             </div>
 

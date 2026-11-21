@@ -1,35 +1,99 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { dummyPegawaiList, dummyAjuanSuratTugas } from '@/data/dummyData';
-import type { AjuanSuratTugas, UnitKerjaType } from '@/types';
+import L from 'leaflet';
+
+import type { Pegawai, AjuanSuratTugas, UnitKerjaType } from '@/types';
+import { useSuratTugas } from '@/hooks/useSuratTugas';
+import { usePokja } from '@/hooks/usePokja';
 import { sendEmailNotification } from '@/utils/emailService';
-import { FileText, Send, ArrowLeft } from 'lucide-react';
+import { generateSuratTugas } from '@/utils/generateSuratTugas';
+import { FileText, Send, ArrowLeft, Search, Download, AlertTriangle, X } from 'lucide-react';
+import apiClient from '@/api/client';
+
+import { useAuth } from '@/hooks/useAuth';
+import { dummyPegawaiList } from '@/data/dummyData';
 
 type Wilayah = { id: string; name: string };
 
 export const BuatTugasPage = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { addTugas, tugasList } = useSuratTugas();
+  const { pokjas } = usePokja();
   const [provinces, setProvinces] = useState<Wilayah[]>([]);
   const [cities, setCities] = useState<Wilayah[]>([]);
   const [isWilayahLoading, setIsWilayahLoading] = useState(false);
+  const [pegawaiSearch, setPegawaiSearch] = useState('');
+  const [unitFilter, setUnitFilter] = useState('');
+  
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<L.Map | null>(null);
+  const mapMarkerRef = useRef<L.Marker | null>(null);
+  
+  // Pegawai List from API
+  const [pegawaiList, setPegawaiList] = useState<Pegawai[]>([]);
+  
+  const [conflictAlert, setConflictAlert] = useState<{
+    pegawai: { id: string; nama: string; unitKerja: string };
+    conflicts: AjuanSuratTugas[];
+  } | null>(null);
+  
+  const [finalSubmitAlert, setFinalSubmitAlert] = useState<{
+    pegawai: { id: string; nama: string; unitKerja: string }[];
+  } | null>(null);
 
-  const [formData, setFormData] = useState({
-    perihal: '',
-    unitKerja: 'RBI' as UnitKerjaType,
-    pegawaiIds: [dummyPegawaiList[0].id],
-    tanggalMulai: '2026-08-01',
-    tanggalSelesai: '2026-08-03',
-    lokasiPenugasan: 'Kecamatan Bandung Tengah',
-    lokasiSpesifik: '',
-    provinsiId: '',
-    kotaId: '',
-    koordinatLat: -6.9147,
-    koordinatLng: 107.6098,
-    deskripsi: '',
-    file: null as File | null,
+  const [formData, setFormData] = useState(() => {
+    const d = new Date();
+    const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    return {
+      uraianKegiatan: '',
+      unitKerja: 'Kepeg' as UnitKerjaType,
+      pegawaiIds: [] as string[],
+      tanggalMulai: today,
+      tanggalSelesai: today,
+      tempat: 'Kecamatan Bandung Tengah',
+      lokasiSpesifik: '',
+      provinsiId: '',
+      kotaId: '',
+      koordinatLat: -6.9147,
+      koordinatLng: 107.6098,
+      deskripsi: '',
+      file: null as File | null,
+      pangkatGolongan: {} as Record<string, string>,
+    };
   });
 
+  // Helper: cek apakah pegawai memiliki tugas yang bentrok dengan rentang tanggal yang dipilih
+  const getConflictingTasks = (pegawaiId: string) => {
+    const { tanggalMulai, tanggalSelesai } = formData;
+    if (!tanggalMulai || !tanggalSelesai) return [];
+    const formStart = new Date(tanggalMulai);
+    const formEnd = new Date(tanggalSelesai);
+    return tugasList.filter((t: any) => {
+      if (t.status === 'DITOLAK') return false;
+      const isPegawaiAssigned = t.pegawaiDitugaskan.some((p: any) => p.id === pegawaiId);
+      if (!isPegawaiAssigned) return false;
+      const tStart = new Date(t.tanggalMulai);
+      const tEnd = new Date(t.tanggalSelesai);
+      return tStart <= formEnd && tEnd >= formStart;
+    });
+  };
+
   useEffect(() => {
+    // Fetch users (pegawai) from backend
+    apiClient.get('/users')
+      .then(res => {
+        if (res.data && res.data.length > 0) {
+          setPegawaiList(res.data);
+        } else {
+          setPegawaiList(dummyPegawaiList);
+        }
+      })
+      .catch(err => {
+        console.error("Gagal mengambil data pegawai", err);
+        setPegawaiList(dummyPegawaiList); // Fallback to dummy data
+      });
+
     fetch('https://www.emsifa.com/api-wilayah-indonesia/api/provinces.json')
       .then((response) => response.ok ? response.json() : Promise.reject())
       .then((data: Wilayah[]) => setProvinces(data))
@@ -68,193 +132,405 @@ export const BuatTugasPage = () => {
   }, [formData.kotaId, cities]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const assignedPegawai = dummyPegawaiList.filter((p) => formData.pegawaiIds.includes(p.id));
-    if (assignedPegawai.length === 0) assignedPegawai.push(dummyPegawaiList[0]);
+  // Effect for handling the map initialization and updates
+  useEffect(() => {
+    if (!mapContainerRef.current) return;
+    
+    if (!mapInstanceRef.current) {
+      mapInstanceRef.current = L.map(mapContainerRef.current, {
+        center: [formData.koordinatLat, formData.koordinatLng],
+        zoom: 10,
+        zoomControl: true
+      });
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap'
+      }).addTo(mapInstanceRef.current);
+
+      const icon = L.divIcon({
+        className: 'custom-map-marker',
+        html: `
+          <div style="background-color: #ef4444; width: 30px; height: 40px; border-radius: 15px 15px 18px 18px; display: flex; align-items: center; justify-content: center; color: white; border: 2px solid white; box-shadow: 0 4px 8px rgba(0,0,0,0.3);">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="22" viewBox="0 0 24 24" fill="white" stroke="none">
+              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+              <circle cx="12" cy="9" r="3" fill="white" opacity="0.9" />
+            </svg>
+          </div>`,
+        iconSize: [30, 40],
+        iconAnchor: [15, 40]
+      });
+
+      mapMarkerRef.current = L.marker([formData.koordinatLat, formData.koordinatLng], { icon }).addTo(mapInstanceRef.current);
+    } else {
+      const latlng: [number, number] = [formData.koordinatLat, formData.koordinatLng];
+      mapInstanceRef.current.setView(latlng, 12);
+      if (mapMarkerRef.current) {
+        mapMarkerRef.current.setLatLng(latlng);
+      }
+    }
+  }, [formData.koordinatLat, formData.koordinatLng]);
+
+  const handleActualSubmit = async () => {
+    const assignedPegawai = pegawaiList.filter((p) => formData.pegawaiIds.includes(p.id));
+    if (assignedPegawai.length === 0) return;
     
     const provinsi = provinces.find((item) => item.id === formData.provinsiId)?.name;
     const kota = cities.find((item) => item.id === formData.kotaId)?.name;
-    const newId = `st-new-${Date.now()}`;
     const newNomor = `DRAFT-ST/${formData.unitKerja.toUpperCase().replace(/\s+/g, '')}/2026/00X`;
 
-    const newAjuan: AjuanSuratTugas = {
-      id: newId,
+    const newAjuan = {
       nomorSurat: newNomor,
-      perihal: formData.perihal,
-      pengaju: dummyPegawaiList[0], // Logged in user
-      pegawaiDitugaskan: assignedPegawai,
+      uraianKegiatan: formData.uraianKegiatan,
+      pengaju_id: Number(user?.id) || 1, // Pass the numeric ID to backend
+      pegawaiDitugaskan: assignedPegawai.map(p => Number(p.id) || 1), // Pass array of numeric IDs
       unitKerja: formData.unitKerja,
       tanggalMulai: formData.tanggalMulai,
       tanggalSelesai: formData.tanggalSelesai,
-      lokasiPenugasan: [kota, provinsi].filter(Boolean).join(', ') || formData.lokasiPenugasan,
-      lokasiSpesifik: formData.lokasiSpesifik,
-      koordinat: [formData.koordinatLat, formData.koordinatLng],
+      tempat: formData.lokasiSpesifik 
+        ? `${formData.lokasiSpesifik}, ${[kota, provinsi].filter(Boolean).join(', ')}`
+        : ([kota, provinsi].filter(Boolean).join(', ') || formData.tempat),
+      koordinatLat: formData.koordinatLat,
+      koordinatLng: formData.koordinatLng,
       deskripsi: formData.deskripsi,
-      status: 'DRAFT',
-      workflow: [
-        {
-          stage: 'DRAFT',
-          label: 'Pengajuan Draft ST',
-          actor: dummyPegawaiList[0].nama,
-          tanggal: new Date().toISOString().replace('T', ' ').substring(0, 16),
-          status: 'COMPLETED',
-          catatan: 'Draft baru telah diajukan dari Admin.',
-        }
-      ],
+      status: 'VERIFIKASI_SUBBAGIAN',
     };
 
-    dummyAjuanSuratTugas.unshift(newAjuan);
-    
-    // Kirim notifikasi email ke semua pegawai yang ditugaskan
     try {
+      await addTugas(newAjuan);
+      
+      // Kirim notifikasi email ke semua pegawai yang ditugaskan
       for (const pegawai of assignedPegawai) {
         await sendEmailNotification({
           to_email: pegawai.email || 'user@example.com',
           to_name: pegawai.nama,
-          nomor_surat: newAjuan.nomorSurat,
-          perihal: newAjuan.perihal,
-          tanggal_mulai: newAjuan.tanggalMulai,
-          tanggal_selesai: newAjuan.tanggalSelesai,
-          lokasi: newAjuan.lokasiPenugasan,
-          pesan_tambahan: newAjuan.deskripsi
+          nomor_surat: newNomor,
+          uraianKegiatan: formData.uraianKegiatan,
+          tanggal_mulai: formData.tanggalMulai,
+          tanggal_selesai: formData.tanggalSelesai,
+          lokasi: [kota, provinsi].filter(Boolean).join(', ') || formData.tempat,
+          pesan_tambahan: formData.deskripsi
         });
       }
+      alert('Tugas berhasil dibuat dan disimpan di database!');
+      navigate('/admin/tugas');
     } catch (err) {
-      console.error('Failed to send email notifications', err);
+      console.error('Failed to save tugas or send email notifications', err);
+      alert('Terjadi kesalahan saat menyimpan tugas.');
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Check if any selected pegawai has conflicts
+    const conflictingSelected = pegawaiList
+      .filter((p) => formData.pegawaiIds.includes(p.id))
+      .filter((p) => getConflictingTasks(p.id).length > 0);
+
+    if (conflictingSelected.length > 0) {
+      setFinalSubmitAlert({
+        pegawai: conflictingSelected.map(p => ({ id: p.id, nama: p.nama, unitKerja: p.unitKerja }))
+      });
+      return;
     }
 
-    alert('Tugas berhasil dibuat dan notifikasi email telah dikirim!');
-    navigate('/admin/tugas');
+    handleActualSubmit();
   };
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
-      <div className="flex items-center gap-4 border-b border-slate-200 pb-4">
+    <div className="space-y-5 max-w-4xl mx-auto pb-20">
+      <div className="flex items-center gap-3 border-b border-slate-200 pb-3">
         <button 
           onClick={() => navigate('/admin/tugas')}
-          className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition"
+          className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition"
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Buat Tugas Baru</h1>
-          <p className="text-sm text-slate-500">Isi formulir berikut untuk membuat draft penugasan baru.</p>
+          <h1 className="text-xl font-bold text-slate-800">Buat Tugas Baru</h1>
+          <p className="text-sm text-slate-500">Isi formulir berikut dengan teliti untuk membuat draft penugasan baru.</p>
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-4">
+      <div className="flex gap-2">
+        <button 
+          className="px-4 py-2 rounded-lg bg-blue-600 text-white font-medium text-sm transition shadow-sm"
+        >
+          Buat Tugas
+        </button>
+        <button 
+          onClick={() => navigate('/admin/tugas/upload-surat')}
+          className="px-4 py-2 rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 font-medium text-sm transition cursor-pointer"
+        >
+          Upload Tugas
+        </button>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-5">
+        
+        {/* CARD 1: INFORMASI DASAR */}
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="bg-slate-50 px-5 py-3 border-b border-slate-200">
+            <h2 className="text-base font-bold text-slate-800">1. Informasi Dasar</h2>
+            <p className="text-xs text-slate-500">Masukkan perihal dan unit kerja pengaju.</p>
+          </div>
+          <div className="p-5 space-y-4">
             <div>
-              <label className="block text-sm font-bold text-slate-700 mb-1">Perihal Penugasan</label>
+              <label className="block text-sm font-bold text-slate-700 mb-1.5">Uraian Kegiatan Penugasan <span className="text-red-500">*</span></label>
               <input
                 type="text"
                 required
                 placeholder="Contoh: Pendampingan Monitoring Posko Kesehatan..."
-                value={formData.perihal}
-                onChange={(e) => setFormData({ ...formData, perihal: e.target.value })}
-                className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50 hover:bg-white transition-colors"
+                value={formData.uraianKegiatan}
+                onChange={(e) => setFormData({ ...formData, uraianKegiatan: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50 hover:bg-white transition-colors"
               />
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1">Unit Kerja Pengaju</label>
-                <select
-                  value={formData.unitKerja}
-                  onChange={(e) => setFormData({ ...formData, unitKerja: e.target.value as UnitKerjaType })}
-                  className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50 hover:bg-white transition-colors"
-                >
-                  <option value="RBI">RBI</option>
-                  <option value="Fastingkom">Fastingkom</option>
-                  <option value="Kepeg">Kepeg</option>
-                  <option value="PM">PM</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1">Pegawai Ditugaskan</label>
-                <select
-                  multiple
-                  value={formData.pegawaiIds}
-                  onChange={(e) => {
-                    const options = Array.from(e.target.selectedOptions, option => option.value);
-                    setFormData({ ...formData, pegawaiIds: options });
-                  }}
-                  className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50 hover:bg-white transition-colors h-32"
-                >
-                  {dummyPegawaiList.map((p) => (
-                    <option key={p.id} value={p.id} className="py-1">
-                      {p.nama} ({p.unitKerja})
-                    </option>
-                  ))}
-                </select>
-                <p className="text-xs text-slate-500 mt-1">Tahan tombol Ctrl/Cmd untuk memilih lebih dari satu pegawai.</p>
-              </div>
+            <div>
+              <label className="block text-sm font-bold text-slate-700 mb-1.5">Unit Kerja Pengaju <span className="text-red-500">*</span></label>
+              <select
+                value={formData.unitKerja}
+                onChange={(e) => setFormData({ ...formData, unitKerja: e.target.value as UnitKerjaType })}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50 hover:bg-white transition-colors"
+              >
+                {pokjas.map(p => (
+                  <option key={p.id} value={p.kode}>{p.nama} ({p.kode})</option>
+                ))}
+              </select>
             </div>
+          </div>
+        </div>
 
+        {/* CARD 2: TANGGAL PENUGASAN */}
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="bg-slate-50 px-5 py-3 border-b border-slate-200">
+            <h2 className="text-base font-bold text-slate-800">2. Tanggal Penugasan</h2>
+            <p className="text-xs text-slate-500">Tentukan rentang tanggal pelaksanaan tugas terlebih dahulu.</p>
+          </div>
+          <div className="p-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1">Tanggal Mulai</label>
+                <label className="block text-sm font-bold text-slate-700 mb-1.5">Tanggal Mulai <span className="text-red-500">*</span></label>
                 <input
                   type="date"
                   required
                   value={formData.tanggalMulai}
-                  onChange={(e) => setFormData({ ...formData, tanggalMulai: e.target.value })}
-                  className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50 hover:bg-white transition-colors"
+                  onChange={(e) => {
+                    const newMulai = e.target.value;
+                    let newSelesai = formData.tanggalSelesai;
+                    if (newMulai) {
+                      if (!newSelesai || newSelesai < newMulai) {
+                        newSelesai = newMulai;
+                      }
+                    }
+                    setFormData({ ...formData, tanggalMulai: newMulai, tanggalSelesai: newSelesai });
+                  }}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50 hover:bg-white transition-colors"
                 />
               </div>
               <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1">Tanggal Selesai</label>
+                <label className="block text-sm font-bold text-slate-700 mb-1.5">Tanggal Selesai <span className="text-red-500">*</span></label>
                 <input
                   type="date"
                   required
+                  min={formData.tanggalMulai}
                   value={formData.tanggalSelesai}
                   onChange={(e) => setFormData({ ...formData, tanggalSelesai: e.target.value })}
-                  className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50 hover:bg-white transition-colors"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50 hover:bg-white transition-colors"
                 />
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* CARD 3: PEGAWAI DITUGASKAN */}
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="bg-slate-50 px-5 py-3 border-b border-slate-200">
+            <h2 className="text-base font-bold text-slate-800">3. Pegawai yang Ditugaskan</h2>
+            <p className="text-xs text-slate-500">Pilih satu atau beberapa pegawai yang akan melaksanakan tugas.</p>
+          </div>
+          <div className="p-5 space-y-4">
+            <div>
+              <div className="flex flex-col sm:flex-row gap-2 mb-3">
+                <div className="flex-1 flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg focus-within:ring-2 focus-within:ring-blue-500 transition-shadow">
+                  <Search className="w-4 h-4 text-slate-400" />
+                  <input 
+                    type="text" 
+                    placeholder="Cari nama pegawai..." 
+                    value={pegawaiSearch}
+                    onChange={(e) => setPegawaiSearch(e.target.value)}
+                    className="bg-transparent border-none outline-none text-sm w-full text-slate-700"
+                  />
+                </div>
+                <select 
+                  value={unitFilter}
+                  onChange={(e) => setUnitFilter(e.target.value)}
+                  className="sm:w-40 px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-700 outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                >
+                  <option value="">Semua Unit</option>
+                  {pokjas.map(p => (
+                    <option key={p.id} value={p.kode}>{p.nama} ({p.kode})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="w-full p-2 border border-slate-300 rounded-lg bg-slate-50 h-40 overflow-y-auto space-y-1 custom-scrollbar">
+                {pegawaiList
+                  .filter(p => p.nama.toLowerCase().includes(pegawaiSearch.toLowerCase()) && (unitFilter === '' || p.unitKerja === unitFilter))
+                  .map((p) => {
+                  const conflicts = getConflictingTasks(p.id);
+                  const hasConflict = conflicts.length > 0;
+                  const isChecked = formData.pegawaiIds.includes(p.id);
+                  return (
+                  <label
+                    key={p.id}
+                    className={`flex items-start gap-2 cursor-pointer p-1.5 rounded-md border transition-colors ${
+                      hasConflict && isChecked
+                        ? 'bg-red-50 border-red-200 hover:bg-red-100'
+                        : hasConflict
+                          ? 'bg-amber-50/50 border-amber-200/60 hover:bg-amber-50'
+                          : 'border-transparent hover:bg-white hover:border-slate-300'
+                    }`}
+                  >
+                    <input 
+                      type="checkbox"
+                      className={`w-4 h-4 rounded cursor-pointer mt-0.5 ${
+                        hasConflict && isChecked
+                          ? 'border-red-400 text-red-600 focus:ring-red-500'
+                          : 'border-slate-400 text-blue-600 focus:ring-blue-500'
+                      }`}
+                      checked={isChecked}
+                      onChange={(e) => {
+                        if (e.target.checked && hasConflict) {
+                          setConflictAlert({ pegawai: p, conflicts });
+                          return;
+                        }
+                        if (e.target.checked) {
+                          setFormData({ ...formData, pegawaiIds: [...formData.pegawaiIds, p.id] });
+                        } else {
+                          setFormData({ ...formData, pegawaiIds: formData.pegawaiIds.filter(id => id !== p.id) });
+                        }
+                      }}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <span className={`text-sm font-medium ${hasConflict ? 'text-red-600' : 'text-slate-700'}`}>
+                        {p.nama} <span className={`text-xs font-normal ${hasConflict ? 'text-red-400' : 'text-slate-500'}`}>({p.unitKerja})</span>
+                      </span>
+                      {hasConflict && (
+                        <div className="flex items-start gap-1 mt-0.5">
+                          <AlertTriangle className="w-3 h-3 text-red-500 flex-shrink-0 mt-0.5" />
+                          <span className="text-[11px] text-red-500 leading-tight">
+                            Sedang Ditugaskan — Bentrok {conflicts.length} tugas
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </label>
+                  );
+                })}
+                {pegawaiList.filter(p => p.nama.toLowerCase().includes(pegawaiSearch.toLowerCase()) && (unitFilter === '' || p.unitKerja === unitFilter)).length === 0 && (
+                  <div className="text-center text-xs text-slate-500 py-4">Pegawai tidak ditemukan</div>
+                )}
+              </div>
+              <p className="text-xs text-blue-600 mt-2 font-medium">💡 Centang kotak di samping nama pegawai untuk memilih.</p>
+            </div>
+
+
+            {formData.pegawaiIds.length > 0 && (
+              <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 mt-4">
+                <h3 className="text-sm font-bold text-slate-800 mb-2">Lengkapi Data Pangkat & Golongan <span className="text-red-500">*</span></h3>
+                <p className="text-xs text-slate-600 mb-3">Data ini wajib diisi karena akan dicetak langsung pada file Word Surat Tugas.</p>
+                <div className="space-y-3 max-h-48 overflow-y-auto custom-scrollbar pr-2">
+                  {formData.pegawaiIds.map(id => {
+                    const peg = pegawaiList.find(p => p.id === id);
+                    if (!peg) return null;
+                    return (
+                      <div key={id} className="flex flex-col sm:flex-row sm:items-center gap-2">
+                        <span className="text-sm font-medium text-slate-700 sm:w-1/3 truncate">{peg.nama}</span>
+                        <input
+                          type="text"
+                          required
+                          placeholder="Cth: Pembina Utama Muda, IV/c"
+                          value={formData.pangkatGolongan[id] || ''}
+                          onChange={(e) => setFormData(prev => ({
+                            ...prev,
+                            pangkatGolongan: { ...prev.pangkatGolongan, [id]: e.target.value }
+                          }))}
+                          className="flex-1 w-full px-3 py-1.5 border border-slate-300 rounded-md text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* CARD 4: LOKASI PELAKSANAAN */}
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="bg-slate-50 px-5 py-3 border-b border-slate-200">
+            <h2 className="text-base font-bold text-slate-800">4. Lokasi Pelaksanaan</h2>
+            <p className="text-xs text-slate-500">Tentukan di mana tugas ini dilaksanakan.</p>
+          </div>
+          <div className="p-5 space-y-4">
 
             <div>
-              <label className="block text-sm font-bold text-slate-700 mb-1">Domisili Lokasi Penugasan</label>
+              <label className="block text-sm font-bold text-slate-700 mb-1.5">Domisili (Provinsi & Kota) <span className="text-red-500">*</span></label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <select required value={formData.provinsiId} onChange={(e) => setFormData({ ...formData, provinsiId: e.target.value, kotaId: '' })} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50 hover:bg-white transition-colors">
-                  <option value="">Pilih Provinsi</option>
+                <select required value={formData.provinsiId} onChange={(e) => setFormData({ ...formData, provinsiId: e.target.value, kotaId: '' })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50 hover:bg-white transition-colors">
+                  <option value="">-- Pilih Provinsi --</option>
                   {provinces.map((wilayah) => <option key={wilayah.id} value={wilayah.id}>{wilayah.name}</option>)}
                 </select>
-                <select required value={formData.kotaId} disabled={!formData.provinsiId || isWilayahLoading} onChange={(e) => setFormData({ ...formData, kotaId: e.target.value })} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:bg-slate-100 bg-slate-50 hover:bg-white transition-colors">
-                  <option value="">Pilih Kota/Kabupaten</option>
+                <select required value={formData.kotaId} disabled={!formData.provinsiId || isWilayahLoading} onChange={(e) => setFormData({ ...formData, kotaId: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:bg-slate-200 bg-slate-50 hover:bg-white transition-colors">
+                  <option value="">-- Pilih Kota/Kabupaten --</option>
                   {cities.map((wilayah) => <option key={wilayah.id} value={wilayah.id}>{wilayah.name}</option>)}
                 </select>
               </div>
+              <p className="text-xs text-slate-500 mt-1.5">💡 Pilih Provinsi terlebih dahulu untuk memunculkan daftar Kota.</p>
             </div>
 
             <div>
-              <label className="block text-sm font-bold text-slate-700 mb-1">Lokasi Penugasan Spesifik</label>
-              <input type="text" required placeholder="Contoh: Kantor, lembaga, atau sekolah tujuan" value={formData.lokasiSpesifik} onChange={(e) => setFormData({ ...formData, lokasiSpesifik: e.target.value })} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50 hover:bg-white transition-colors" />
+              <label className="block text-sm font-bold text-slate-700 mb-1.5">Tempat Spesifik <span className="text-red-500">*</span></label>
+              <input type="text" required placeholder="Contoh: SMKN 1 Bandung, Jl. Wastukencana No.3" value={formData.lokasiSpesifik} onChange={(e) => setFormData({ ...formData, lokasiSpesifik: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50 hover:bg-white transition-colors" />
             </div>
 
             <div>
-              <label className="block text-sm font-bold text-slate-700 mb-1">Deskripsi Tugas</label>
+              <label className="block text-sm font-bold text-slate-700 mb-1.5">Preview Titik Lokasi Peta</label>
+              <div className="w-full h-[250px] bg-slate-100 rounded-lg border border-slate-300 overflow-hidden relative z-0">
+                <div ref={mapContainerRef} className="w-full h-full" />
+              </div>
+              <p className="text-xs text-slate-500 mt-1.5">💡 Titik lokasi di peta ini akan otomatis mengikuti Kota/Kabupaten yang Anda pilih.</p>
+            </div>
+          </div>
+        </div>
+
+        {/* CARD 5: DESKRIPSI & LAMPIRAN */}
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="bg-slate-50 px-5 py-3 border-b border-slate-200">
+            <h2 className="text-base font-bold text-slate-800">5. Deskripsi & Lampiran (Opsional)</h2>
+            <p className="text-xs text-slate-500">Informasi tambahan dan dokumen pendukung.</p>
+          </div>
+          <div className="p-5 space-y-4">
+            <div>
+              <label className="block text-sm font-bold text-slate-700 mb-1.5">Deskripsi Tugas</label>
               <textarea
-                rows={4}
-                placeholder="Penjelasan rinci mengenai agenda dan uraian tugas..."
+                rows={3}
+                placeholder="Penjelasan rinci mengenai agenda, output yang diharapkan, dll..."
                 value={formData.deskripsi}
                 onChange={(e) => setFormData({ ...formData, deskripsi: e.target.value })}
-                className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50 hover:bg-white transition-colors"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50 hover:bg-white transition-colors"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-bold text-slate-700 mb-1">Upload Surat Tugas / Dokumen Pendukung</label>
-              <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-300 border-dashed rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors">
+              <label className="block text-sm font-bold text-slate-700 mb-1.5">Upload File Pendukung (Opsional)</label>
+              <div className="mt-1 flex justify-center px-4 pt-5 pb-5 border-2 border-slate-300 border-dashed rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors">
                 <div className="space-y-2 text-center">
-                  <FileText className="mx-auto h-12 w-12 text-slate-400" />
+                  <FileText className="mx-auto h-10 w-10 text-slate-400" />
                   <div className="flex text-sm text-slate-600 justify-center">
-                    <label className="relative cursor-pointer bg-transparent rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500">
-                      <span>Pilih file</span>
+                    <label className="relative cursor-pointer bg-transparent rounded-md font-bold text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500 px-1">
+                      <span>Klik di sini untuk memilih file</span>
                       <input 
                         type="file" 
                         className="sr-only" 
@@ -262,37 +538,218 @@ export const BuatTugasPage = () => {
                         onChange={(e) => setFormData({ ...formData, file: e.target.files?.[0] || null })}
                       />
                     </label>
-                    <p className="pl-1">atau tarik dan lepas file di sini</p>
                   </div>
-                  <p className="text-xs text-slate-500">PDF, Word, Excel hingga 10MB</p>
+                  <p className="text-xs text-slate-500">Mendukung format PDF, Word, Excel (Maks. 10MB)</p>
                   {formData.file && (
-                    <p className="text-sm font-bold text-emerald-600 mt-2">
-                      File terpilih: {formData.file.name}
-                    </p>
+                    <div className="mt-3 p-2 bg-emerald-50 border border-emerald-200 rounded-md inline-block">
+                      <p className="text-sm font-bold text-emerald-700">
+                        File Terpilih: {formData.file.name}
+                      </p>
+                    </div>
                   )}
                 </div>
               </div>
             </div>
           </div>
+        </div>
 
-          <div className="pt-4 flex items-center justify-end gap-3 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={() => navigate('/admin/tugas')}
-              className="px-5 py-2.5 border border-slate-200 hover:bg-slate-50 text-slate-600 text-sm font-bold rounded-xl transition-colors cursor-pointer"
-            >
-              Batal
-            </button>
-            <button
-              type="submit"
-              className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl shadow-md shadow-blue-500/20 transition-all cursor-pointer"
-            >
-              <Send className="w-4 h-4" />
-              <span>Simpan Tugas</span>
-            </button>
+        {/* FLOATING ACTION BAR */}
+        <div className="fixed bottom-0 left-0 right-0 md:left-64 z-50 bg-white border-t border-slate-200 p-3 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] flex flex-wrap items-center justify-end gap-2.5 px-5">
+          <button
+            type="button"
+            onClick={() => navigate('/admin/tugas')}
+            className="px-4 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 text-sm font-bold rounded-lg transition-colors cursor-pointer"
+          >
+            Batal
+          </button>
+          
+          <button
+            type="button"
+            onClick={() => {
+              const assignedPegawai = pegawaiList.filter((p) => formData.pegawaiIds.includes(p.id));
+              if (assignedPegawai.length === 0) {
+                alert('Pilih minimal 1 pegawai untuk generate surat tugas.');
+                return;
+              }
+              
+              // Validation for pangkatGolongan
+              let missingPangkat = false;
+              for (const pid of formData.pegawaiIds) {
+                if (!formData.pangkatGolongan[pid] || formData.pangkatGolongan[pid].trim() === '') {
+                  missingPangkat = true;
+                  break;
+                }
+              }
+              if (missingPangkat) {
+                 alert('Mohon isi Pangkat & Golongan untuk setiap pegawai yang dipilih sebelum mencetak Surat Tugas.');
+                 return;
+              }
+
+              const provinsi = provinces.find((item) => item.id === formData.provinsiId)?.name || '';
+              const kota = cities.find((item) => item.id === formData.kotaId)?.name || '';
+              const lokasiGabungan = [kota, provinsi].filter(Boolean).join(', ') || formData.tempat;
+              const newNomor = `DRAFT-ST/${formData.unitKerja.toUpperCase().replace(/\s+/g, '')}/2026/00X`;
+
+              generateSuratTugas({
+                nomorSurat: newNomor,
+                uraianKegiatan: formData.uraianKegiatan || '-',
+                pegawaiList: assignedPegawai.map((p) => ({
+                  nama: p.nama,
+                  nip: p.nip,
+                  pangkat: formData.pangkatGolongan[p.id] || '-',
+                  jabatan: p.jabatan,
+                })),
+                tanggalMulai: formData.tanggalMulai,
+                tanggalSelesai: formData.tanggalSelesai,
+                lokasi: lokasiGabungan,
+                lokasiSpesifik: formData.lokasiSpesifik,
+                deskripsi: formData.deskripsi,
+              });
+            }}
+            className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-lg shadow-sm transition-all cursor-pointer"
+          >
+            <Download className="w-4 h-4" />
+            <span>Cetak Word (.docx)</span>
+          </button>
+          
+          <button
+            type="submit"
+            className="flex items-center gap-1.5 px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-lg shadow-sm transition-all cursor-pointer"
+          >
+            <Send className="w-4 h-4" />
+            <span>Simpan Tugas</span>
+          </button>
+        </div>
+      </form>
+
+      {/* CONFLICT ALERT MODAL */}
+      {conflictAlert && (
+        <div className="fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
+            <div className="bg-red-50 border-b border-red-100 p-4 flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-red-100 rounded-full">
+                  <AlertTriangle className="w-5 h-5 text-red-600" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-red-800">Pegawai Tidak Tersedia</h3>
+                  <p className="text-sm text-red-600">Terjadi bentrokan jadwal penugasan</p>
+                </div>
+              </div>
+              <button 
+                type="button"
+                onClick={() => setConflictAlert(null)}
+                className="text-red-400 hover:text-red-600 transition-colors p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-5 space-y-4">
+              <p className="text-sm text-slate-700">
+                Pegawai <strong>{conflictAlert.pegawai.nama}</strong> sudah ditugaskan pada rentang tanggal tersebut.
+              </p>
+              
+              <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar pr-2">
+                <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Detail Bentrok:</div>
+                {conflictAlert.conflicts.map(c => (
+                  <div key={c.id} className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-1">
+                    <div className="text-[11px] font-bold text-red-600">{c.nomorSurat}</div>
+                    <div className="text-sm text-slate-700 font-medium leading-snug">{c.uraianKegiatan}</div>
+                    <div className="text-xs text-slate-500">{c.tanggalMulai} s/d {c.tanggalSelesai}</div>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="pt-2 flex gap-2">
+                <button 
+                  type="button"
+                  onClick={() => setConflictAlert(null)}
+                  className="flex-1 py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg transition-colors text-sm cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => {
+                    setFormData({ ...formData, pegawaiIds: [...formData.pegawaiIds, conflictAlert.pegawai.id] });
+                    setConflictAlert(null);
+                  }}
+                  className="flex-1 py-2.5 px-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition-colors text-sm cursor-pointer"
+                >
+                  Ya, Tetap Pilih
+                </button>
+              </div>
+            </div>
           </div>
-        </form>
-      </div>
+        </div>
+      )}
+
+      {/* FINAL SUBMIT ALERT MODAL */}
+      {finalSubmitAlert && (
+        <div className="fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
+            <div className="bg-red-50 border-b border-red-100 p-4 flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-red-100 rounded-full">
+                  <AlertTriangle className="w-5 h-5 text-red-600" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-red-800">Konfirmasi Simpan Tugas</h3>
+                  <p className="text-sm text-red-600">Ada pegawai yang bentrok jadwal</p>
+                </div>
+              </div>
+              <button 
+                type="button"
+                onClick={() => setFinalSubmitAlert(null)}
+                className="text-red-400 hover:text-red-600 transition-colors p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-5 space-y-4">
+              <p className="text-sm text-slate-700">
+                Anda memilih <strong>{finalSubmitAlert.pegawai.length} pegawai</strong> yang sudah memiliki jadwal penugasan pada rentang tanggal tersebut:
+              </p>
+              
+              <ul className="space-y-1.5 max-h-48 overflow-y-auto custom-scrollbar bg-slate-50 border border-slate-200 rounded-lg p-3">
+                {finalSubmitAlert.pegawai.map(p => (
+                  <li key={p.id} className="text-sm flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                    <span className="font-bold text-slate-800">{p.nama}</span>
+                    <span className="text-xs text-slate-500">({p.unitKerja})</span>
+                  </li>
+                ))}
+              </ul>
+              
+              <p className="text-sm text-slate-700 font-medium">
+                Apakah Anda yakin ingin tetap menyimpan dan menugaskan mereka?
+              </p>
+
+              <div className="pt-2 flex gap-2">
+                <button 
+                  type="button"
+                  onClick={() => setFinalSubmitAlert(null)}
+                  className="flex-1 py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg transition-colors text-sm cursor-pointer"
+                >
+                  Batal Simpan
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => {
+                    setFinalSubmitAlert(null);
+                    handleActualSubmit();
+                  }}
+                  className="flex-1 py-2.5 px-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition-colors text-sm cursor-pointer"
+                >
+                  Ya, Tetap Simpan
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

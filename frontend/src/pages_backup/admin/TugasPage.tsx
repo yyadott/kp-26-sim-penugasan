@@ -58,7 +58,7 @@ const PegawaiPenugasanTab = () => {
               <td className="px-6 py-4"><span className="text-blue-700 bg-blue-50 px-2 py-1 rounded-md text-xs font-medium">{p.unitKerja}</span></td>
               <td className="px-6 py-4">
                 <ul className="list-disc list-inside text-slate-600 space-y-1">
-                  {p.activeTasks.map(t => <li key={t.id} className="truncate max-w-xs" title={t.perihal}>{t.nomorSurat}</li>)}
+                  {p.activeTasks.map(t => <li key={t.id} className="truncate max-w-xs" title={t.uraianKegiatan}>{t.nomorSurat}</li>)}
                 </ul>
               </td>
               <td className="px-6 py-4 font-semibold text-slate-700">{p.activeTasks.length} Tugas</td>
@@ -119,7 +119,7 @@ const GenericTaskTable = ({ tasks, emptyMsg }: { tasks: typeof dummyAjuanSuratTu
       <thead className="bg-slate-50 text-slate-600 border-b border-slate-200">
         <tr>
           <th className="px-6 py-4 font-semibold">Nomor Surat</th>
-          <th className="px-6 py-4 font-semibold">Perihal</th>
+          <th className="px-6 py-4 font-semibold">Uraian Kegiatan</th>
           <th className="px-6 py-4 font-semibold">Tanggal Mulai</th>
           <th className="px-6 py-4 font-semibold">Tanggal Berakhir</th>
           <th className="px-6 py-4 font-semibold">Pegawai Ditugaskan</th>
@@ -130,7 +130,7 @@ const GenericTaskTable = ({ tasks, emptyMsg }: { tasks: typeof dummyAjuanSuratTu
         {tasks.map(t => (
           <tr key={t.id} className="hover:bg-slate-50 transition">
             <td className="px-6 py-4 font-medium text-slate-800">{t.nomorSurat}</td>
-            <td className="px-6 py-4 text-slate-600 max-w-xs truncate" title={t.perihal}>{t.perihal}</td>
+            <td className="px-6 py-4 text-slate-600 max-w-xs truncate" title={t.uraianKegiatan}>{t.uraianKegiatan}</td>
             <td className="px-6 py-4 text-slate-600">{formatDate(t.tanggalMulai)}</td>
             <td className="px-6 py-4 text-slate-600">{formatDate(t.tanggalSelesai)}</td>
             <td className="px-6 py-4"><PegawaiTooltip pegawaiList={t.pegawaiDitugaskan} /></td>

@@ -17,10 +17,12 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 interface CalendarWidgetProps {
   selectedDate: Date | null;
   onSelectDate: (date: Date) => void;
+  initialMonth?: Date;
+  hasTask?: (date: Date) => boolean;
 }
 
-export const CalendarWidget = ({ selectedDate, onSelectDate }: CalendarWidgetProps) => {
-  const [currentMonth, setCurrentMonth] = useState(new Date());
+export const CalendarWidget = ({ selectedDate, onSelectDate, initialMonth, hasTask }: CalendarWidgetProps) => {
+  const [currentMonth, setCurrentMonth] = useState(initialMonth || new Date());
 
   const renderHeader = () => {
     return (
@@ -78,14 +80,16 @@ export const CalendarWidget = ({ selectedDate, onSelectDate }: CalendarWidgetPro
         const isCurrentMonth = isSameMonth(day, monthStart);
         const isToday = isSameDay(day, new Date());
 
+        const hasTaskOnDay = hasTask ? hasTask(cloneDay) : false;
+
         days.push(
           <div
             key={day.toISOString()}
             onClick={() => onSelectDate(cloneDay)}
-            className={`flex justify-center items-center p-1 cursor-pointer`}
+            className={`flex flex-col justify-center items-center p-1 cursor-pointer h-[2.75rem]`}
           >
             <span
-              className={`w-7 h-7 flex items-center justify-center rounded-full text-xs font-medium transition-all
+              className={`w-7 h-7 flex items-center justify-center rounded-full text-xs font-medium transition-all shrink-0
                 ${!isCurrentMonth ? 'text-slate-300' : ''}
                 ${isSelected ? 'bg-blue-600 text-white shadow-md shadow-blue-200' : ''}
                 ${!isSelected && isToday ? 'bg-blue-50 text-blue-700 font-bold' : ''}
@@ -94,6 +98,11 @@ export const CalendarWidget = ({ selectedDate, onSelectDate }: CalendarWidgetPro
             >
               {formattedDate}
             </span>
+            {hasTaskOnDay ? (
+              <div className={`w-1 h-1 rounded-full mt-0.5 shrink-0 ${isSelected ? 'bg-blue-600' : 'bg-blue-400'}`}></div>
+            ) : (
+              <div className="w-1 h-1 mt-0.5 shrink-0"></div>
+            )}
           </div>
         );
         day = addDays(day, 1);

@@ -82,12 +82,12 @@ export const TugasPage = () => {
   // Modal Form Ajuan Baru
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [formData, setFormData] = useState({
-    perihal: '',
-    unitKerja: 'RBI' as UnitKerjaType,
+    uraianKegiatan: '',
+    unitKerja: 'Kepeg' as UnitKerjaType,
     pegawaiIds: [dummyPegawaiList[0].id],
     tanggalMulai: '2026-08-01',
     tanggalSelesai: '2026-08-03',
-    lokasiPenugasan: 'Kecamatan Bandung Tengah',
+    tempat: 'Kecamatan Bandung Tengah',
     lokasiSpesifik: '',
     provinsiId: '',
     kotaId: '',
@@ -142,12 +142,12 @@ export const TugasPage = () => {
     const matchesStatus = selectedStatuses.length === 0 || selectedStatuses.includes(item.status);
     const matchesApplicant = selectedApplicants.length === 0 || selectedApplicants.includes(item.pengaju.nama);
     const matchesAssignee = selectedAssignees.length === 0 || item.pegawaiDitugaskan.some((pegawai) => selectedAssignees.includes(pegawai.nama));
-    const matchesLocation = selectedLocations.length === 0 || selectedLocations.includes(item.lokasiPenugasan);
+    const matchesLocation = selectedLocations.length === 0 || selectedLocations.includes(item.tempat);
     const matchesSpecificLocation = selectedSpecificLocations.length === 0 || selectedSpecificLocations.includes(item.lokasiSpesifik || '');
     return matchesUnit && matchesStatus && matchesApplicant && matchesAssignee && matchesLocation && matchesSpecificLocation;
   });
 
-  const unitOptions: UnitKerjaType[] = ['RBI', 'Fastingkom', 'Kepeg', 'PM'];
+  const unitOptions: UnitKerjaType[] = ['Kepeg', 'Fastingkom', 'PM'];
   const statusOptions = [
     { value: 'SURAT_TERBIT', label: 'Diapprove' },
     { value: 'VERIFIKASI_SUBBAGIAN', label: 'Diproses' },
@@ -157,7 +157,7 @@ export const TugasPage = () => {
   ];
   const applicantOptions = Array.from(new Map(ajuanList.map((item) => [item.pengaju.nama, item.pengaju.nama]))).map(([value, label]) => ({ value, label }));
   const assigneeOptions = Array.from(new Map(ajuanList.flatMap((item) => item.pegawaiDitugaskan).map((pegawai) => [pegawai.nama, pegawai.nama]))).map(([value, label]) => ({ value, label }));
-  const locationOptions = Array.from(new Set(ajuanList.map((item) => item.lokasiPenugasan))).map((value) => ({ value, label: value }));
+  const locationOptions = Array.from(new Set(ajuanList.map((item) => item.tempat))).map((value) => ({ value, label: value }));
   const specificLocationOptions = Array.from(new Set(ajuanList.map((item) => item.lokasiSpesifik).filter(Boolean) as string[])).map((value) => ({ value, label: value }));
 
   const toggleUnitFilter = (unit: UnitKerjaType) => {
@@ -181,7 +181,8 @@ export const TugasPage = () => {
     setOpenFilter(null);
   };
 
-  const formatLokasiKhusus = (lokasi: string) => {
+  const formatLokasiKhusus = (lokasi?: string) => {
+    if (!lokasi) return '';
     const cleaned = lokasi.trim();
     if (!cleaned) return '';
     let result = cleaned.replace(/,?\s*jawa barat$/i, '').trim();
@@ -224,13 +225,13 @@ export const TugasPage = () => {
     const newAjuan: AjuanSuratTugas = {
       id: newId,
       nomorSurat: newNomor,
-      perihal: formData.perihal,
+      uraianKegiatan: formData.uraianKegiatan,
       pengaju: dummyPegawaiList[0], // Logged in user
       pegawaiDitugaskan: assignedPegawai,
       unitKerja: formData.unitKerja,
       tanggalMulai: formData.tanggalMulai,
       tanggalSelesai: formData.tanggalSelesai,
-      lokasiPenugasan: [kota, provinsi].filter(Boolean).join(', ') || formData.lokasiPenugasan,
+      tempat: [kota, provinsi].filter(Boolean).join(', ') || formData.tempat,
       lokasiSpesifik: formData.lokasiSpesifik,
       koordinat: [formData.koordinatLat, formData.koordinatLng],
       deskripsi: formData.deskripsi,
@@ -265,10 +266,10 @@ export const TugasPage = () => {
           to_email: pegawai.email || 'user@example.com',
           to_name: pegawai.nama,
           nomor_surat: newAjuan.nomorSurat,
-          perihal: newAjuan.perihal,
+          uraianKegiatan: newAjuan.uraianKegiatan,
           tanggal_mulai: newAjuan.tanggalMulai,
           tanggal_selesai: newAjuan.tanggalSelesai,
-          lokasi: newAjuan.lokasiPenugasan,
+          lokasi: newAjuan.tempat,
           pesan_tambahan: newAjuan.deskripsi
         });
       }
@@ -278,12 +279,12 @@ export const TugasPage = () => {
 
     setIsFormModalOpen(false);
     setFormData({
-      perihal: '',
-      unitKerja: 'RBI',
+      uraianKegiatan: '',
+      unitKerja: 'Kepeg',
       pegawaiIds: [dummyPegawaiList[0].id],
       tanggalMulai: '2026-08-01',
       tanggalSelesai: '2026-08-03',
-      lokasiPenugasan: 'Kecamatan Bandung Tengah',
+      tempat: 'Kecamatan Bandung Tengah',
       lokasiSpesifik: '',
       provinsiId: '',
       kotaId: '',
@@ -479,7 +480,7 @@ export const TugasPage = () => {
             <table className="w-full text-left text-sm text-slate-600">
               <thead className="bg-slate-50 text-slate-700 text-xs font-bold uppercase tracking-wider border-b border-slate-200">
                 <tr>
-                  <th className="px-6 py-4">Nomor & Perihal Surat</th>
+                  <th className="px-6 py-4">Nomor & Uraian Kegiatan Surat</th>
                   <th className="px-6 py-4">Unit Kerja & Pengaju</th>
                   <th className="px-6 py-4">Pegawai Ditugaskan</th>
                   <th className="px-6 py-4">Tanggal & Domisili</th>
@@ -498,7 +499,7 @@ export const TugasPage = () => {
                         <span className="font-mono text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 block w-fit mb-1">
                           {item.nomorSurat}
                         </span>
-                        <p className="font-semibold text-slate-800 whitespace-nowrap">{item.perihal}</p>
+                        <p className="font-semibold text-slate-800 whitespace-nowrap">{item.uraianKegiatan}</p>
                       </td>
                       <td className="px-6 py-4">
                         <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold ${unitColor.bg} ${unitColor.text} mb-1`}>
@@ -530,7 +531,7 @@ export const TugasPage = () => {
                         </p>
                         <div className="flex items-center gap-1 text-slate-500 text-xs mt-0.5">
                           <MapPin className="w-3.5 h-3.5 text-rose-500" />
-                          <span>{formatLokasiKhusus(item.lokasiPenugasan)}</span>
+                          <span>{formatLokasiKhusus(item.tempat)}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4 min-w-[190px] align-top">
@@ -632,8 +633,8 @@ export const TugasPage = () => {
                     <span className="text-[11px] font-mono font-bold text-blue-700">{item.nomorSurat}</span>
                     {getStatusBadge(item.status)}
                   </div>
-                  <h4 className="font-semibold text-slate-800 text-xs line-clamp-1">{item.perihal}</h4>
-                  <p className="text-[11px] text-slate-500 mt-1">{item.unitKerja} • {item.lokasiPenugasan}</p>
+                  <h4 className="font-semibold text-slate-800 text-xs line-clamp-1">{item.uraianKegiatan}</h4>
+                  <p className="text-[11px] text-slate-500 mt-1">{item.unitKerja} • {item.tempat}</p>
                 </div>
               ))}
             </div>
@@ -648,7 +649,7 @@ export const TugasPage = () => {
                     <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded border border-blue-200">
                       {selectedAjuan.nomorSurat}
                     </span>
-                    <h3 className="text-lg font-bold text-slate-800 mt-2">{selectedAjuan.perihal}</h3>
+                    <h3 className="text-lg font-bold text-slate-800 mt-2">{selectedAjuan.uraianKegiatan}</h3>
                     <p className="text-xs text-slate-500 mt-1">
                       Pengaju: <span className="font-semibold text-slate-700">{selectedAjuan.pengaju.nama}</span> ({selectedAjuan.unitKerja})
                     </p>
@@ -788,7 +789,7 @@ export const TugasPage = () => {
                 <span className="font-mono text-xs font-bold text-blue-700">{selectedAjuan.nomorSurat}</span>
                 {getStatusBadge(selectedAjuan.status)}
               </div>
-              <h4 className="font-bold text-slate-900 text-sm">{selectedAjuan.perihal}</h4>
+              <h4 className="font-bold text-slate-900 text-sm">{selectedAjuan.uraianKegiatan}</h4>
               <p className="text-xs text-slate-600">{selectedAjuan.deskripsi}</p>
             </div>
 
@@ -851,13 +852,13 @@ export const TugasPage = () => {
 
             <form onSubmit={handleCreateDraft} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Perihal Penugasan</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Uraian Kegiatan Penugasan</label>
                 <input
                   type="text"
                   required
                   placeholder="Contoh: Pendampingan Monitoring Posko Kesehatan..."
-                  value={formData.perihal}
-                  onChange={(e) => setFormData({ ...formData, perihal: e.target.value })}
+                  value={formData.uraianKegiatan}
+                  onChange={(e) => setFormData({ ...formData, uraianKegiatan: e.target.value })}
                   className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 />
               </div>
@@ -870,7 +871,7 @@ export const TugasPage = () => {
                     onChange={(e) => setFormData({ ...formData, unitKerja: e.target.value as UnitKerjaType })}
                     className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                   >
-                    <option value="RBI">RBI</option>
+                    
                     <option value="Fastingkom">Fastingkom</option>
                     <option value="Kepeg">Kepeg</option>
                     <option value="PM">PM</option>
@@ -922,7 +923,7 @@ export const TugasPage = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Domisili Lokasi Penugasan</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Domisili Tempat</label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <select required value={formData.provinsiId} onChange={(e) => setFormData({ ...formData, provinsiId: e.target.value, kotaId: '' })} className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
                     <option value="">Pilih Provinsi</option>
@@ -936,7 +937,7 @@ export const TugasPage = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Lokasi Penugasan Spesifik</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Tempat Spesifik</label>
                 <input type="text" required placeholder="Contoh: Kantor, lembaga, atau sekolah tujuan" value={formData.lokasiSpesifik} onChange={(e) => setFormData({ ...formData, lokasiSpesifik: e.target.value })} className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
               </div>
 

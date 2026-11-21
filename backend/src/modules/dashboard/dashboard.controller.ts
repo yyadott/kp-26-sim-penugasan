@@ -6,7 +6,7 @@ export class DashboardController {
   getDashboard() {
     return {
       welcome: {
-        unitKerja: 'RBI',
+        unitKerja: 'Kepeg',
         role: 'ADMIN',
         nama: 'Taryadi',
       },
@@ -21,7 +21,7 @@ export class DashboardController {
           id: 'st-001',
           nomorSurat: 'ST/084/RBI/VII/2026',
           perihal: 'Pendampingan Integrasi Infrastruktur Network & IoT Monitoring Wilayah Utara',
-          unitKerja: 'RBI',
+          unitKerja: 'Kepeg',
           lokasiPenugasan: 'Kecamatan Lembang, Bandung Barat',
           status: 'SURAT_TERBIT',
         },
@@ -31,7 +31,7 @@ export class DashboardController {
           id: 'att-001',
           nama: 'Taryadi',
           nip: '2350081041',
-          unitKerja: 'RBI',
+          unitKerja: 'Kepeg',
           jamMasuk: '07:28',
           lokasiPresensiMasuk: 'Pos Pantau Lembang',
         },

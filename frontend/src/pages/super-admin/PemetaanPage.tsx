@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { PenugasanMap } from '@/components/map/PenugasanMap';
 import { PenugasanCalendar } from '@/components/calendar/PenugasanCalendar';
-import { dummyAjuanSuratTugas, UNIT_COLORS } from '@/data/dummyData';
+import { getUnitColor } from '@/data/dummyData';
 import { MapPin, Navigation, User, Map as MapIcon, Calendar } from 'lucide-react';
 import { usePemetaanFilter } from '@/hooks/usePemetaanFilter';
 import { PemetaanFilterBar } from '@/components/penugasan/PemetaanFilterBar';
@@ -17,17 +17,18 @@ export const PemetaanPage = () => {
     allPegawaiInPenugasan,
     mapLocations,
     selectedPegawai,
+    tugasList,
   } = usePemetaanFilter();
 
-
-  const totalOrangAktif = dummyAjuanSuratTugas
-    .filter((item) => item.status === 'SURAT_TERBIT')
-    .reduce((total, item) => total + item.pegawaiDitugaskan.length, 0);
-  const totalOrangMendatang = dummyAjuanSuratTugas
-    .filter((item) => item.status !== 'SURAT_TERBIT' && item.status !== 'DITOLAK')
-    .reduce((total, item) => total + item.pegawaiDitugaskan.length, 0);
-  const totalOrangDitugaskan = dummyAjuanSuratTugas
-    .reduce((total, item) => total + item.pegawaiDitugaskan.length, 0);
+  const totalOrangAktif = (tugasList || [])
+    .filter((item: any) => item.status === 'SURAT_TERBIT')
+    .reduce((total: number, item: any) => total + (item.pegawaiDitugaskan?.length || 0), 0);
+  
+  const totalSuratDiterbitkan = (tugasList || [])
+    .filter((item: any) => item.status === 'SURAT_TERBIT').length;
+  
+  const totalOrangDitugaskan = (tugasList || [])
+    .reduce((total: number, item: any) => total + (item.pegawaiDitugaskan?.length || 0), 0);
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
@@ -36,7 +37,7 @@ export const PemetaanPage = () => {
         <div>
           <div className="flex items-center gap-2">
             <MapPin className="w-7 h-7 text-blue-600" />
-            <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Visualisasi Pemetaan Lokasi Penugasan Pegawai</h2>
+            <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Visualisasi Pemetaan Tempat Pegawai</h2>
           </div>
           <p className="text-slate-500 text-sm mt-1">
             Pemantauan lokasi penugasan tiap-tiap pegawai dari unit kerja yang berbeda-beda secara realtime berbasis peta interaktif.
@@ -50,8 +51,8 @@ export const PemetaanPage = () => {
             <span className="text-lg font-extrabold text-emerald-800">{totalOrangAktif} Orang</span>
           </div>
           <div className="bg-amber-50 border border-amber-200 px-4 py-2 rounded-xl text-center">
-            <span className="text-xs text-amber-700 font-medium block">Jadwal Mendatang</span>
-            <span className="text-lg font-extrabold text-amber-800">{totalOrangMendatang} Orang</span>
+            <span className="text-xs text-amber-700 font-medium block">Surat Diterbitkan</span>
+            <span className="text-lg font-extrabold text-amber-800">{totalSuratDiterbitkan} Surat</span>
           </div>
           <div className="bg-blue-50 border border-blue-200 px-4 py-2 rounded-xl text-center">
             <span className="text-xs text-blue-700 font-medium block">Total Ditugaskan</span>
@@ -88,12 +89,12 @@ export const PemetaanPage = () => {
               <span
                 className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-bold border"
                 style={{
-                  backgroundColor: `${UNIT_COLORS[selectedUnit]?.hex || '#6366f1'}10`,
-                  color: UNIT_COLORS[selectedUnit]?.hex || '#6366f1',
-                  borderColor: `${UNIT_COLORS[selectedUnit]?.hex || '#6366f1'}40`,
+                  backgroundColor: `${getUnitColor(selectedUnit).hex}10`,
+                  color: getUnitColor(selectedUnit).hex,
+                  borderColor: `${getUnitColor(selectedUnit).hex}40`,
                 }}
               >
-                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: UNIT_COLORS[selectedUnit]?.hex }} />
+                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: getUnitColor(selectedUnit).hex }} />
                 Unit {selectedUnit}
               </span>
             )}
@@ -163,7 +164,7 @@ export const PemetaanPage = () => {
                   </div>
                 ) : (
                   filteredLocations.map((loc) => {
-                    const color = UNIT_COLORS[loc.unitKerja] || { bg: 'bg-slate-100', text: 'text-slate-800', hex: '#3b82f6' };
+                    const color = getUnitColor(loc.unitKerja);
 
                     return (
                       <div
@@ -186,7 +187,7 @@ export const PemetaanPage = () => {
                         </div>
 
                         <div>
-                          <h4 className="font-bold text-slate-900 text-xs">{loc.perihal}</h4>
+                          <h4 className="font-bold text-slate-900 text-xs">{loc.uraianKegiatan}</h4>
                           <p className="text-[11px] text-slate-500 font-mono mt-0.5">{loc.nomorSurat}</p>
                         </div>
 

@@ -1,40 +1,42 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { formatDate } from '@/utils/formatter';
 import { useAuth } from '@/hooks/useAuth';
 import { CalendarWidget } from '@/components/ui/CalendarWidget';
 import { PenugasanMap } from '@/components/map/PenugasanMap';
 import { PenugasanCalendar } from '@/components/calendar/PenugasanCalendar';
 import {
-  dummyAjuanSuratTugas,
-  dummyPresensiPegawaiLain,
-  dummyPresensiPribadi,
-  UNIT_COLORS,
+  getUnitColor,
 } from '@/data/dummyData';
 import type { AjuanSuratTugas } from '@/types';
 import { Link } from 'react-router-dom';
+import { useSuratTugas } from '@/hooks/useSuratTugas';
 import { usePemetaanFilter } from '@/hooks/usePemetaanFilter';
+import { usePegawai } from '@/hooks/usePegawai';
 import { PemetaanFilterBar } from '@/components/penugasan/PemetaanFilterBar';
 import {
   FileText,
-  CalendarCheck,
-  MapPin,
-  Clock,
-  ChevronRight,
-  UserCheck,
-  Building,
-  X,
   FileCheck,
   CheckCircle2,
   Map as MapIcon,
   Calendar,
   BarChart3,
-  Umbrella,
   ArrowUpRight,
+  Building,
+  Clock,
+  MapPin,
+  ChevronRight,
+  X,
+  Users,
 } from 'lucide-react';
 
 export const DashboardPage = () => {
   const { user } = useAuth();
+  const { tugasList, refreshTugas } = useSuratTugas();
   const todayFormatted = formatDate(new Date().toISOString());
+
+  useEffect(() => {
+    refreshTugas();
+  }, []);
 
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedAjuan, setSelectedAjuan] = useState<AjuanSuratTugas | null>(null);
@@ -51,12 +53,51 @@ export const DashboardPage = () => {
     mapLocations,
   } = usePemetaanFilter();
 
+  const { pegawaiList } = usePegawai();
+
   const activeLocations = mapLocations.filter((l) => l.status === 'AKTIF');
-  const recentAjuan = dummyAjuanSuratTugas.slice(0, 8);
-  const recentPresensi = dummyPresensiPegawaiLain.slice(0, 8);
+
+  // Hitung total orang aktif seperti di halaman Pemetaan
+  const totalOrangAktif = (tugasList || [])
+    .filter((item: any) => item.status === 'SURAT_TERBIT')
+    .reduce((total: number, item: any) => total + (item.pegawaiDitugaskan?.length || 0), 0);
+
+  const recentAjuan = tugasList.slice(0, 8);
+
+  let displayDateStr = "Pilih Tanggal";
+  let tugasPadaTanggal: AjuanSuratTugas[] = [];
+
+  const checkHasTask = (date: Date) => {
+    const selDate = new Date(date);
+    selDate.setHours(0,0,0,0);
+    return tugasList.some(t => {
+      if (!t.tanggalMulai || !t.tanggalSelesai) return false;
+      const start = new Date(t.tanggalMulai);
+      start.setHours(0,0,0,0);
+      const end = new Date(t.tanggalSelesai);
+      end.setHours(23,59,59,999);
+      return selDate >= start && selDate <= end;
+    });
+  };
+
+  if (selectedDate) {
+    displayDateStr = formatDate(selectedDate.toISOString());
+    const selDate = new Date(selectedDate);
+    selDate.setHours(0,0,0,0);
+    
+    tugasPadaTanggal = tugasList.filter(t => {
+      if (!t.tanggalMulai || !t.tanggalSelesai) return false;
+      const start = new Date(t.tanggalMulai);
+      start.setHours(0,0,0,0);
+      const end = new Date(t.tanggalSelesai);
+      end.setHours(23,59,59,999);
+      return selDate >= start && selDate <= end;
+    });
+  }
 
 
-  const formatLokasiDisplay = (lokasi: string) => {
+  const formatLokasiDisplay = (lokasi?: string) => {
+    if (!lokasi) return '';
     const cleaned = lokasi.trim();
     if (!cleaned) return '';
     if (cleaned.toLowerCase().includes('jawa barat')) return cleaned;
@@ -98,51 +139,51 @@ export const DashboardPage = () => {
       </div>
 
       {/* Executive Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:border-blue-300 transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Penugasan Aktif</span>
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Titik Penugasan</span>
             <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
-              <FileText className="w-5 h-5" />
+              <MapPin className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-4">
             <span className="text-3xl font-black text-slate-800">{activeLocations.length}</span>
-            <span className="text-xs text-slate-500 block mt-0.5">Pegawai On-Site di Lapangan</span>
-          </div>
-        </div>
-
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:border-emerald-300 transition-all flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Presensi Hari Ini</span>
-            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
-              <CalendarCheck className="w-5 h-5" />
-            </div>
-          </div>
-          <div className="mt-4">
-            <span className="text-3xl font-black text-emerald-700">{dummyPresensiPribadi.persentaseKehadiran}%</span>
-            <span className="text-xs text-emerald-600 font-semibold block mt-0.5">Tingkat Kehadiran Instansi</span>
+            <span className="text-xs text-slate-500 block mt-0.5">Titik Lokasi Aktif di Lapangan</span>
           </div>
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:border-amber-300 transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Draft Butuh Approval</span>
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Penugasan Aktif</span>
             <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
-              <Clock className="w-5 h-5" />
+              <FileText className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-4">
-            <span className="text-3xl font-black text-amber-800">2</span>
-            <span className="text-xs text-slate-500 block mt-0.5">Ajuan Tahap Verifikasi</span>
+            <span className="text-3xl font-black text-amber-800">{totalOrangAktif}</span>
+            <span className="text-xs text-slate-500 block mt-0.5">Pegawai Terlibat (On-Site)</span>
+          </div>
+        </div>
+
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:border-violet-300 transition-all flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Pegawai</span>
+            <div className="w-9 h-9 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center font-bold">
+              <Users className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="mt-4">
+            <span className="text-3xl font-black text-violet-800">{pegawaiList.length}</span>
+            <span className="text-xs text-slate-500 block mt-0.5">Data Pegawai Terdaftar</span>
           </div>
         </div>
       </div>
 
       {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Rekap Penugasan 2026 (Spans 2 columns) */}
-        <div className="lg:col-span-2 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col h-[280px]">
+      <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
+        {/* Rekap Penugasan 2026 */}
+        <div className="w-full bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col h-[280px]">
           <div className="flex justify-between items-start mb-6">
             <div className="flex gap-3">
               <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
@@ -184,50 +225,6 @@ export const DashboardPage = () => {
                 <span className="text-[10px] sm:text-xs font-bold text-slate-400 mt-3">{item.label}</span>
               </div>
             ))}
-          </div>
-        </div>
-
-        {/* Rekap Izin & Cuti (Spans 1 column) */}
-        <div className="lg:col-span-1 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col h-[280px]">
-          <div className="flex justify-between items-start mb-6">
-            <div className="flex gap-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
-                <Umbrella className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="font-bold text-slate-800 text-[15px]">Rekap Izin & Cuti</h3>
-                <p className="text-[12px] text-slate-500 mt-0.5">Kuota izin/cuti tahun 2026.</p>
-              </div>
-            </div>
-            <Link to="../absensi?tab=pegawai-lain" className="text-xs font-bold text-blue-600 hover:underline whitespace-nowrap mt-1">Detail</Link>
-          </div>
-          
-          {/* Donut Chart and Stats */}
-          <div className="flex-1 flex items-center justify-center gap-6">
-            {/* SVG Donut */}
-            <div className="relative w-28 h-28 shrink-0">
-              <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="40" stroke="currentColor" strokeWidth="12" fill="transparent" className="text-slate-100" />
-                <circle cx="50" cy="50" r="40" stroke="currentColor" strokeWidth="12" fill="transparent" strokeDasharray="251.2" strokeDashoffset={251.2 * (1 - 0.73)} strokeLinecap="round" className="text-emerald-500" />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-xl font-black text-slate-800">73%</span>
-                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Tersisa</span>
-              </div>
-            </div>
-            
-            {/* Stats */}
-            <div className="flex flex-col gap-4">
-              <div>
-                <div className="text-xl font-black text-emerald-700">11</div>
-                <div className="text-xs font-medium text-slate-500">Sisa hari izin/cuti</div>
-              </div>
-              <div className="h-px bg-slate-100 w-full"></div>
-              <div>
-                <div className="text-xl font-black text-slate-700">4</div>
-                <div className="text-xs font-medium text-slate-500">Hari telah terpakai</div>
-              </div>
-            </div>
           </div>
         </div>
       </div>
@@ -303,128 +300,160 @@ export const DashboardPage = () => {
         )}
       </div>
 
-      {/* Stacked Tables Layout: Recent Assignments & Attendance Log */}
+      {/* Stacked Tables Layout: Recent Assignments & Selected Date Tasks */}
       <div className="space-y-6">
-        {/* Ajuan Surat Tugas Terbaru */}
+        
+        {/* Ajuan Surat Tugas Terbaru (MOVED UP) */}
         <div className="w-full bg-white rounded-2xl border-2 border-slate-300 p-6 shadow-sm space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-slate-200">
             <h3 className="font-bold text-slate-800 text-base flex items-center gap-2">
               <FileText className="w-4 h-4 text-blue-600" />
-              Proses Ajuan Surat Tugas Terbaru
+              Info Surat Terbaru
             </h3>
             <Link to="/tugas" className="text-sm font-semibold text-blue-600 hover:underline">
               Lihat Semua
             </Link>
           </div>
 
-          <div className="overflow-x-auto pb-2">
-            <div className="flex gap-4 min-w-max">
-              {recentAjuan.map((item) => {
-                const unitColor = UNIT_COLORS[item.unitKerja] || { bg: 'bg-slate-100', text: 'text-slate-800' };
-                const statusIsApproved = item.status === 'SURAT_TERBIT';
-                const statusIsRejected = item.status === 'DITOLAK';
-                const statusLabel = statusIsApproved ? 'DiApprove' : statusIsRejected ? 'Ditolak' : 'Diproses';
-                const statusBadgeClass = statusIsApproved
-                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                  : statusIsRejected
-                    ? 'bg-rose-100 text-rose-800 border border-rose-300'
-                    : 'bg-slate-100 text-slate-700 border border-slate-300';
+        <div className="overflow-x-auto pb-2">
+          <div className="flex gap-4 min-w-max">
+            {recentAjuan.map((item) => {
+              const unitColor = getUnitColor(item.unitKerja);
+              const statusIsApproved = item.status === 'SURAT_TERBIT';
+              const statusIsRejected = item.status === 'DITOLAK';
+              const statusLabel = statusIsApproved ? 'DiApprove' : statusIsRejected ? 'Ditolak' : 'Diproses';
+              const statusBadgeClass = statusIsApproved
+                ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                : statusIsRejected
+                  ? 'bg-rose-100 text-rose-800 border border-rose-300'
+                  : 'bg-slate-100 text-slate-700 border border-slate-300';
 
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedAjuan(item);
-                      setIsModalOpen(true);
-                    }}
-                    className="min-w-[760px] shrink-0 rounded-3xl border border-slate-200 bg-slate-50 p-6 shadow-sm text-left transition hover:border-blue-300 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-300"
-                  >
-                    <div className="flex items-center justify-between gap-4">
-                      <span className="font-mono text-xs font-bold text-blue-700 whitespace-nowrap">{item.nomorSurat}</span>
-                      <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold ${statusBadgeClass}`}>
-                        {statusIsApproved ? (
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                        ) : statusIsRejected ? (
-                          <X className="w-3.5 h-3.5 text-rose-600" />
-                        ) : (
-                          <Clock className="w-3.5 h-3.5 text-slate-500" />
-                        )}
-                        {statusLabel}
-                      </span>
-                    </div>
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedAjuan(item);
+                    setIsModalOpen(true);
+                  }}
+                  className="min-w-[760px] shrink-0 rounded-3xl border border-slate-200 bg-slate-50 p-6 shadow-sm text-left transition hover:border-blue-300 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                >
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="font-mono text-xs font-bold text-blue-700 whitespace-nowrap">{item.nomorSurat}</span>
+                    <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold ${statusBadgeClass}`}>
+                      {statusIsApproved ? (
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                      ) : statusIsRejected ? (
+                        <X className="w-3.5 h-3.5 text-rose-600" />
+                      ) : (
+                        <Clock className="w-3.5 h-3.5 text-slate-500" />
+                      )}
+                      {statusLabel}
+                    </span>
+                  </div>
 
-                    <div className="mt-4">
-                      <h4 className="text-base font-semibold text-slate-900 whitespace-nowrap overflow-x-auto">{item.perihal}</h4>
-                    </div>
+                  <div className="mt-4">
+                    <h4 className="text-base font-semibold text-slate-900 whitespace-nowrap overflow-x-auto">{item.uraianKegiatan}</h4>
+                  </div>
 
-                    <div className="mt-4 flex flex-wrap gap-3 items-center">
-                      <span className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-bold ${unitColor.bg} ${unitColor.text}`}>
-                        {item.unitKerja}
-                      </span>
-                      <span className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 whitespace-nowrap">
-                        <MapPin className="w-4 h-4 text-rose-500 shrink-0" />
-                        {formatLokasiDisplay(item.lokasiPenugasan)}
-                      </span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+                  <div className="mt-4 flex flex-wrap gap-3 items-center">
+                    <span className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-bold ${unitColor.bg} ${unitColor.text}`}>
+                      {item.unitKerja}
+                    </span>
+                    <span className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 whitespace-nowrap">
+                      <MapPin className="w-4 h-4 text-rose-500 shrink-0" />
+                      {formatLokasiDisplay(item.tempat)}
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
+        </div>
 
-        {/* Presensi & Calendar Layout */}
+        {/* Calendar and Selected Date Tasks */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Ringkasan Presensi Pegawai Hari Ini */}
-          <div className="lg:col-span-3 bg-white rounded-2xl border-2 border-slate-300 p-6 shadow-sm space-y-4 overflow-hidden">
+          {/* Calendar Widget */}
+          <div className="lg:col-span-1">
+            <CalendarWidget 
+              selectedDate={selectedDate} 
+              onSelectDate={setSelectedDate}
+              initialMonth={new Date(2026, 0, 1)}
+              hasTask={checkHasTask}
+            />
+          </div>
+
+          {/* Penugasan Pada Tanggal */}
+          <div className="lg:col-span-3 w-full bg-white rounded-2xl border-2 border-slate-300 p-6 shadow-sm space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-200">
               <h3 className="font-bold text-slate-800 text-base flex items-center gap-2">
-                <UserCheck className="w-4 h-4 text-emerald-600" />
-                Ringkasan Presensi Pegawai Hari Ini
+                <Calendar className="w-4 h-4 text-blue-600" />
+                Penugasan Aktif ({displayDateStr})
               </h3>
-              <Link to="/absensi" className="text-sm font-semibold text-blue-600 hover:underline">
-                Lihat Detail
-              </Link>
             </div>
 
             <div className="overflow-x-auto pb-2">
-              <div className="flex gap-4 min-w-max">
-                {recentPresensi.map((p) => {
-                  const unitColor = UNIT_COLORS[p.unitKerja] || { bg: 'bg-slate-100', text: 'text-slate-800' };
+              {tugasPadaTanggal.length > 0 ? (
+                <div className="flex gap-4 min-w-max">
+                  {tugasPadaTanggal.map((item) => {
+                    const unitColor = getUnitColor(item.unitKerja);
+                    const statusIsApproved = item.status === 'SURAT_TERBIT';
+                    const statusIsRejected = item.status === 'DITOLAK';
+                    const statusLabel = statusIsApproved ? 'DiApprove' : statusIsRejected ? 'Ditolak' : 'Diproses';
+                    const statusBadgeClass = statusIsApproved
+                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                      : statusIsRejected
+                        ? 'bg-rose-100 text-rose-800 border border-rose-300'
+                        : 'bg-slate-100 text-slate-700 border border-slate-300';
 
-                  return (
-                    <div key={p.id} className="w-[260px] shrink-0 rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3 shadow-sm">
-                      <div className="space-y-1">
-                        <h4 className="font-bold text-slate-900 text-sm">{p.nama}</h4>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${unitColor.bg} ${unitColor.text}`}>
-                            {p.unitKerja}
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedAjuan(item);
+                          setIsModalOpen(true);
+                        }}
+                        className="min-w-[760px] shrink-0 rounded-3xl border border-slate-200 bg-slate-50 p-6 shadow-sm text-left transition hover:border-blue-300 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                      >
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="font-mono text-xs font-bold text-blue-700 whitespace-nowrap">{item.nomorSurat}</span>
+                          <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold ${statusBadgeClass}`}>
+                            {statusIsApproved ? (
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                            ) : statusIsRejected ? (
+                              <X className="w-3.5 h-3.5 text-rose-600" />
+                            ) : (
+                              <Clock className="w-3.5 h-3.5 text-slate-500" />
+                            )}
+                            {statusLabel}
                           </span>
-                          <span className="text-xs text-slate-400 font-mono">NIP: {p.nip}</span>
                         </div>
-                      </div>
 
-                      <div className="space-y-2 text-sm">
-                        <div className="rounded-lg bg-white border border-slate-200 p-2">
-                          <div className="text-[11px] font-semibold uppercase text-slate-500">Masuk</div>
-                          <div className="font-mono font-bold text-emerald-700">{p.jamMasuk}</div>
+                        <div className="mt-4">
+                          <h4 className="text-base font-semibold text-slate-900 whitespace-nowrap overflow-x-auto">{item.uraianKegiatan}</h4>
                         </div>
-                        <div className="rounded-lg bg-white border border-slate-200 p-2">
-                          <div className="text-[11px] font-semibold uppercase text-slate-500">Keluar</div>
-                          <div className="font-mono text-slate-700">{p.jamKeluar || '-'}</div>
+
+                        <div className="mt-4 flex flex-wrap gap-3 items-center">
+                          <span className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-bold ${unitColor.bg} ${unitColor.text}`}>
+                            {item.unitKerja}
+                          </span>
+                          <span className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 whitespace-nowrap">
+                            <MapPin className="w-4 h-4 text-rose-500 shrink-0" />
+                            {formatLokasiDisplay(item.tempat)}
+                          </span>
                         </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="flex items-center justify-center py-8 text-sm text-slate-500 font-medium bg-slate-50 rounded-xl border border-slate-200">
+                  {selectedDate ? "Tidak ada penugasan aktif pada tanggal ini." : "Pilih tanggal di kalender untuk melihat penugasan."}
+                </div>
+              )}
             </div>
-          </div>
-
-          {/* Calendar Widget */}
-          <div className="lg:col-span-1">
-            <CalendarWidget selectedDate={selectedDate} onSelectDate={setSelectedDate} />
           </div>
         </div>
       </div>
@@ -450,7 +479,7 @@ export const DashboardPage = () => {
                 <span className="font-mono text-xs font-bold text-blue-700">{selectedAjuan.nomorSurat}</span>
                 <span className="text-xs text-slate-500">{selectedAjuan.unitKerja}</span>
               </div>
-              <h4 className="font-bold text-slate-900 text-sm">{selectedAjuan.perihal}</h4>
+              <h4 className="font-bold text-slate-900 text-sm">{selectedAjuan.uraianKegiatan}</h4>
               <p className="text-xs text-slate-600">{selectedAjuan.deskripsi}</p>
             </div>
 
@@ -461,7 +490,7 @@ export const DashboardPage = () => {
               </div>
               <div className="rounded-2xl border border-slate-200 p-4 bg-slate-50">
                 <div className="text-[11px] font-semibold uppercase text-slate-500 mb-2">Lokasi</div>
-                <div className="text-sm font-semibold text-slate-800">{formatLokasiDisplay(selectedAjuan.lokasiPenugasan)}</div>
+                <div className="text-sm font-semibold text-slate-800">{formatLokasiDisplay(selectedAjuan.tempat)}</div>
               </div>
             </div>
 

@@ -13,7 +13,7 @@ export interface EmailTemplateParams {
   to_email: string;
   to_name: string;
   nomor_surat: string;
-  perihal: string;
+  uraianKegiatan: string;
   tanggal_mulai: string;
   tanggal_selesai: string;
   lokasi: string;
